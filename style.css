@@ -102,11 +102,12 @@ a{color:inherit;}
   display:flex;align-items:center;justify-content:center;
   font-family:var(--font-mono);font-weight:700;font-size:13px;color:#241a06;
   box-shadow:var(--shadow-soft), 0 0 0 3px color-mix(in srgb, var(--amber) 14%, transparent);
-  flex-shrink:0;
+  flex-shrink:0;overflow:hidden;
   clip-path:polygon(8px 0,100% 0,100% 100%,0 100%,0 8px);
   position:relative;
   transition:box-shadow .25s var(--ease), transform .25s var(--ease);
 }
+.brand-mark img{width:100%;height:100%;object-fit:cover;display:block;}
 .brand:hover .brand-mark{transform:translateY(-1px) rotate(-2deg);box-shadow:var(--shadow-lift), 0 0 0 4px color-mix(in srgb, var(--amber) 22%, transparent);}
 .brand-mark::after{
   content:"";position:absolute;top:0;left:0;width:8px;height:8px;
@@ -139,6 +140,9 @@ a{color:inherit;}
   position:relative;
 }
 .mm-item:hover{background:var(--bg-elev-2);padding-left:15px;}
+.mm-item.active{background:var(--amber-soft);color:var(--ink);}
+.mm-item.active .mm-ico-wrap{background:var(--amber-soft);color:var(--amber-ink);}
+[data-theme="dark"] .mm-item.active .mm-ico-wrap{color:var(--amber);}
 .mm-item:active{transform:scale(.98);}
 .mm-item svg{width:16px;height:16px;flex-shrink:0;}
 .mm-item .mm-ico-wrap{
@@ -551,6 +555,21 @@ table.excel td .tx-shift-chip{white-space:nowrap;}
 .saldo-col.out .saldo-fig{color:var(--rust);}
 .saldo-col.final .saldo-fig{color:var(--ink);font-size:16px;}
 .saldo-op{font-size:16px;font-weight:700;color:var(--ink-faint);flex-shrink:0;}
+
+/* ---------------- Blur nominal uang (tampilan tamu, sampai di-reveal) ---------------- */
+.money-blur{
+  filter:blur(6px);user-select:none;transition:filter .35s var(--ease);
+  display:inline-block;
+}
+body.money-revealed .money-blur{filter:blur(0);}
+.money-toggle-btn{
+  display:flex;align-items:center;justify-content:center;gap:7px;width:100%;
+  margin-top:10px;padding:9px 14px;border-radius:11px;cursor:pointer;
+  background:var(--bg-elev-2);border:1px solid var(--border);color:var(--ink-soft);
+  font-size:12.5px;font-weight:700;transition:all .18s var(--ease);
+}
+.money-toggle-btn:hover{border-color:var(--amber);color:var(--ink);}
+.money-toggle-btn svg{width:15px;height:15px;flex-shrink:0;}
 @media (max-width:420px){
   .saldo-strip{gap:6px;padding:12px 8px;}
   .saldo-fig{font-size:11.5px;}
@@ -694,7 +713,8 @@ footer.site-footer{
 .status-badge{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;}
 .status-badge.active{background:color-mix(in srgb, var(--forest) 18%, transparent);color:var(--forest);}
 .status-badge.off{background:color-mix(in srgb, var(--ink-faint) 22%, transparent);color:var(--ink-soft);}
-.member-actions{display:flex;gap:6px;margin-top:12px;}
+.member-actions{display:flex;gap:6px;margin-top:12px;flex-wrap:wrap;}
+.member-actions .btn{flex-shrink:0;}
 
 /* modal */
 .modal-overlay{
@@ -738,9 +758,8 @@ footer.site-footer{
   .stat-strip{grid-template-columns:1fr;}
   .stat-grid{grid-template-columns:repeat(2,1fr);}
 }
-/* ---------- bar khusus admin di mobile (topbar tetap + tab pill) ---------- */
+/* ---------- bar khusus admin di mobile (topbar + hamburger menu) ---------- */
 .admin-topbar-mobile{display:none;}
-.admin-tabs-mobile{display:none;}
 @media (max-width:760px){
   .admin-shell{flex-direction:column;}
   .sidebar{display:none;}
@@ -750,21 +769,6 @@ footer.site-footer{
     position:sticky;top:0;z-index:36;
   }
   .admin-topbar-mobile .brand-text b{font-size:14px;}
-  .admin-tabs-mobile{
-    display:flex;gap:7px;overflow-x:auto;padding:10px 14px;
-    background:var(--bg-elev);border-bottom:1px solid var(--border);
-    position:sticky;top:60px;z-index:35;
-    scrollbar-width:none;
-  }
-  .admin-tabs-mobile::-webkit-scrollbar{display:none;}
-  .pill-tab{
-    flex-shrink:0;display:flex;align-items:center;gap:6px;
-    padding:8px 14px;border-radius:20px;border:1px solid var(--border);
-    background:var(--bg-elev-2);color:var(--ink-soft);font-weight:700;font-size:12.5px;
-    white-space:nowrap;cursor:pointer;transition:all .2s var(--ease);
-  }
-  .pill-tab svg{width:14px;height:14px;}
-  .pill-tab.active{background:var(--amber);border-color:var(--amber);color:#241a06;}
   .admin-main{padding:16px 14px 50px;}
   .stat-grid{grid-template-columns:repeat(2,1fr);}
 }
@@ -869,4 +873,85 @@ footer.site-footer{
 .win-banner{
   margin-top:12px;padding:12px 14px;border-radius:12px;background:var(--forest-soft);color:var(--forest);
   font-weight:700;font-size:13.5px;text-align:center;
+}
+
+/* ============================================================
+   BOOT LOADER — splash screen 7 detik (piggy bank + koin)
+============================================================ */
+.boot-loader{
+  position:fixed;inset:0;z-index:20000;
+  display:flex;align-items:center;justify-content:center;
+  background:
+    radial-gradient(circle at 50% 28%, color-mix(in srgb, var(--amber) 16%, transparent), transparent 55%),
+    var(--bg);
+  transition:opacity .65s ease, visibility .65s ease;
+  overflow:hidden;
+}
+.boot-loader::before{
+  content:"";position:absolute;inset:0;pointer-events:none;
+  background-image:radial-gradient(color-mix(in srgb, var(--ink) 6%, transparent) 1px, transparent 1px);
+  background-size:26px 26px;opacity:.5;
+}
+.boot-loader.hide{opacity:0;visibility:hidden;pointer-events:none;}
+.boot-inner{
+  position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;
+  width:min(360px, 88vw);text-align:center;
+}
+.boot-piggy-wrap{
+  position:relative;width:170px;height:170px;margin-bottom:22px;
+  display:flex;align-items:center;justify-content:center;
+}
+.boot-piggy-glow{
+  position:absolute;inset:-20px;border-radius:50%;
+  background:radial-gradient(circle, color-mix(in srgb, var(--amber) 30%, transparent), transparent 70%);
+  animation:bootGlowPulse 2.2s ease-in-out infinite;
+}
+@keyframes bootGlowPulse{0%,100%{transform:scale(.92);opacity:.7;}50%{transform:scale(1.08);opacity:1;}}
+.boot-piggy-img{
+  position:relative;z-index:2;width:132px;height:auto;
+  filter:drop-shadow(0 10px 22px rgba(0,0,0,.35));
+  animation:bootPiggyBounce 1.6s ease-in-out infinite;
+}
+@keyframes bootPiggyBounce{0%,100%{transform:translateY(0) rotate(0deg);}50%{transform:translateY(-7px) rotate(-1.5deg);}}
+.boot-coin{
+  position:absolute;top:-8px;left:calc(50% + var(--x));width:15px;height:15px;border-radius:50%;
+  background:radial-gradient(circle at 35% 30%, #ffe9a8, #e8a93a 55%, #b9791c 100%);
+  box-shadow:0 0 0 1px rgba(0,0,0,.15) inset, 0 2px 4px rgba(0,0,0,.25);
+  opacity:0;z-index:3;
+  animation:bootCoinFall 2.4s cubic-bezier(.55,0,.85,.35) infinite;
+  animation-delay:calc(var(--d) * .32s);
+}
+@keyframes bootCoinFall{
+  0%{opacity:0;transform:translateY(0) scale(.6) rotate(0deg);}
+  8%{opacity:1;}
+  62%{opacity:1;transform:translateY(96px) scale(1) rotate(180deg);}
+  78%{opacity:0;transform:translateY(112px) scale(.5) rotate(230deg);}
+  100%{opacity:0;transform:translateY(112px) scale(.5);}
+}
+.boot-progress-track{
+  width:100%;height:6px;border-radius:20px;background:var(--bg-elev-2);
+  border:1px solid var(--border);overflow:hidden;margin-bottom:8px;
+}
+.boot-progress-fill{
+  height:100%;width:0%;border-radius:20px;
+  background:linear-gradient(90deg, var(--forest), var(--amber));
+  transition:width .18s linear;
+}
+.boot-percent{
+  font-family:var(--font-mono);font-size:12px;font-weight:700;color:var(--ink-soft);
+  margin-bottom:18px;letter-spacing:.03em;
+}
+.boot-phrase-wrap{min-height:38px;display:flex;align-items:center;justify-content:center;margin-bottom:26px;}
+.boot-phrase{
+  font-family:var(--font-mono);font-size:11.5px;color:var(--ink-faint);line-height:1.5;
+  animation:bootPhraseIn .45s var(--ease);
+}
+@keyframes bootPhraseIn{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:translateY(0);}}
+.boot-footer{font-size:11px;color:var(--ink-faint);}
+.boot-footer a{color:var(--amber-ink);font-weight:700;text-decoration:none;}
+[data-theme="dark"] .boot-footer a{color:var(--amber);}
+.boot-footer a:hover{text-decoration:underline;}
+@media (max-width:420px){
+  .boot-piggy-wrap{width:140px;height:140px;}
+  .boot-piggy-img{width:108px;}
 }

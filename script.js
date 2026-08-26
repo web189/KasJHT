@@ -211,6 +211,7 @@ const state = {
   editingMemberId: null,
   mobileMenuOpen: false,
   guestFilterOpen: false, // panel filter tabel transaksi (tampilan tamu) — tersembunyi secara default
+  moneyRevealed: false,   // samarkan (blur) semua nominal uang di tampilan tamu sampai user klik "Tampilkan Semua Nominal"
   // draft form "Pengajuan Pembelian" — dipertahankan lintas re-render
   pengajuan: { mode:"solo", soloAdmin:"", patunganSet:null, ket:"", nominal:"", pemohon:"", editingReqId:null },
 };
@@ -516,6 +517,7 @@ window.addEventListener("hashchange", ()=>{
 function goto(route){ location.hash = route; }
 
 function render(){
+  document.body.classList.toggle("money-revealed", !!state.moneyRevealed);
   const root = document.getElementById("app");
   if(state.route === "/admin"){
     if(!isAuthed()){ goto("/login"); return; }
@@ -550,7 +552,7 @@ function topbar(){
   <div class="topbar">
     <div class="topbar-inner">
       <a class="brand" href="#/">
-        <div class="brand-mark">JK</div>
+        <div class="brand-mark"><img src="assets/piggy-sm.png" alt="Logo"></div>
         <div class="brand-text"><b>JHT KAS Adm PRG</b><span>Buku kas admin gudang</span></div>
       </a>
       <div class="topbar-actions">
@@ -701,9 +703,8 @@ function renderGuest(){
     <div class="hero">
       <div class="hero-top">
         <div>
-          <div class="hero-eyebrow">Transparansi Kas · ${DB.members.length} Anggota</div>
-          <h1>Rekap Kas Admin Gudang</h1>
-          <p class="hero-sub">Semua kontribusi, pengeluaran, dan histori anggota tercatat terbuka di sini. Tampilan tamu bersifat lihat-saja.</p>
+          <div class="hero-eyebrow">Transparansi Kas dan Anggaran Pembelian Barang dan Jasa</div>
+          <h1>Rekap Kas Admin GDNG 2026</h1>
           <div class="hero-chart" id="heroChart">
             <svg class="hero-chart-svg" id="heroChartSvg" viewBox="0 0 600 130" preserveAspectRatio="none"></svg>
             <div class="hero-chart-tag">
@@ -727,19 +728,23 @@ function renderGuest(){
       <div class="saldo-strip reveal">
         <div class="saldo-col in">
           <span class="saldo-label">Kas Masuk</span>
-          <span class="saldo-fig mono">${rupiah(t.masuk)}</span>
+          <span class="saldo-fig mono money-blur">${rupiah(t.masuk)}</span>
         </div>
         <span class="saldo-op">−</span>
         <div class="saldo-col out">
           <span class="saldo-label">Kas Keluar</span>
-          <span class="saldo-fig mono">${rupiah(t.keluar)}</span>
+          <span class="saldo-fig mono money-blur">${rupiah(t.keluar)}</span>
         </div>
         <span class="saldo-op">=</span>
         <div class="saldo-col final">
           <span class="saldo-label">Saldo Akhir</span>
-          <span class="saldo-fig mono">${rupiah(t.saldo)}</span>
+          <span class="saldo-fig mono money-blur">${rupiah(t.saldo)}</span>
         </div>
       </div>
+      <button class="money-toggle-btn" id="moneyToggleBtn">
+        ${icon(state.moneyRevealed ? 'eye-off' : 'eye')}
+        <span>${state.moneyRevealed ? 'Sembunyikan Semua Nominal' : 'Tampilkan Semua Nominal'}</span>
+      </button>
 
       <div class="panel" style="margin-top:16px;">
         <div class="panel-head"><h3>🏆 Peringkat Setoran Anggota</h3><span class="hint">urut dari yang paling rajin setor</span></div>
@@ -754,8 +759,8 @@ function renderGuest(){
               ${avatarHtml(r.id)}
               <span class="rank-name">${nameOf(r.id)}${isOff ? '<span class="off-tag">nonaktif</span>' : ''}</span>
               <div class="rank-figures">
-                <span class="rank-amt">${rupiah(r.total)}</span>
-                <span class="rank-pct">${r.pct.toFixed(1)}%</span>
+                <span class="rank-amt money-blur">${rupiah(r.total)}</span>
+                <span class="rank-pct money-blur">${r.pct.toFixed(1)}%</span>
               </div>
               <div class="rank-bar-track"><div class="rank-bar-fill"></div></div>
             </div>
@@ -855,7 +860,7 @@ function excelTableHtml(list, withActions, maxHeightPx){
             <td>${fmtDateShort(t.tgl)}</td>
             <td class="col-name"><span class="avatar-mini" style="background:${avatarBg(colorOf(t.admin))}">${initials(nameOf(t.admin))}</span>${nameOf(t.admin)}</td>
             <td><span class="tx-shift-chip">${t.shift||"Non Shift"}</span></td>
-            <td class="col-amt"><span class="amt-pill ${isIn?'in':'out'}">${isIn?'↑':'↓'} ${rupiah(amount)}</span></td>
+            <td class="col-amt"><span class="amt-pill ${isIn?'in':'out'} ${withActions?'':'money-blur'}">${isIn?'↑':'↓'} ${rupiah(amount)}</span></td>
             <td class="col-ket">${escapeHtml(t.ket) || "—"}</td>
             ${withActions ? `<td class="col-no"><button class="icon-btn sm" data-edit="${t.id}" title="Ubah">${icon('edit')}</button><button class="icon-btn sm" style="color:var(--rust);" data-del="${t.id}" title="Hapus">${icon('trash')}</button></td>` : ""}
           </tr>`;
@@ -926,9 +931,17 @@ document.addEventListener("click", (e)=>{
   }
 });
 
+function bindMoneyToggle(){
+  document.getElementById("moneyToggleBtn")?.addEventListener("click", ()=>{
+    state.moneyRevealed = !state.moneyRevealed;
+    render();
+  });
+}
+
 function bindGuest(){
   bindTopbarCommon();
   initHeroChart();
+  bindMoneyToggle();
   document.getElementById("ledgerToggle")?.addEventListener("click", ()=>{
     state.guestFilterOpen = !state.guestFilterOpen;
     render();
@@ -1135,10 +1148,11 @@ function renderRiwayatPage(){
       <div class="hero-eyebrow">Transparansi Pengajuan</div>
       <h1>Riwayat Pengajuan Pembelian</h1>
       <p class="hero-sub">Semua pengajuan pembelian—baik yang disetujui, ditolak, maupun masih menunggu—tercatat terbuka di sini.</p>
+      ${!isAuthed() ? `<button class="money-toggle-btn" id="moneyToggleBtn" style="margin-bottom:16px;">${icon(state.moneyRevealed?'eye-off':'eye')}<span>${state.moneyRevealed?'Sembunyikan Semua Nominal':'Tampilkan Semua Nominal'}</span></button>` : ""}
 
       <div class="panel">
         <div class="req-list">
-          ${list.length ? list.map(reqCardHtml).join("") : `<div class="empty-row">Belum ada pengajuan.</div>`}
+          ${list.length ? list.map(r=>reqCardHtml(r)).join("") : `<div class="empty-row">Belum ada pengajuan.</div>`}
         </div>
       </div>
       <div style="margin-top:16px;">
@@ -1153,11 +1167,12 @@ function renderRiwayatPage(){
 function reqCardHtml(r, withActions){
   const meta = requestStatusMeta(r.status);
   const adminNames = r.admins.map(nameOf).join(", ");
+  const blur = !isAuthed() ? "money-blur" : "";
   return `
     <div class="req-card">
       <div class="req-top">
         <span class="stamp ${meta.cls}">${meta.label}</span>
-        <span class="req-amt mono">${rupiah(r.nominal)}</span>
+        <span class="req-amt mono ${blur}">${rupiah(r.nominal)}</span>
       </div>
       <div class="req-ket">${escapeHtml(r.keterangan)}</div>
       <div class="req-meta">
@@ -1166,10 +1181,14 @@ function reqCardHtml(r, withActions){
         <span>${r.mode==='solo' ? '💰 Solo' : '🤝 Patungan'}: ${adminNames}</span>
       </div>
       ${r.status!=="pending" ? `<div class="req-meta" style="margin-top:4px;">${r.status==='approved'?'✅':'❌'} Diputuskan ${r.decidedAt?fmtDateShort(r.decidedAt):''}${r.catatan?` · "${escapeHtml(r.catatan)}"`:''}</div>` : ""}
-      ${withActions && r.status==="pending" ? `
+      ${withActions ? `
         <div class="req-actions">
+          ${r.status==="pending" ? `
           <button class="btn btn-sm" style="color:var(--forest);border-color:var(--forest);" data-acc="${r.id}">${icon('check')}<span>ACC</span></button>
           <button class="btn btn-sm btn-danger" data-tolak="${r.id}">${icon('close')}<span>Tolak</span></button>
+          <button class="btn btn-sm" data-edit-req="${r.id}">${icon('edit')}<span>Edit</span></button>
+          ` : ""}
+          <button class="btn btn-sm btn-danger" data-del-req="${r.id}" title="Hapus pengajuan">${icon('trash')}</button>
         </div>` : ""}
     </div>
   `;
@@ -1189,10 +1208,11 @@ function renderAsetPage(){
       <div class="hero-eyebrow">Hasil Pengeluaran Kas</div>
       <h1>Aset Barang/Jasa Milik Pribadi Admin</h1>
       <p class="hero-sub">Daftar barang/jasa yang sudah dibeli menggunakan saldo kas pribadi admin, hasil dari pengajuan yang disetujui.</p>
+      ${!isAuthed() ? `<button class="money-toggle-btn" id="moneyToggleBtn" style="margin-bottom:16px;">${icon(state.moneyRevealed?'eye-off':'eye')}<span>${state.moneyRevealed?'Sembunyikan Semua Nominal':'Tampilkan Semua Nominal'}</span></button>` : ""}
 
       <div class="stat-card accent reveal" style="max-width:280px;margin-bottom:18px;">
         <div class="label">Total Nilai Aset</div>
-        <div class="value mono">${rupiah(totalNilai)}</div>
+        <div class="value mono money-blur">${rupiah(totalNilai)}</div>
       </div>
 
       <div class="panel">
@@ -1201,7 +1221,7 @@ function renderAsetPage(){
             <div class="req-card">
               <div class="req-top">
                 <span class="stamp approved">Aset</span>
-                <span class="req-amt mono">${rupiah(r.nominal)}</span>
+                <span class="req-amt mono money-blur">${rupiah(r.nominal)}</span>
               </div>
               <div class="req-ket">${escapeHtml(r.keterangan)}</div>
               <div class="req-meta">
@@ -1222,6 +1242,7 @@ function bindSimplePage(){
   bindTopbarCommon();
   document.getElementById("backHome2")?.addEventListener("click", ()=> goto("/"));
   document.getElementById("goPengajuanBtn")?.addEventListener("click", ()=> goto("/pengajuan"));
+  bindMoneyToggle();
 }
 
 function renderLogin(){
@@ -1230,7 +1251,7 @@ function renderLogin(){
     <div class="login-card">
       <button class="back-link" id="backHome">&larr; Kembali ke tampilan tamu</button>
       <div class="login-brand">
-        <div class="brand-mark" style="width:46px;height:46px;font-size:15px;">JK</div>
+        <div class="brand-mark" style="width:46px;height:46px;"><img src="assets/piggy-sm.png" alt="Logo"></div>
         <h2 style="font-size:17px;">Masuk sebagai Admin</h2>
         <span class="stamp active" style="font-size:9px;">Akses Terbatas</span>
       </div>
@@ -1279,30 +1300,36 @@ const ADMIN_NAV = [
 
 function renderAdmin(){
   const theme = document.documentElement.getAttribute("data-theme")||"dark";
+  const pendingCount = pendingRequestCount();
   return `
   <div class="admin-topbar-mobile">
-    <div class="brand-mark" style="width:32px;height:32px;font-size:11px;">JK</div>
+    <div class="brand-mark" style="width:32px;height:32px;"><img src="assets/piggy-sm.png" alt="Logo"></div>
     <div class="brand-text"><b>JHT KAS Adm</b></div>
-    <div style="margin-left:auto;display:flex;gap:6px;">
-      <button class="icon-btn" id="mAdminExportExcel" style="color:var(--forest);" title="Unduh Excel">${icon('file-excel')}</button>
-      <button class="icon-btn" id="mAdminExportPdf" style="color:var(--rust);" title="Unduh PDF">${icon('file-pdf')}</button>
-      <button class="icon-btn" id="themeBtnM" title="Ganti tema">${icon(theme==='dark'?'sun':'moon')}</button>
-      <button class="icon-btn" id="viewGuestBtnM" title="Tampilan tamu">${icon('grid')}</button>
-      <button class="icon-btn" id="logoutBtnM" style="color:var(--rust);" title="Keluar">${icon('logout')}</button>
+    <button class="icon-btn hamburger-btn" id="adminHamburgerBtn" style="margin-left:auto;" title="Menu">${icon('menu')}${pendingCount>0?`<span class="menu-dot"></span>`:""}</button>
+    <div class="mobile-menu-panel" id="adminMobileMenuPanel">
+      <div class="mm-label">Navigasi</div>
+      ${ADMIN_NAV.map(n=>`
+        <button class="mm-item ${state.adminSection===n.id?'active':''}" data-sec="${n.id}"><span class="mm-ico-wrap">${icon(n.icon)}</span><span>${n.label}</span>${n.id==='pengajuan'&&pendingCount>0?`<span class="mm-badge">${pendingCount}</span>`:''}</button>
+      `).join("")}
+      <div class="mm-sep"></div>
+      <div class="mm-label">Unduh Data</div>
+      <button class="mm-item" id="mAdminExportExcel"><span class="mm-ico-wrap">${icon('file-excel')}</span><span>Unduh Excel</span></button>
+      <button class="mm-item" id="mAdminExportPdf"><span class="mm-ico-wrap">${icon('file-pdf')}</span><span>Unduh PDF</span></button>
+      <div class="mm-sep"></div>
+      <button class="mm-item" id="themeBtnM"><span class="mm-ico-wrap">${icon(theme==='dark'?'sun':'moon')}</span><span>Ganti Tema</span></button>
+      <button class="mm-item" id="viewGuestBtnM"><span class="mm-ico-wrap">${icon('grid')}</span><span>Lihat Tampilan Tamu</span></button>
+      <button class="mm-item" id="logoutBtnM" style="color:var(--rust);"><span class="mm-ico-wrap">${icon('logout')}</span><span>Keluar</span></button>
     </div>
-  </div>
-  <div class="admin-tabs-mobile">
-    ${ADMIN_NAV.map(n=>`<button class="pill-tab ${state.adminSection===n.id?'active':''}" data-sec="${n.id}">${icon(n.icon)}<span>${n.label}</span>${n.id==='pengajuan'&&pendingRequestCount()>0?`<span class="mm-badge">${pendingRequestCount()}</span>`:''}</button>`).join("")}
   </div>
   <div class="admin-shell">
     <aside class="sidebar">
       <div class="sidebar-brand">
-        <div class="brand-mark">JK</div>
+        <div class="brand-mark"><img src="assets/piggy-sm.png" alt="Logo"></div>
         <div class="brand-text"><b>JHT KAS</b><span>Admin</span></div>
       </div>
       ${ADMIN_NAV.map(n=>`
         <button class="nav-item ${state.adminSection===n.id?'active':''}" data-sec="${n.id}">
-          ${icon(n.icon)}<span>${n.label}</span>${n.id==='pengajuan'&&pendingRequestCount()>0?`<span class="mm-badge">${pendingRequestCount()}</span>`:''}
+          ${icon(n.icon)}<span>${n.label}</span>${n.id==='pengajuan'&&pendingCount>0?`<span class="mm-badge">${pendingCount}</span>`:''}
         </button>
       `).join("")}
       <div class="nav-sep"></div>
@@ -1348,7 +1375,7 @@ function secPengajuan(){
     <div class="panel">
       <div class="panel-head"><h3>Riwayat Keputusan</h3></div>
       <div class="req-list">
-        ${decided.length ? decided.map(r=>reqCardHtml(r,false)).join("") : `<div class="empty-row">Belum ada riwayat.</div>`}
+        ${decided.length ? decided.map(r=>reqCardHtml(r,true)).join("") : `<div class="empty-row">Belum ada riwayat.</div>`}
       </div>
     </div>
   `;
@@ -1459,6 +1486,7 @@ function secAnggota(){
           <div class="member-actions">
             <button class="btn btn-sm" data-edit-member="${m.id}">${icon('edit')}Edit</button>
             <button class="btn btn-sm ${m.status==='active'?'btn-danger':''}" data-toggle-status="${m.id}">${m.status==='active' ? 'Nonaktifkan' : 'Aktifkan'}</button>
+            <button class="btn btn-sm btn-danger" data-del-member="${m.id}" title="Hapus anggota">${icon('trash')}</button>
           </div>
         </div>`;
       }).join("")}
@@ -1565,6 +1593,122 @@ function memberFormModal(existing){
   `;
 }
 
+function reqFormModal(existing){
+  const actives = activeMembers();
+  const checkedSet = new Set(existing.admins);
+  return `
+    <div class="modal-head"><h3>Ubah Pengajuan Pembelian</h3><button class="icon-btn" id="modalClose">&times;</button></div>
+    <div class="field"><label>Keterangan Barang/Jasa</label><textarea id="reqKet" rows="2">${escapeHtml(existing.keterangan)}</textarea></div>
+    <div class="form-row2">
+      <div class="field"><label>Nominal (Rp)</label><input type="number" id="reqNominal" value="${existing.nominal}"></div>
+      <div class="field"><label>Tanggal</label><input type="date" id="reqTgl" value="${existing.tgl}"></div>
+    </div>
+    <div class="field">
+      <label>Sumber Dana</label>
+      <div class="sheet-tabs" id="reqModeTabs" style="width:100%;">
+        <button class="sheet-tab ${existing.mode==='solo'?'active':''}" data-mode="solo" style="flex:1;">Solo (1 Admin)</button>
+        <button class="sheet-tab ${existing.mode==='patungan'?'active':''}" data-mode="patungan" style="flex:1;">Patungan</button>
+      </div>
+    </div>
+    <div class="field" id="reqAdminWrap">
+      ${existing.mode==='solo' ? `
+        <label>Admin</label>
+        <select id="reqSoloAdmin">${actives.map(m=>`<option value="${m.id}" ${existing.admins[0]===m.id?'selected':''}>${m.nama}</option>`).join("")}</select>
+      ` : `
+        <label>Admin Patungan</label>
+        <div class="check-list">
+          ${actives.map(m=>`
+            <label class="check-row">
+              <input type="checkbox" data-req-patungan="${m.id}" ${checkedSet.has(m.id)?'checked':''}>
+              ${avatarHtml(m.id,"sm")}<span>${m.nama}</span>
+            </label>
+          `).join("")}
+        </div>
+      `}
+    </div>
+    <div class="field"><label>Nama Pemohon</label><input type="text" id="reqPemohon" value="${escapeHtml(existing.pemohon||'')}"></div>
+    <div class="modal-actions">
+      <button class="btn" id="modalClose2">Batal</button>
+      <button class="btn btn-primary" id="reqSave">${icon('plus')}<span>Simpan Perubahan</span></button>
+    </div>
+  `;
+}
+
+function bindReqForm(existing){
+  document.getElementById("modalClose").addEventListener("click", closeModal);
+  document.getElementById("modalClose2").addEventListener("click", closeModal);
+  let mode = existing.mode;
+  let patunganSet = new Set(existing.admins);
+
+  function renderAdminWrap(){
+    const actives = activeMembers();
+    const wrap = document.getElementById("reqAdminWrap");
+    if(mode==='solo'){
+      wrap.innerHTML = `
+        <label>Admin</label>
+        <select id="reqSoloAdmin">${actives.map(m=>`<option value="${m.id}" ${existing.admins[0]===m.id?'selected':''}>${m.nama}</option>`).join("")}</select>
+      `;
+    } else {
+      wrap.innerHTML = `
+        <label>Admin Patungan</label>
+        <div class="check-list">
+          ${actives.map(m=>`
+            <label class="check-row">
+              <input type="checkbox" data-req-patungan="${m.id}" ${patunganSet.has(m.id)?'checked':''}>
+              ${avatarHtml(m.id,"sm")}<span>${m.nama}</span>
+            </label>
+          `).join("")}
+        </div>
+      `;
+      wireReqPatunganChecks();
+    }
+  }
+  function wireReqPatunganChecks(){
+    document.querySelectorAll("[data-req-patungan]").forEach(cb=>{
+      cb.addEventListener("change", ()=>{
+        if(cb.checked) patunganSet.add(cb.dataset.reqPatungan); else patunganSet.delete(cb.dataset.reqPatungan);
+      });
+    });
+  }
+  if(mode==='patungan') wireReqPatunganChecks();
+
+  document.querySelectorAll("#reqModeTabs [data-mode]").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      mode = btn.dataset.mode;
+      document.querySelectorAll("#reqModeTabs [data-mode]").forEach(b=>b.classList.toggle("active", b===btn));
+      renderAdminWrap();
+    });
+  });
+
+  document.getElementById("reqSave").addEventListener("click", ()=>{
+    const ket = document.getElementById("reqKet").value.trim();
+    const nominal = Number(document.getElementById("reqNominal").value)||0;
+    const tgl = document.getElementById("reqTgl").value;
+    const pemohon = document.getElementById("reqPemohon").value.trim();
+    if(!ket){ toast("Keterangan wajib diisi","err"); return; }
+    if(nominal<=0){ toast("Nominal harus lebih dari 0","err"); return; }
+    let admins = [];
+    if(mode==='solo'){
+      const sel = document.getElementById("reqSoloAdmin").value;
+      if(!sel){ toast("Pilih admin","err"); return; }
+      admins = [sel];
+    } else {
+      admins = [...patunganSet];
+      if(admins.length===0){ toast("Pilih minimal 1 admin untuk patungan","err"); return; }
+    }
+    existing.keterangan = ket;
+    existing.nominal = nominal;
+    existing.tgl = tgl || existing.tgl;
+    existing.pemohon = pemohon || "Tamu";
+    existing.mode = mode;
+    existing.admins = admins;
+    saveRequests(DB.requests);
+    toast("Pengajuan diperbarui");
+    closeModal();
+    refreshAdminContent();
+  });
+}
+
 /* ---------------- BIND ADMIN ---------------- */
 function refreshAdminContent(){
   document.getElementById("adminContent").innerHTML = adminContentHtml();
@@ -1575,8 +1719,8 @@ function bindAdmin(){
   document.getElementById("themeBtnA").addEventListener("click", ()=>{ toggleTheme(); render(); });
   document.getElementById("viewGuestBtn").addEventListener("click", ()=> goto("/"));
   document.getElementById("themeBtnM")?.addEventListener("click", ()=>{ toggleTheme(); render(); });
-  document.getElementById("mAdminExportExcel")?.addEventListener("click", ()=> exportExcel(getFilteredTxList(true)));
-  document.getElementById("mAdminExportPdf")?.addEventListener("click", ()=> exportPdf(getFilteredTxList(true)));
+  document.getElementById("mAdminExportExcel")?.addEventListener("click", ()=>{ exportExcel(getFilteredTxList(true)); closeAdminMobileMenu(); });
+  document.getElementById("mAdminExportPdf")?.addEventListener("click", ()=>{ exportPdf(getFilteredTxList(true)); closeAdminMobileMenu(); });
   document.getElementById("viewGuestBtnM")?.addEventListener("click", ()=> goto("/"));
   const doLogout = ()=>{
     localStorage.removeItem(LS_KEYS.auth);
@@ -1585,12 +1729,26 @@ function bindAdmin(){
   };
   document.getElementById("logoutBtn").addEventListener("click", doLogout);
   document.getElementById("logoutBtnM")?.addEventListener("click", doLogout);
+  document.getElementById("adminHamburgerBtn")?.addEventListener("click", (e)=>{
+    e.stopPropagation();
+    document.getElementById("adminMobileMenuPanel")?.classList.toggle("open");
+  });
   document.querySelectorAll("[data-sec]").forEach(btn=>{
-    btn.addEventListener("click", ()=>{ state.adminSection = btn.dataset.sec; state.filterText=""; state.filterAdmin=""; state.filterMonth=""; refreshAdminContent(); syncNavActive(); });
+    btn.addEventListener("click", ()=>{
+      state.adminSection = btn.dataset.sec; state.filterText=""; state.filterAdmin=""; state.filterMonth="";
+      refreshAdminContent(); syncNavActive(); closeAdminMobileMenu();
+    });
   });
   document.getElementById("modalOverlay").addEventListener("click", e=>{ if(e.target.id==="modalOverlay") closeModal(); });
   refreshAdminContent();
 }
+function closeAdminMobileMenu(){ document.getElementById("adminMobileMenuPanel")?.classList.remove("open"); }
+document.addEventListener("click", (e)=>{
+  const panel = document.getElementById("adminMobileMenuPanel");
+  if(panel && panel.classList.contains("open") && !panel.contains(e.target) && !e.target.closest("#adminHamburgerBtn")){
+    closeAdminMobileMenu();
+  }
+});
 
 function syncNavActive(){
   document.querySelectorAll("[data-sec]").forEach(b=>b.classList.toggle("active", b.dataset.sec===state.adminSection));
@@ -1670,6 +1828,40 @@ function bindAdminContentEvents(){
       } else {
         m.status = "active"; delete m.offSejak;
         saveMembers(DB.members); toast(`${m.nama} diaktifkan kembali`); refreshAdminContent();
+      }
+    });
+  });
+  document.querySelectorAll("[data-del-member]").forEach(b=>{
+    b.addEventListener("click", ()=>{
+      const m = memberById(b.dataset.delMember);
+      if(!m) return;
+      const hasTx = DB.tx.some(t=>t.admin===m.id);
+      const warn = hasTx
+        ? `${m.nama} masih punya histori transaksi. Menghapus anggota ini TIDAK menghapus histori transaksinya, tapi namanya tidak akan bisa dipilih lagi untuk transaksi baru. Lanjutkan hapus?`
+        : `Hapus anggota ${m.nama}? Tindakan ini tidak bisa dibatalkan.`;
+      if(confirm(warn)){
+        DB.members = DB.members.filter(x=>x.id!==m.id);
+        saveMembers(DB.members);
+        toast(`${m.nama} dihapus dari daftar anggota`);
+        refreshAdminContent();
+      }
+    });
+  });
+
+  // pengajuan pembelian: edit / hapus
+  document.querySelectorAll("[data-edit-req]").forEach(b=>{
+    b.addEventListener("click", ()=>{
+      const r = DB.requests.find(x=>x.id===b.dataset.editReq);
+      if(r) { openModal(reqFormModal(r)); bindReqForm(r); }
+    });
+  });
+  document.querySelectorAll("[data-del-req]").forEach(b=>{
+    b.addEventListener("click", ()=>{
+      if(confirm("Hapus pengajuan ini? Tindakan ini tidak bisa dibatalkan.")){
+        DB.requests = DB.requests.filter(x=>x.id!==b.dataset.delReq);
+        saveRequests(DB.requests);
+        toast("Pengajuan dihapus");
+        refreshAdminContent();
       }
     });
   });
@@ -2010,10 +2202,71 @@ function rollMonoDice(){
 }
 
 /* ============================================================
+   BOOT LOADER — splash 7 detik, frasa ala programmer + koin jatuh
+============================================================ */
+const BOOT_PHRASES = [
+  "Menginisialisasi kernel sistem…",
+  "Mengompilasi modul enkripsi AES-256…",
+  "Menyinkronkan ledger transaksi terdistribusi…",
+  "Membangun indeks basis data real-time…",
+  "Mengoptimalkan query kas multi-thread…",
+  "Memvalidasi checksum integritas data…",
+  "Menjalankan garbage collector memori…",
+  "Menghubungkan node microservices…",
+  "Menyusun cache neural-index UI…",
+  "Merender antarmuka reaktif…",
+  "Mengunci sesi dengan token keamanan…",
+  "Menstabilkan protokol sinkronisasi cloud…",
+  "Menghitung ulang saldo dengan presisi ganda…",
+  "Mengaktifkan lapisan observability sistem…",
+  "Memuat komponen UI secara asinkron…",
+  "Kompilasi selesai. Menyiapkan tampilan…",
+];
+function runBootLoader(){
+  const el = document.getElementById("bootLoader");
+  if(!el) return;
+  const DURATION = 10000;
+  const fill = document.getElementById("bootProgressFill");
+  const pct = document.getElementById("bootPercent");
+  const phraseEl = document.getElementById("bootPhrase");
+  const start = performance.now();
+  let phraseIdx = 0;
+
+  function setPhrase(i){
+    if(!phraseEl) return;
+    phraseEl.style.animation = "none";
+    void phraseEl.offsetWidth; // reflow biar animasi restart
+    phraseEl.style.animation = "";
+    phraseEl.textContent = BOOT_PHRASES[i % BOOT_PHRASES.length];
+  }
+  setPhrase(0);
+  const phraseTimer = setInterval(()=>{
+    phraseIdx++;
+    setPhrase(phraseIdx);
+  }, 620);
+
+  function tick(now){
+    const elapsed = now - start;
+    const p = Math.min(100, Math.round((elapsed/DURATION)*100));
+    if(fill) fill.style.width = p + "%";
+    if(pct) pct.textContent = p + "%";
+    if(elapsed < DURATION){
+      requestAnimationFrame(tick);
+    } else {
+      clearInterval(phraseTimer);
+      el.classList.add("hide");
+      setTimeout(()=>{ el.remove(); }, 700);
+    }
+  }
+  requestAnimationFrame(tick);
+}
+
+/* ============================================================
    INIT
 ============================================================ */
 applyTheme();
 render();
+runBootLoader();
 
 let _resizeTimer = null;
 let _lastWidth = window.innerWidth;

@@ -4,12 +4,68 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>JHT KAS Adm PRG</title>
+  
+  <!-- Primary Meta -->
+<title>Kas JHT | Kelola Kas Lebih Mudah & Transparan</title>
+
+<meta name="title" content="Kas JHT | Sistem Pengelolaan Kas Digital Modern">
+
+<meta name="description" content="Kelola pemasukan, pengeluaran, saldo, dan riwayat transaksi dengan lebih mudah melalui Kas JHT. Sistem kas digital yang modern, praktis, transparan, dan mudah digunakan.">
+
+<!-- Open Graph / WhatsApp / Facebook -->
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://web189.github.io/KasJHT/">
+
+<meta property="og:title" content="💰 Kas JHT | Kelola Kas Lebih Mudah & Transparan">
+
+<meta property="og:description" content="Pantau pemasukan, pengeluaran, saldo, dan seluruh riwayat transaksi dalam satu sistem digital. Praktis, modern, rapi, transparan, dan mudah diakses kapan saja.">
+
+<meta property="og:image" content="https://web189.github.io/KasJHT/preview.jpg">
+
+<meta property="og:image:secure_url" content="https://web189.github.io/KasJHT/preview.jpg">
+
+<meta property="og:image:type" content="image/jpeg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+
+<!-- Twitter / X -->
+<meta name="twitter:card" content="summary_large_image">
+
+<meta name="twitter:title" content="Kas JHT | Sistem Kas Digital Modern">
+
+<meta name="twitter:description" content="Satu sistem untuk memantau pemasukan, pengeluaran, saldo, grafik, dan riwayat transaksi. Kelola kas lebih praktis, rapi, dan transparan.">
+
+<meta name="twitter:image" content="https://web189.github.io/KasJHT/preview.jpg">
+  
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Mono:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="./style.css">
+<link rel="icon" type="image/png" href="./assets/piggy-sm.png">
 </head>
 <body data-theme="dark">
+
+<!-- ============ BOOT LOADER (splash 7 detik) ============ -->
+<div id="bootLoader" class="boot-loader">
+  <div class="boot-inner">
+    <div class="boot-piggy-wrap">
+      <span class="boot-coin" style="--d:0;--x:-34px"></span>
+      <span class="boot-coin" style="--d:1;--x:-10px"></span>
+      <span class="boot-coin" style="--d:2;--x:14px"></span>
+      <span class="boot-coin" style="--d:3;--x:36px"></span>
+      <span class="boot-coin" style="--d:4;--x:-22px"></span>
+      <span class="boot-coin" style="--d:5;--x:2px"></span>
+      <span class="boot-coin" style="--d:6;--x:26px"></span>
+      <div class="boot-piggy-glow"></div>
+      <img src="./assets/piggy.png" class="boot-piggy-img" alt="JHT KAS">
+    </div>
+    <div class="boot-progress-track"><div class="boot-progress-fill" id="bootProgressFill"></div></div>
+    <div class="boot-percent" id="bootPercent">0%</div>
+    <div class="boot-phrase-wrap"><div class="boot-phrase" id="bootPhrase">Menginisialisasi sistem…</div></div>
+    <div class="boot-footer">Website Developer <a href="https://benyoriki.com/" target="_blank" rel="noopener">benyoriki.com</a></div>
+  </div>
+</div>
+
 <div id="app"></div>
 
 <!-- ============ GLOBAL GAME MODAL (persist across route renders) ============ -->
@@ -54,6 +110,8 @@
 <symbol id="ic-code" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M8 8l-4 4 4 4M16 8l4 4-4 4M13.5 5l-3 14"/></symbol>
 <symbol id="ic-dice" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3.5" y="3.5" width="17" height="17" rx="4"/><circle cx="8" cy="8" r="1.15" fill="currentColor" stroke="none"/><circle cx="16" cy="8" r="1.15" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.15" fill="currentColor" stroke="none"/><circle cx="8" cy="16" r="1.15" fill="currentColor" stroke="none"/><circle cx="16" cy="16" r="1.15" fill="currentColor" stroke="none"/></g></symbol>
 <symbol id="ic-alert" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5L22 20.5H2z"/><path d="M12 9.5v5M12 17.5h.01"/></g></symbol>
+<symbol id="ic-eye" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.8-7 10-7 10 7 10 7-3.8 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></g></symbol>
+<symbol id="ic-eye-off" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l18 18"/><path d="M10.6 5.2A9.8 9.8 0 0112 5c6.2 0 10 7 10 7a15.6 15.6 0 01-3.2 4.1M6.6 6.6C4 8.3 2 12 2 12s3.8 7 10 7a9.7 9.7 0 004-.85"/><path d="M9.9 9.9a3 3 0 004.2 4.2"/></g></symbol>
 </defs>
 </svg>
 
