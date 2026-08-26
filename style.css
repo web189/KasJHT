@@ -1,0 +1,872 @@
+/* ============================================================
+   JHT KAS Adm PRG — design tokens
+   Konsep: buku kas gudang, tab folder berwarna per admin,
+   angka bergaya ledger (mono, tabular).
+============================================================ */
+:root{
+  --font-display:'Space Grotesk',sans-serif;
+  --font-mono:'IBM Plex Mono',monospace;
+  --font-body:'Plus Jakarta Sans',sans-serif;
+
+  --amber:#F0A93A;
+  --amber-ink:#5C3D0A;
+  --blue:#2C5A88;
+  --rust:#B34632;
+  --forest:#3D7A5D;
+
+  --radius-sm:6px;
+  --radius-md:12px;
+  --radius-lg:20px;
+  --shadow-soft:0 8px 24px -12px rgba(20,24,26,.25);
+  --shadow-lift:0 16px 40px -16px rgba(20,24,26,.35);
+  --ease:cubic-bezier(.22,1,.36,1);
+}
+:root[data-theme="light"]{
+  --bg:#EEF0EA;
+  --bg-elev:#FFFFFF;
+  --bg-elev-2:#F6F7F3;
+  --ink:#1A1E23;
+  --ink-soft:#5A6360;
+  --ink-faint:#8B948F;
+  --border:#DBDFD6;
+  --border-soft:#E7EAE3;
+  --amber-soft:#FBEBCB;
+  --forest-soft:#DCEEE3;
+  --rust-soft:#F6E1DA;
+}
+:root[data-theme="dark"]{
+  --bg:#12161A;
+  --bg-elev:#1B2024;
+  --bg-elev-2:#20262A;
+  --ink:#ECEFEA;
+  --ink-soft:#A6AFA9;
+  --ink-faint:#6D7671;
+  --border:#2A3136;
+  --border-soft:#232A2E;
+  --amber-soft:#3A2F16;
+  --forest-soft:#1D3128;
+  --rust-soft:#3A241E;
+}
+
+*,*::before,*::after{box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{
+  margin:0;
+  background:
+    radial-gradient(circle, color-mix(in srgb, var(--ink) 6%, transparent) 1px, transparent 1.4px) 0 0/22px 22px,
+    var(--bg);
+  color:var(--ink);
+  font-family:var(--font-body);
+  -webkit-font-smoothing:antialiased;
+  transition:background-color .35s var(--ease),color .35s var(--ease);
+  min-height:100vh;
+  background-attachment:fixed;
+}
+h1,h2,h3,h4{font-family:var(--font-display);margin:0;letter-spacing:-0.01em;}
+.mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1;}
+button{font-family:inherit;}
+::selection{background:var(--amber);color:#1A1E23;}
+a{color:inherit;}
+
+/* focus visibility for accessibility */
+:focus-visible{outline:2px solid var(--amber);outline-offset:2px;border-radius:4px;}
+
+@media (prefers-reduced-motion: reduce){
+  *{animation-duration:.001ms !important;transition-duration:.001ms !important;}
+}
+
+/* ---------- layout shells ---------- */
+#app{display:flex;flex-direction:column;min-height:100vh;}
+.container{max-width:1180px;margin:0 auto;padding:0 20px;width:100%;}
+
+/* ---------- topbar ---------- */
+.topbar{
+  position:sticky;top:0;z-index:40;
+  background:color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter:blur(10px);
+  border-bottom:1px solid var(--border);
+}
+.topbar::after{
+  content:"";position:absolute;left:0;right:0;bottom:-1px;height:1px;
+  background:linear-gradient(90deg,transparent,var(--amber) 30%,var(--forest) 60%,transparent);
+  opacity:.55;pointer-events:none;
+}
+.topbar-inner{
+  max-width:1180px;margin:0 auto;padding:14px 20px;
+  display:flex;align-items:center;gap:16px;
+}
+.brand{display:flex;align-items:center;gap:10px;margin-right:auto;text-decoration:none;color:var(--ink);}
+.brand-mark{
+  width:36px;height:36px;
+  background:linear-gradient(155deg,var(--amber),#d98a2a);
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--font-mono);font-weight:700;font-size:13px;color:#241a06;
+  box-shadow:var(--shadow-soft), 0 0 0 3px color-mix(in srgb, var(--amber) 14%, transparent);
+  flex-shrink:0;
+  clip-path:polygon(8px 0,100% 0,100% 100%,0 100%,0 8px);
+  position:relative;
+  transition:box-shadow .25s var(--ease), transform .25s var(--ease);
+}
+.brand:hover .brand-mark{transform:translateY(-1px) rotate(-2deg);box-shadow:var(--shadow-lift), 0 0 0 4px color-mix(in srgb, var(--amber) 22%, transparent);}
+.brand-mark::after{
+  content:"";position:absolute;top:0;left:0;width:8px;height:8px;
+  background:rgba(0,0,0,.22);clip-path:polygon(0 0,100% 0,0 100%);
+}
+.brand-text{display:flex;flex-direction:column;line-height:1.15;}
+.brand-text b{font-size:15px;font-weight:700;}
+.brand-text span{font-size:11px;color:var(--ink-faint);letter-spacing:.04em;}
+
+.topbar-actions{display:flex;align-items:center;gap:10px;}
+.hamburger-btn{display:flex;position:relative;}
+.mobile-menu-panel{
+  display:none;position:absolute;right:16px;top:64px;z-index:45;
+  background:color-mix(in srgb, var(--bg-elev) 96%, transparent);
+  backdrop-filter:blur(14px);
+  border:1px solid var(--border);border-radius:16px;
+  box-shadow:var(--shadow-lift), 0 0 0 1px color-mix(in srgb, var(--amber) 8%, transparent);
+  padding:10px;min-width:236px;max-width:calc(100vw - 24px);
+  max-height:calc(100vh - 84px);overflow-y:auto;
+  flex-direction:column;gap:2px;
+}
+.mobile-menu-panel::-webkit-scrollbar{width:6px;}
+.mobile-menu-panel::-webkit-scrollbar-thumb{background:var(--border);border-radius:6px;}
+.mobile-menu-panel.open{display:flex;animation:cardIn .22s var(--ease);}
+.mm-item{
+  display:flex;align-items:center;gap:11px;width:100%;text-align:left;
+  border:none;background:transparent;color:var(--ink);font-weight:600;font-size:13.5px;
+  padding:10px 12px;border-radius:10px;cursor:pointer;
+  transition:background .16s var(--ease),transform .16s var(--ease),padding-left .16s var(--ease);
+  position:relative;
+}
+.mm-item:hover{background:var(--bg-elev-2);padding-left:15px;}
+.mm-item:active{transform:scale(.98);}
+.mm-item svg{width:16px;height:16px;flex-shrink:0;}
+.mm-item .mm-ico-wrap{
+  width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  background:var(--bg-elev-2);color:var(--ink-soft);transition:all .18s var(--ease);
+}
+.mm-item:hover .mm-ico-wrap{background:var(--amber-soft);color:var(--amber-ink);}
+[data-theme="dark"] .mm-item:hover .mm-ico-wrap{color:var(--amber);}
+.mm-item .mm-ext{margin-left:auto;color:var(--ink-faint);opacity:.7;}
+.mm-item .mm-badge{
+  margin-left:auto;background:var(--rust);color:#fff;font-size:10px;font-weight:700;
+  padding:2px 7px;border-radius:20px;
+}
+.mm-item .mm-chev{margin-left:auto;color:var(--ink-faint);transition:transform .2s var(--ease);}
+.mm-item.mm-expandable[aria-expanded="true"] .mm-chev{transform:rotate(90deg);}
+.mobile-menu-panel > *{flex-shrink:0;}
+.mm-submenu{
+  overflow:hidden;max-height:0;flex-shrink:0;transition:max-height .28s var(--ease);
+  display:flex;flex-direction:column;gap:1px;padding-left:14px;
+  border-left:2px solid var(--border-soft);margin:2px 0 2px 24px;
+}
+.mm-submenu.open{max-height:220px;}
+.mm-submenu .mm-item{font-size:12.8px;padding:8px 10px;flex-shrink:0;}
+.mm-submenu .mm-item .mm-ico-wrap{width:24px;height:24px;}
+.menu-dot{
+  position:absolute;top:6px;right:6px;width:8px;height:8px;border-radius:50%;
+  background:var(--rust);border:2px solid var(--bg-elev);
+  box-shadow:0 0 0 2px color-mix(in srgb, var(--rust) 35%, transparent);
+  animation:pulseDot 2.2s ease-in-out infinite;
+}
+@keyframes pulseDot{0%,100%{box-shadow:0 0 0 2px color-mix(in srgb, var(--rust) 35%, transparent);}50%{box-shadow:0 0 0 5px color-mix(in srgb, var(--rust) 12%, transparent);}}
+.mm-sep{height:1px;background:var(--border);margin:8px 4px;}
+.mm-label{font-size:10px;font-weight:700;color:var(--ink-faint);text-transform:uppercase;letter-spacing:.06em;padding:8px 12px 3px;}
+.mm-footer{
+  margin-top:6px;padding:12px 12px 8px;border-top:1px solid var(--border-soft);
+  font-size:11.5px;color:var(--ink-faint);text-align:center;line-height:1.6;
+}
+.mm-footer a{
+  color:var(--amber-ink);font-weight:700;text-decoration:none;position:relative;
+}
+[data-theme="dark"] .mm-footer a{color:var(--amber);}
+.mm-footer a:hover{text-decoration:underline;}
+@media (max-width:760px){
+  .export-row{display:none;}
+}
+@media (max-width:760px){
+  .topbar-actions{display:none;}
+}
+
+.icon-btn{
+  width:38px;height:38px;border-radius:10px;border:1px solid var(--border);
+  background:var(--bg-elev);color:var(--ink);cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:transform .3s var(--ease),background .2s;
+}
+.icon-btn.sm{width:28px;height:28px;border-radius:8px;}
+.icon-btn.sm svg{width:12px;height:12px;}
+.icon-btn:hover{background:var(--bg-elev-2);transform:translateY(-1px) rotate(-8deg);}
+.icon-btn svg{width:18px;height:18px;}
+
+.btn{
+  border:1px solid var(--border);background:var(--bg-elev);color:var(--ink);
+  padding:9px 16px;border-radius:10px;font-weight:600;font-size:13.5px;cursor:pointer;
+  display:inline-flex;align-items:center;gap:8px;
+  transition:transform .18s var(--ease),box-shadow .18s var(--ease),background .18s;
+}
+.btn:hover{transform:translateY(-1px);box-shadow:var(--shadow-soft);}
+.btn:active{transform:translateY(0);}
+.btn-primary{background:var(--amber);border-color:var(--amber);color:#241a06;}
+.btn-primary:hover{background:#e79c26;}
+.btn-ghost{background:transparent;}
+.btn-danger{color:var(--rust);border-color:var(--rust);background:transparent;}
+.btn-sm{padding:6px 11px;font-size:12.5px;border-radius:8px;}
+.btn svg{width:15px;height:15px;}
+
+/* ---------- sheet-style tab switcher (mirrors the user's own spreadsheet tabs) ---------- */
+.sheet-tabs{display:flex;gap:4px;background:var(--bg-elev-2);padding:4px;border-radius:11px;border:1px solid var(--border);}
+.sheet-tab{
+  border:none;background:transparent;color:var(--ink-soft);font-weight:600;font-size:13px;
+  padding:8px 14px;border-radius:8px;cursor:pointer;transition:all .2s var(--ease);
+  font-family:var(--font-body);
+}
+.sheet-tab.active{background:var(--bg-elev);color:var(--ink);box-shadow:var(--shadow-soft);}
+
+/* ============================================================
+   Signature element: "folder tab" — die-cut index tab shape
+   used for admin colour chips, sidebar nav, member cards.
+============================================================ */
+.tab-chip{
+  position:relative;display:inline-flex;align-items:center;gap:7px;
+  padding:6px 12px 6px 10px;border-radius:0 9px 9px 0;
+  clip-path:polygon(10px 0,100% 0,100% 100%,0 100%,0 10px);
+  font-weight:600;font-size:12.5px;color:#fff;
+  box-shadow:0 3px 8px -3px rgba(0,0,0,.35);
+}
+.tab-dot{width:9px;height:9px;border-radius:2px;flex-shrink:0;}
+
+/* avatar inisial anggota (dipakai di legend & kartu anggota) */
+.avatar{
+  width:30px;height:30px;border-radius:9px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--font-display);font-weight:700;font-size:11.5px;color:#fff;
+  letter-spacing:.01em;
+  box-shadow:0 0 0 2px var(--bg-elev), 0 4px 10px -3px rgba(0,0,0,.45);
+  text-shadow:0 1px 1px rgba(0,0,0,.25);
+}
+.avatar.sm{width:22px;height:22px;font-size:9.5px;border-radius:7px;}
+
+/* ============================================================
+   Signature #2: lubang ring-binder di tepi panel ledger utama —
+   memperkuat kesan "buku kas" fisik yang dibuka setiap shift.
+============================================================ */
+.panel-ledger{position:relative;padding-left:34px !important;}
+.panel-ledger::before{
+  content:"";position:absolute;left:14px;top:20px;bottom:20px;width:1px;
+  background:repeating-linear-gradient(var(--border) 0 2px, transparent 2px 4px);
+}
+.panel-ledger::after{
+  content:"";position:absolute;left:9px;top:20px;bottom:20px;width:11px;
+  background-image:radial-gradient(circle, var(--bg) 3.5px, var(--border) 4px, transparent 4.5px);
+  background-size:11px 34px;background-repeat:repeat-y;
+}
+@media (max-width:640px){ .panel-ledger{padding-left:20px !important;} .panel-ledger::before,.panel-ledger::after{display:none;} }
+
+/* ============================================================
+   Signature #3: badge status bergaya cap/stempel tinta buku kas.
+============================================================ */
+.stamp{
+  display:inline-flex;align-items:center;gap:5px;
+  font-family:var(--font-display);font-weight:700;font-size:11px;letter-spacing:.06em;text-transform:uppercase;
+  padding:4px 12px;border-radius:20px;border:1.5px solid currentColor;
+  position:relative;transform:rotate(-4deg);
+}
+.stamp::before{content:"";position:absolute;inset:2px;border:1px solid currentColor;border-radius:16px;opacity:.5;}
+.stamp.active{color:var(--forest);}
+.stamp.off{color:var(--rust);}
+.stamp.approved{color:var(--forest);}
+.stamp.rejected{color:var(--rust);}
+.stamp.pending{color:var(--amber-ink,#8a5a12);}
+
+/* stempel dekoratif di hero */
+.hero-stamp{
+  position:absolute;top:18px;right:0;width:88px;height:88px;border-radius:50%;
+  border:2px dashed color-mix(in srgb, var(--forest) 55%, var(--border));
+  display:flex;align-items:center;justify-content:center;text-align:center;
+  transform:rotate(-12deg);color:var(--forest);opacity:.8;
+  font-family:var(--font-display);font-weight:700;font-size:10.5px;letter-spacing:.04em;text-transform:uppercase;
+  line-height:1.25;padding:8px;
+}
+@media (max-width:760px){ .hero-stamp{display:none;} }
+
+/* ============================================================
+   Animasi masuk bertahap (stagger) — halus, ringan, tidak berat
+============================================================ */
+.reveal{opacity:0;animation:revealIn .55s var(--ease) forwards;}
+@keyframes revealIn{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+.card-grid .member-card{animation:revealIn .5s var(--ease) both;}
+.card-grid .member-card:nth-child(n){animation-delay:calc(.03s * var(--i, 0));}
+
+.stat-grid .stat-card:nth-child(1){animation-delay:.02s;}
+.stat-grid .stat-card:nth-child(2){animation-delay:.07s;}
+.stat-grid .stat-card:nth-child(3){animation-delay:.12s;}
+.stat-grid .stat-card:nth-child(4){animation-delay:.17s;}
+
+/* ============================================================
+   GUEST VIEW
+============================================================ */
+.hero{padding:34px 0 10px;position:relative;}
+.hero-top{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;flex-wrap:wrap;margin-bottom:22px;position:relative;}
+.hero-eyebrow{font-size:12.5px;color:var(--ink-faint);font-weight:600;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;}
+.hero h1{font-size:26px;}
+.hero-sub{color:var(--ink-soft);font-size:14px;margin-top:6px;max-width:52ch;}
+.hero-avatars{display:flex;margin-top:16px;}
+.hero-av{
+  width:32px;height:32px;font-size:12px;border-radius:50%;
+  border:2.5px solid var(--bg);margin-right:-10px;
+  box-shadow:0 2px 6px rgba(0,0,0,.15);
+  transition:transform .2s var(--ease);
+}
+.hero-av:hover{transform:translateY(-3px);z-index:5;}
+
+/* ---- kartu grafik trading animasi (dekoratif) ---- */
+.hero-chart{
+  position:relative;margin-top:16px;border:1px solid var(--border);border-radius:14px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--bg-elev) 94%, transparent), var(--bg-elev-2)),
+    repeating-linear-gradient(90deg, transparent 0 39px, color-mix(in srgb, var(--ink) 3%, transparent) 39px 40px);
+  overflow:hidden;height:130px;box-shadow:var(--shadow-soft);
+}
+.hero-chart::before{
+  content:"";position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(100deg, transparent 30%, color-mix(in srgb, var(--amber) 7%, transparent) 48%, transparent 65%);
+  background-size:220% 100%;
+  animation:heroSheen 5.5s ease-in-out infinite;
+}
+@keyframes heroSheen{0%{background-position:120% 0;}100%{background-position:-40% 0;}}
+.hero-chart-svg{width:100%;height:100%;display:block;position:relative;z-index:1;}
+.hero-chart-svg rect,.hero-chart-svg line,.hero-chart-svg polyline{transition:y .5s var(--ease), height .5s var(--ease);}
+.hero-chart-tag{
+  position:absolute;top:10px;left:12px;z-index:2;display:flex;align-items:center;gap:6px;
+  font-size:10.5px;font-weight:700;letter-spacing:.05em;color:var(--ink-soft);
+  background:color-mix(in srgb, var(--bg-elev) 65%, transparent);backdrop-filter:blur(4px);
+  padding:4px 9px;border-radius:20px;border:1px solid var(--border-soft);
+}
+.hct-dot{width:6px;height:6px;border-radius:50%;background:var(--forest);flex-shrink:0;animation:pulseDot2 1.6s ease-in-out infinite;}
+@keyframes pulseDot2{0%,100%{opacity:1;box-shadow:0 0 0 0 color-mix(in srgb, var(--forest) 40%, transparent);}50%{opacity:.5;box-shadow:0 0 0 4px transparent;}}
+.hero-chart-price{
+  position:absolute;top:9px;right:12px;z-index:2;display:flex;flex-direction:column;align-items:flex-end;gap:1px;
+  background:color-mix(in srgb, var(--bg-elev) 65%, transparent);backdrop-filter:blur(4px);
+  padding:4px 10px;border-radius:10px;border:1px solid var(--border-soft);
+}
+.hcp-val{font-size:15px;font-weight:700;}
+.hcp-chg{font-size:10.5px;font-weight:700;}
+.hero-chart-range{
+  position:absolute;bottom:8px;left:12px;z-index:2;display:flex;gap:10px;
+  font-size:10px;font-weight:600;color:var(--ink-faint);
+}
+.hero-chart-range b{font-weight:700;color:var(--ink-soft);}
+.hero-live-ring{transform-origin:center;transform-box:fill-box;animation:heroLiveRing 1.8s ease-out infinite;}
+@keyframes heroLiveRing{0%{transform:scale(.5);opacity:.9;}100%{transform:scale(2.1);opacity:0;}}
+@media (max-width:640px){
+  .hero-chart{height:98px;}
+  .hcp-val{font-size:13px;}
+  .hero-chart-tag{font-size:9.5px;padding:3px 8px;}
+  .hero-chart-price{padding:3px 8px;}
+  .hero-chart-range{font-size:9px;gap:8px;bottom:6px;left:10px;}
+}
+
+.stat-card{
+  background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius-lg);
+  padding:20px 22px;position:relative;overflow:hidden;
+  transition:transform .25s var(--ease),box-shadow .25s var(--ease);
+}
+.stat-card:hover{transform:translateY(-3px);box-shadow:var(--shadow-lift);}
+.stat-card .label{font-size:12px;color:var(--ink-faint);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;}
+.stat-card .value{font-size:26px;font-weight:700;}
+.stat-card.hero-stat .value{font-size:32px;}
+.stat-card .delta{font-size:12px;margin-top:6px;color:var(--ink-soft);}
+.stat-card.accent{background:linear-gradient(155deg,var(--amber-soft),var(--bg-elev) 70%);}
+.stat-card.accent::after{
+  content:"";position:absolute;top:-30px;right:-30px;width:110px;height:110px;border-radius:50%;
+  background:radial-gradient(circle,var(--amber) 0%,transparent 70%);opacity:.25;
+}
+
+.split{display:grid;grid-template-columns:1.15fr 1fr;gap:16px;margin-bottom:22px;align-items:stretch;}
+.panel{background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px 22px;}
+.panel-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;gap:10px;flex-wrap:wrap;}
+.panel-head h3{font-size:15px;}
+.panel-head .hint{font-size:12px;color:var(--ink-faint);}
+
+.panel-head-toggle{cursor:pointer;user-select:none;border-radius:10px;margin:-6px -8px 14px;padding:6px 8px;transition:background .15s var(--ease);}
+.panel-head-toggle:hover{background:var(--bg-elev-2);}
+.panel-head-toggle:focus-visible{outline:2px solid var(--amber);outline-offset:2px;}
+.panel-head-hint{
+  display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;color:var(--ink-faint);
+  white-space:nowrap;
+}
+.panel-head-chev{display:flex;transition:transform .25s var(--ease);color:var(--ink-faint);}
+.panel-head-chev svg{width:13px;height:13px;}
+.panel-head-toggle[aria-expanded="true"] .panel-head-chev{transform:rotate(90deg);}
+.ledger-filter-collapse{overflow:hidden;max-height:0;transition:max-height .32s var(--ease);}
+.ledger-filter-collapse.open{max-height:300px;}
+
+
+.filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;}
+.filters input,.filters select{
+  background:var(--bg-elev-2);border:1px solid var(--border);color:var(--ink);
+  padding:9px 12px;border-radius:9px;font-size:13px;font-family:var(--font-body);
+}
+.filters input{flex:1;min-width:140px;}
+
+/* ============================================================
+   Komponen kecil yang masih dipakai tabel transaksi
+============================================================ */
+.tx-shift-chip{
+  display:inline-block;font-size:10px;font-weight:700;background:var(--bg-elev-2);
+  border:1px solid var(--border);padding:2px 8px;border-radius:20px;color:var(--ink-soft);
+  margin-right:7px;vertical-align:middle;
+}
+
+.empty-row{text-align:center;color:var(--ink-faint);padding:30px 12px;font-size:13px;}
+
+/* tabel ringkas untuk Laporan Bulanan (data rekap, bukan daftar transaksi) */
+.ledger{width:100%;border-collapse:separate;border-spacing:0;font-size:13.5px;}
+.ledger thead th{
+  text-align:left;font-size:11px;color:var(--ink-faint);text-transform:uppercase;letter-spacing:.05em;
+  font-weight:700;padding:0 12px 8px;border-bottom:1px solid var(--border);
+}
+.ledger tbody tr:hover{background:var(--bg-elev-2);}
+.ledger td{padding:11px 12px;border-bottom:1px solid var(--border-soft);vertical-align:middle;}
+
+/* ---------------- Peringkat setoran (leaderboard) ---------------- */
+.rank-list{display:flex;flex-direction:column;gap:7px;}
+.rank-row{
+  display:grid;
+  grid-template-columns:24px 30px 1fr auto;
+  align-items:center;
+  column-gap:9px;
+  background:var(--bg-elev-2);border:1px solid var(--border-soft);border-radius:10px;
+  padding:10px 12px;cursor:pointer;transition:all .18s var(--ease);
+}
+.rank-row:hover{border-color:var(--amber);}
+.rank-row.active{background:var(--amber-soft);border-color:var(--amber);}
+.rank-bar-track{
+  grid-column:1 / -1;grid-row:2;margin-top:9px;height:6px;border-radius:4px;
+  background:var(--border-soft);overflow:hidden;
+}
+.rank-bar-fill{
+  height:100%;border-radius:4px;background:var(--m-color,var(--amber));
+  width:0%;
+  animation:growBar .9s var(--ease) forwards;
+  animation-delay:calc(var(--i,0) * 70ms);
+}
+@keyframes growBar{ from{ width:0%; } to{ width:var(--target-width,0%); } }
+.rank-no{
+  width:22px;height:22px;line-height:22px;text-align:center;
+  border-radius:6px;font-family:var(--font-mono);font-weight:700;font-size:11px;
+  color:var(--ink-soft);background:var(--bg-elev);
+}
+.rank-no.top1{background:#F0A93A;color:#241a06;}
+.rank-no.top2{background:#C7CDD1;color:#20242A;}
+.rank-no.top3{background:#D69A6C;color:#2A1A0A;}
+.rank-name{font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.rank-name .off-tag{
+  font-weight:700;font-size:9.5px;color:var(--ink-soft);margin-left:7px;
+  background:var(--bg-elev);border:1px solid var(--border);padding:1px 7px;border-radius:20px;
+  text-transform:uppercase;letter-spacing:.03em;vertical-align:1px;
+}
+.rank-row.off-member{opacity:.6;}
+.rank-row.off-member .avatar{filter:grayscale(70%);opacity:.7;box-shadow:none;}
+.rank-row.off-member .rank-name{color:var(--ink-faint);text-decoration:line-through;text-decoration-color:var(--ink-faint);}
+.rank-row.off-member .off-tag{opacity:1;text-decoration:none;}
+.rank-row.off-member .rank-bar-fill{filter:grayscale(60%);}
+
+/* ============================================================
+   TABEL TRANSAKSI ALA-EXCEL — modern, scrollable 2 arah,
+   header sticky, dibangun dari <table> asli (paling stabil
+   dirender di semua perangkat/browser).
+============================================================ */
+.excel-wrap{
+  border:1px solid var(--border);border-radius:14px;overflow:auto;
+  max-height:620px; /* ~10 baris terlihat, sisanya digulir */
+  -webkit-overflow-scrolling:touch;
+  background:var(--bg-elev);
+}
+table.excel{border-collapse:collapse;width:100%;min-width:780px;font-size:13px;}
+table.excel thead th{
+  position:sticky;top:0;z-index:2;
+  background:var(--bg-elev-2);color:var(--ink-soft);
+  font-weight:700;font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;
+  text-align:left;padding:12px 14px;border-bottom:2px solid var(--border);white-space:nowrap;
+}
+table.excel tbody td{
+  padding:10px 14px;border-bottom:1px solid var(--border-soft);white-space:nowrap;
+  font-size:13px;
+}
+table.excel tbody tr:nth-child(even){background:var(--bg-elev-2);}
+table.excel tbody tr:hover{background:var(--amber-soft);}
+table.excel td.col-no{
+  text-align:center;color:var(--ink-faint);font-family:var(--font-mono);
+  background:var(--bg-elev-2);width:44px;
+}
+table.excel tbody tr:nth-child(even) td.col-no{background:var(--bg-elev);}
+table.excel td.col-name{white-space:nowrap;}
+.avatar-mini{
+  display:inline-block;width:20px;height:20px;border-radius:6px;
+  line-height:20px;text-align:center;font-size:9.5px;font-weight:700;color:#fff;
+  font-family:var(--font-display);vertical-align:middle;margin-right:8px;
+}
+table.excel td.col-amt{font-family:var(--font-mono);font-weight:700;text-align:right;}
+table.excel td.col-amt.in{color:var(--forest);}
+table.excel td.col-amt.out{color:var(--rust);}
+table.excel td.col-ket{color:var(--ink-soft);max-width:220px;overflow:hidden;text-overflow:ellipsis;}
+table.excel td .tx-shift-chip{white-space:nowrap;}
+
+.amt-pill{
+  display:inline-block;padding:4px 11px;border-radius:20px;
+  font-family:var(--font-mono);font-weight:700;font-size:12px;white-space:nowrap;
+}
+.amt-pill.in{background:var(--forest-soft);color:var(--forest);}
+.amt-pill.out{background:var(--rust-soft);color:var(--rust);}
+
+/* ---------------- tombol ekspor ---------------- */
+.export-row{display:flex;gap:8px;margin-bottom:12px;}
+.export-btn{background:var(--bg-elev-2);}
+.export-btn svg{width:14px;height:14px;}
+#gExportExcel, #aExportExcel{color:var(--forest);}
+#gExportPdf, #aExportPdf{color:var(--rust);}
+.export-hint{font-size:11.5px;color:var(--ink-faint);margin:0 0 12px;}
+
+/* ---------------- search input dengan ikon ---------------- */
+.search-wrap{position:relative;flex:1;min-width:140px;}
+.search-wrap svg{position:absolute;left:11px;top:50%;transform:translateY(-50%);width:14px;height:14px;color:var(--ink-faint);pointer-events:none;}
+.search-wrap input{width:100%;padding-left:32px !important;}
+
+/* ---------------- kontrol jumlah baris tabel ---------------- */
+.rows-toggle{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 12px;}
+.rows-toggle-label{font-size:12px;color:var(--ink-faint);font-weight:700;}
+
+/* ---------------- ringkasan saldo, satu baris, kompak ---------------- */
+.saldo-strip{
+  display:flex;align-items:center;justify-content:center;gap:10px;
+  background:var(--bg-elev);border:1px solid var(--border);border-radius:14px;
+  padding:14px 10px;margin-top:16px;overflow-x:auto;
+}
+.saldo-col{display:flex;flex-direction:column;align-items:center;gap:2px;min-width:0;flex-shrink:0;}
+.saldo-label{font-size:9.5px;color:var(--ink-faint);text-transform:uppercase;letter-spacing:.04em;font-weight:700;white-space:nowrap;}
+.saldo-fig{font-size:14px;font-weight:700;white-space:nowrap;}
+.saldo-col.in .saldo-fig{color:var(--forest);}
+.saldo-col.out .saldo-fig{color:var(--rust);}
+.saldo-col.final .saldo-fig{color:var(--ink);font-size:16px;}
+.saldo-op{font-size:16px;font-weight:700;color:var(--ink-faint);flex-shrink:0;}
+@media (max-width:420px){
+  .saldo-strip{gap:6px;padding:12px 8px;}
+  .saldo-fig{font-size:11.5px;}
+  .saldo-label{font-size:8px;}
+  .saldo-op{font-size:13px;}
+}
+.rank-figures{text-align:right;line-height:1.3;}
+.rank-amt{display:block;font-size:13px;font-weight:700;font-family:var(--font-mono);}
+.rank-pct{display:block;font-size:11px;color:var(--ink-faint);font-family:var(--font-mono);}
+
+/* ---------------- filter rentang waktu detail anggota ---------------- */
+
+.load-more{display:flex;justify-content:center;margin-top:14px;}
+
+footer.site-footer{
+  margin-top:auto;padding:22px 20px 30px;text-align:center;
+  font-size:12px;color:var(--ink-faint);border-top:1px solid var(--border);
+}
+
+/* ============================================================
+   LOGIN
+============================================================ */
+.login-screen{
+  min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;
+  background:
+    radial-gradient(circle at 15% 10%, color-mix(in srgb, var(--amber) 12%, transparent), transparent 45%),
+    var(--bg);
+}
+.login-card{
+  width:100%;max-width:380px;background:var(--bg-elev);border:1px solid var(--border);
+  border-radius:var(--radius-lg);padding:32px 28px;box-shadow:var(--shadow-lift);
+  animation:cardIn .5s var(--ease) both;
+}
+@keyframes cardIn{from{opacity:0;transform:translateY(10px) scale(.98);}to{opacity:1;transform:none;}}
+.login-brand{display:flex;flex-direction:column;align-items:center;gap:10px;margin-bottom:22px;}
+.field{margin-bottom:14px;}
+.field label{display:block;font-size:12.5px;font-weight:600;color:var(--ink-soft);margin-bottom:6px;}
+.field input,.field select,.field textarea{
+  width:100%;background:var(--bg-elev-2);border:1px solid var(--border);color:var(--ink);
+  padding:10px 12px;border-radius:9px;font-size:14px;font-family:var(--font-body);
+}
+.field textarea{resize:vertical;min-height:70px;}
+.field-hint{font-size:11.5px;color:var(--ink-faint);margin-top:6px;}
+
+/* ---------------- Pengajuan Pembelian: checklist patungan ---------------- */
+.check-list{display:flex;flex-direction:column;gap:7px;}
+.check-row{
+  display:flex;align-items:center;gap:9px;padding:9px 12px;
+  border:1px solid var(--border);border-radius:9px;cursor:pointer;
+  background:var(--bg-elev-2);transition:border-color .15s;
+}
+.check-row:hover{border-color:var(--amber);}
+.check-row input[type="checkbox"]{width:16px;height:16px;accent-color:var(--amber);flex-shrink:0;}
+.check-row-saldo{margin-left:auto;font-size:11.5px;color:var(--ink-faint);flex-shrink:0;}
+
+/* ---------------- Kartu peringatan saldo (Pengajuan Pembelian) ---------------- */
+.pg-saldo-note{
+  display:none;align-items:flex-start;gap:9px;margin:2px 0 14px;padding:11px 13px;
+  border-radius:11px;background:color-mix(in srgb, var(--rust) 12%, var(--bg-elev-2));
+  border:1px solid color-mix(in srgb, var(--rust) 35%, var(--border));
+  color:var(--rust);font-size:12.5px;line-height:1.5;
+}
+.pg-saldo-note.show{display:flex;animation:cardIn .2s var(--ease);}
+.pg-saldo-note svg{width:17px;height:17px;flex-shrink:0;margin-top:1px;}
+.pg-saldo-note span{color:var(--ink);}
+#pgSubmit:disabled{opacity:.45;cursor:not-allowed;pointer-events:none;}
+
+/* ---------------- Kartu Pengajuan / Aset ---------------- */
+.req-list{display:flex;flex-direction:column;gap:12px;}
+.req-card{
+  background:var(--bg-elev-2);border:1px solid var(--border-soft);border-radius:12px;
+  padding:14px 16px;
+}
+.req-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px;}
+.req-amt{font-size:15px;font-weight:700;}
+.req-ket{font-size:14px;font-weight:600;margin-bottom:6px;}
+.req-meta{display:flex;flex-wrap:wrap;gap:12px;font-size:12px;color:var(--ink-soft);}
+.req-actions{display:flex;gap:8px;margin-top:12px;}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--amber);}
+.login-error{color:var(--rust);font-size:12.5px;margin:-4px 0 12px;min-height:16px;}
+.login-hint{margin-top:16px;font-size:11.5px;color:var(--ink-faint);text-align:center;line-height:1.5;}
+.back-link{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--ink-soft);text-decoration:none;margin-bottom:16px;cursor:pointer;background:none;border:none;padding:0;}
+.back-link:hover{color:var(--ink);}
+
+/* ============================================================
+   ADMIN SHELL
+============================================================ */
+.admin-shell{display:flex;flex:1;min-height:100vh;}
+.sidebar{
+  width:216px;flex-shrink:0;background:var(--bg-elev);border-right:1px solid var(--border);
+  padding:18px 12px;display:flex;flex-direction:column;gap:4px;position:sticky;top:0;height:100vh;
+}
+.sidebar-brand{display:flex;align-items:center;gap:10px;padding:6px 8px 18px;}
+.nav-item{
+  display:flex;align-items:center;gap:10px;padding:10px 12px 10px 14px;border-radius:0 10px 10px 0;
+  color:var(--ink-soft);text-decoration:none;font-weight:600;font-size:13.5px;cursor:pointer;border:none;background:transparent;
+  text-align:left;width:100%;position:relative;transition:all .18s var(--ease);
+}
+.nav-item svg{width:17px;height:17px;flex-shrink:0;}
+.nav-item:hover{background:var(--bg-elev-2);color:var(--ink);}
+.nav-item.active{background:var(--amber-soft);color:var(--ink);}
+.nav-item.active::before{
+  content:"";position:absolute;left:0;top:8px;bottom:8px;width:4px;border-radius:0 3px 3px 0;background:var(--amber);
+}
+.nav-sep{height:1px;background:var(--border);margin:10px 4px;}
+.nav-foot{margin-top:auto;display:flex;flex-direction:column;gap:6px;}
+
+.admin-main{flex:1;padding:22px 26px 60px;min-width:0;}
+.admin-topline{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:20px;flex-wrap:wrap;}
+.admin-topline h2{font-size:20px;}
+.admin-topline .sub{color:var(--ink-soft);font-size:13px;margin-top:2px;}
+
+.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px;}
+.alert-banner{
+  display:flex;align-items:center;gap:10px;background:var(--amber-soft);border:1px solid var(--amber);
+  border-radius:12px;padding:12px 16px;margin-bottom:16px;cursor:pointer;font-size:13.5px;
+  transition:transform .15s var(--ease);
+}
+.alert-banner:hover{transform:translateY(-1px);}
+.alert-banner svg{width:18px;height:18px;color:#8a5a12;flex-shrink:0;}
+.alert-cta{margin-left:auto;font-weight:700;color:#8a5a12;white-space:nowrap;}
+.section{display:none;}
+.section.active{display:block;animation:secIn .35s var(--ease) both;}
+@keyframes secIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:none;}}
+
+.card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:14px;}
+.member-card{
+  background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius-md);
+  padding:16px;position:relative;overflow:hidden;transition:transform .2s var(--ease),box-shadow .2s var(--ease);
+}
+.member-card:hover{transform:translateY(-2px);box-shadow:var(--shadow-soft);}
+.member-card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--m-color,#999);}
+.member-head{display:grid;grid-template-columns:30px 1fr;column-gap:10px;align-items:center;margin-bottom:10px;}
+.member-head-text{min-width:0;}
+.member-head-text .mname{display:block;}
+.member-head-text .mrole{display:block;margin-top:1px;}
+.member-card .mname{font-weight:700;font-size:15px;margin-bottom:2px;}
+.member-card .mrole{font-size:11.5px;color:var(--ink-faint);margin-bottom:10px;}
+.member-card .mtotal{font-size:18px;font-weight:700;margin-bottom:2px;}
+.member-card .mlabel{font-size:11px;color:var(--ink-faint);margin-bottom:12px;}
+.status-badge{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;}
+.status-badge.active{background:color-mix(in srgb, var(--forest) 18%, transparent);color:var(--forest);}
+.status-badge.off{background:color-mix(in srgb, var(--ink-faint) 22%, transparent);color:var(--ink-soft);}
+.member-actions{display:flex;gap:6px;margin-top:12px;}
+
+/* modal */
+.modal-overlay{
+  position:fixed;inset:0;background:rgba(10,12,13,.55);backdrop-filter:blur(3px);
+  display:none;align-items:center;justify-content:center;z-index:100;padding:20px;
+}
+.modal-overlay.open{display:flex;animation:fadeIn .2s var(--ease);}
+@keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
+.modal{
+  background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius-lg);
+  width:100%;max-width:440px;padding:24px;box-shadow:var(--shadow-lift);
+  animation:cardIn .3s var(--ease);max-height:88vh;overflow-y:auto;
+}
+.modal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+.modal-head h3{font-size:16px;}
+.form-row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:18px;}
+.color-picker{display:flex;gap:8px;flex-wrap:wrap;}
+.color-swatch{width:26px;height:26px;border-radius:7px;cursor:pointer;border:2px solid transparent;transition:transform .15s;}
+.color-swatch.selected{border-color:var(--ink);transform:scale(1.1);}
+
+.toast-stack{position:fixed;bottom:20px;right:20px;z-index:200;display:flex;flex-direction:column;gap:8px;}
+.toast{
+  background:var(--bg-elev);border:1px solid var(--border);border-left:4px solid var(--forest);
+  padding:11px 16px;border-radius:9px;box-shadow:var(--shadow-lift);font-size:13px;font-weight:600;
+  animation:toastIn .3s var(--ease);min-width:200px;
+}
+.toast.err{border-left-color:var(--rust);}
+@keyframes toastIn{from{opacity:0;transform:translateX(20px);}to{opacity:1;transform:none;}}
+
+.mini-bar-wrap{display:flex;align-items:flex-end;gap:6px;height:130px;padding-top:10px;}
+.mini-bar{flex:1;border-radius:5px 5px 2px 2px;position:relative;transition:height .5s var(--ease);min-height:3px;}
+.mini-bar-labels{display:flex;gap:6px;margin-top:6px;}
+.mini-bar-labels span{flex:1;text-align:center;font-size:10px;color:var(--ink-faint);}
+
+.hidden{display:none !important;}
+
+/* ---------- responsive ---------- */
+@media (max-width:920px){
+  .split{grid-template-columns:1fr;}
+  .stat-strip{grid-template-columns:1fr;}
+  .stat-grid{grid-template-columns:repeat(2,1fr);}
+}
+/* ---------- bar khusus admin di mobile (topbar tetap + tab pill) ---------- */
+.admin-topbar-mobile{display:none;}
+.admin-tabs-mobile{display:none;}
+@media (max-width:760px){
+  .admin-shell{flex-direction:column;}
+  .sidebar{display:none;}
+  .admin-topbar-mobile{
+    display:flex;align-items:center;gap:8px;padding:12px 16px;
+    background:var(--bg-elev);border-bottom:1px solid var(--border);
+    position:sticky;top:0;z-index:36;
+  }
+  .admin-topbar-mobile .brand-text b{font-size:14px;}
+  .admin-tabs-mobile{
+    display:flex;gap:7px;overflow-x:auto;padding:10px 14px;
+    background:var(--bg-elev);border-bottom:1px solid var(--border);
+    position:sticky;top:60px;z-index:35;
+    scrollbar-width:none;
+  }
+  .admin-tabs-mobile::-webkit-scrollbar{display:none;}
+  .pill-tab{
+    flex-shrink:0;display:flex;align-items:center;gap:6px;
+    padding:8px 14px;border-radius:20px;border:1px solid var(--border);
+    background:var(--bg-elev-2);color:var(--ink-soft);font-weight:700;font-size:12.5px;
+    white-space:nowrap;cursor:pointer;transition:all .2s var(--ease);
+  }
+  .pill-tab svg{width:14px;height:14px;}
+  .pill-tab.active{background:var(--amber);border-color:var(--amber);color:#241a06;}
+  .admin-main{padding:16px 14px 50px;}
+  .stat-grid{grid-template-columns:repeat(2,1fr);}
+}
+
+@media (max-width:640px){
+  .topbar-inner{flex-wrap:wrap;}
+  .hero h1{font-size:21px;}
+}
+
+/* ============================================================
+   GAME CENTER (Catur / Ular Tangga / Monopoli)
+============================================================ */
+.modal-game{max-width:560px;width:100%;padding:20px;}
+.game-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px;}
+.game-head h3{font-size:16.5px;display:flex;align-items:center;gap:8px;}
+.game-sub{font-size:12px;color:var(--ink-soft);margin:-10px 0 14px;}
+.game-toolbar{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;}
+.game-turn-badge{
+  display:inline-flex;align-items:center;gap:7px;font-size:12.5px;font-weight:700;
+  padding:6px 12px;border-radius:20px;background:var(--bg-elev-2);border:1px solid var(--border);
+}
+.game-turn-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+
+/* ---- pilih game landing list ---- */
+.game-pick-list{display:flex;flex-direction:column;gap:10px;}
+.game-pick{
+  display:flex;align-items:center;gap:12px;padding:14px;border:1px solid var(--border);
+  border-radius:14px;background:var(--bg-elev-2);cursor:pointer;text-align:left;
+  transition:all .2s var(--ease);
+}
+.game-pick:hover{border-color:var(--amber);transform:translateY(-2px);box-shadow:var(--shadow-soft);}
+.game-pick .gp-emoji{font-size:26px;width:46px;height:46px;border-radius:12px;display:flex;align-items:center;justify-content:center;background:var(--bg-elev);flex-shrink:0;}
+.game-pick .gp-text b{display:block;font-size:14.5px;}
+.game-pick .gp-text span{display:block;font-size:12px;color:var(--ink-faint);margin-top:2px;}
+.game-pick svg{margin-left:auto;color:var(--ink-faint);flex-shrink:0;}
+
+/* ---- chess ---- */
+.chess-board{
+  display:grid;grid-template-columns:repeat(8,1fr);width:100%;aspect-ratio:1/1;
+  border-radius:12px;overflow:hidden;border:1px solid var(--border);box-shadow:var(--shadow-soft);
+}
+.chess-cell{
+  display:flex;align-items:center;justify-content:center;font-size:min(6.5vw,28px);
+  cursor:pointer;position:relative;user-select:none;transition:background .15s;
+}
+.chess-cell.light{background:color-mix(in srgb, var(--amber-soft) 55%, var(--bg-elev));}
+.chess-cell.dark{background:color-mix(in srgb, var(--forest-soft) 65%, var(--bg-elev-2));}
+.chess-cell.sel{box-shadow:inset 0 0 0 3px var(--amber);}
+.chess-cell.hint::after{content:"";position:absolute;width:22%;height:22%;border-radius:50%;background:color-mix(in srgb, var(--forest) 55%, transparent);}
+
+/* ---- ular tangga ---- */
+.ladder-board{
+  display:grid;grid-template-columns:repeat(10,1fr);width:100%;aspect-ratio:1/1;
+  border-radius:12px;overflow:hidden;border:1px solid var(--border);box-shadow:var(--shadow-soft);
+}
+.ladder-cell{
+  position:relative;display:flex;align-items:flex-start;justify-content:flex-start;
+  font-size:9px;font-weight:700;color:var(--ink-faint);padding:2px 3px;
+}
+.ladder-cell:nth-child(odd){background:var(--bg-elev-2);}
+.ladder-cell:nth-child(even){background:var(--bg-elev);}
+.ladder-cell.snake{background:color-mix(in srgb, var(--rust) 20%, var(--bg-elev-2)) !important;}
+.ladder-cell.ladder{background:color-mix(in srgb, var(--forest) 20%, var(--bg-elev-2)) !important;}
+.ladder-cell .lc-tag{position:absolute;bottom:2px;right:3px;font-size:9px;}
+.ladder-tokens{position:absolute;bottom:2px;left:2px;display:flex;flex-wrap:wrap;gap:2px;max-width:88%;}
+.game-token{width:9px;height:9px;border-radius:50%;border:1.4px solid var(--bg-elev);flex-shrink:0;}
+.game-token.lg{width:16px;height:16px;border-width:2px;}
+
+/* ---- monopoli ---- */
+.mono-board{
+  position:relative;display:grid;grid-template-columns:repeat(8,1fr);grid-template-rows:repeat(8,1fr);
+  width:100%;aspect-ratio:1/1;border-radius:12px;overflow:hidden;border:1px solid var(--border);
+  box-shadow:var(--shadow-soft);background:var(--bg-elev-2);
+}
+.mono-cell{
+  border:1px solid var(--border-soft);display:flex;align-items:center;justify-content:center;
+  text-align:center;font-size:7.4px;font-weight:700;line-height:1.15;color:var(--ink-soft);
+  padding:2px;position:relative;background:var(--bg-elev);
+}
+.mono-cell.corner{background:var(--amber-soft);color:var(--amber-ink);font-size:8px;}
+.mono-center{
+  grid-row:2/8;grid-column:2/8;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:8px;background:radial-gradient(circle at 50% 30%, color-mix(in srgb, var(--amber) 12%, transparent), transparent 70%);
+}
+.mono-center b{font-family:var(--font-display);font-size:15px;}
+
+/* ---- dice & players setup ---- */
+.dice-face{
+  width:52px;height:52px;border-radius:12px;background:var(--bg-elev);border:1px solid var(--border);
+  display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);padding:8px;
+  box-shadow:var(--shadow-soft);
+}
+.dice-face i{border-radius:50%;background:transparent;}
+.dice-face i.on{background:var(--ink);}
+.dice-face.rolling{animation:diceRoll .5s var(--ease);}
+@keyframes diceRoll{0%{transform:rotate(0);}50%{transform:rotate(180deg) scale(1.08);}100%{transform:rotate(360deg);}}
+.player-setup-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+.player-setup-row input{flex:1;}
+.player-dot{width:14px;height:14px;border-radius:50%;flex-shrink:0;}
+.game-legend{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px;font-size:12px;color:var(--ink-soft);}
+.game-legend span{display:inline-flex;align-items:center;gap:6px;}
+.win-banner{
+  margin-top:12px;padding:12px 14px;border-radius:12px;background:var(--forest-soft);color:var(--forest);
+  font-weight:700;font-size:13.5px;text-align:center;
+}
