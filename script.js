@@ -564,6 +564,34 @@ function depositRanking(){
     .sort((a,b)=>b.total-a.total); // urutan peringkat TETAP berdasarkan total kas masuk
 }
 
+// Rincian saldo anggota dalam bentuk 3 "chip" berwarna: Setor (hijau) − Keluar (merah) = Sisa Saldo (aksen).
+// compact=true dipakai di ringkasan dashboard admin (hanya chip Sisa Saldo yang tampil).
+function rankBreakdownHtml(r, compact){
+  const neg = r.saldo < 0;
+  const saldoChip = `
+    <div class="rb-chip rb-saldo ${neg?'is-neg':'is-pos'}">
+      <span class="rb-chip-label">Sisa Saldo</span>
+      <span class="rb-chip-val mono money-blur">${neg?'-':''}${rupiah(Math.abs(r.saldo))}</span>
+    </div>`;
+  if(compact){
+    return `<div class="rank-breakdown compact">${saldoChip}</div>`;
+  }
+  return `
+    <div class="rank-breakdown">
+      <div class="rb-chip rb-in">
+        <span class="rb-chip-label">Setor</span>
+        <span class="rb-chip-val mono money-blur">${rupiah(r.total)}</span>
+      </div>
+      <span class="rb-op">&minus;</span>
+      <div class="rb-chip rb-out">
+        <span class="rb-chip-label">Keluar</span>
+        <span class="rb-chip-val mono money-blur">${rupiah(r.keluar)}</span>
+      </div>
+      <span class="rb-op">=</span>
+      ${saldoChip}
+    </div>`;
+}
+
 /* ---------------- EKSPOR EXCEL & PDF ---------------- */
 function exportRowsPlain(list){
   return list.map((t,i)=>{
@@ -890,22 +918,15 @@ function renderGuest(){
             const widthPct = Math.max(4, (r.total/maxTotal*100));
             const isOff = m && m.status==='off';
             return `
-            <div class="rank-row ${isOff?'off-member':''}" data-member="${r.id}" style="--i:${i};--m-color:${colorOf(r.id)};--target-width:${widthPct}%;">
+            <div class="rank-row ${isOff?'off-member':''} ${i<3?'podium podium-'+(i+1):''}" data-member="${r.id}" style="--i:${i};--m-color:${colorOf(r.id)};--target-width:${widthPct}%;">
               <span class="rank-no ${i<3?'top'+(i+1):''}">${i+1}</span>
               ${avatarHtml(r.id)}
               <span class="rank-name">${nameOf(r.id)}${isOff ? '<span class="off-tag">nonaktif</span>' : ''}</span>
               <div class="rank-figures">
                 <span class="rank-amt money-blur">${rupiah(r.total)}</span>
-                <span class="rank-pct money-blur">${r.pct.toFixed(1)}%</span>
+                <span class="rank-pct money-blur">${r.pct.toFixed(1)}% dari total</span>
               </div>
-              <div class="rank-breakdown money-blur">
-                <span class="rb-in">${rupiah(r.total)}</span>
-                <span class="rb-op">&minus;</span>
-                <span class="rb-out">${rupiah(r.keluar)}</span>
-                <span class="rb-op">=</span>
-                <span class="rb-label">Sisa Saldo</span>
-                <span class="rb-saldo">${rupiah(r.saldo)}</span>
-              </div>
+              ${rankBreakdownHtml(r,false)}
               <div class="rank-bar-track"><div class="rank-bar-fill"></div></div>
             </div>
           `;}).join("") : `<div class="empty-row">Belum ada setoran tercatat.</div>`}
@@ -1580,7 +1601,7 @@ function secDashboard(){
             const m = memberById(r.id);
             const isOff = m && m.status==='off';
             return `
-            <div class="rank-row ${isOff?'off-member':''}" style="cursor:default;">
+            <div class="rank-row ${isOff?'off-member':''} ${i<3?'podium podium-'+(i+1):''}" style="cursor:default;">
               <span class="rank-no ${i<3?'top'+(i+1):''}">${i+1}</span>
               ${avatarHtml(r.id)}
               <span class="rank-name">${nameOf(r.id)}${isOff ? '<span class="off-tag">nonaktif</span>' : ''}</span>
@@ -1588,10 +1609,7 @@ function secDashboard(){
                 <span class="rank-amt">${rupiah(r.total)}</span>
                 <span class="rank-pct">${r.pct.toFixed(1)}%</span>
               </div>
-              <div class="rank-breakdown compact">
-                <span class="rb-label">Sisa Saldo</span>
-                <span class="rb-saldo">${rupiah(r.saldo)}</span>
-              </div>
+              ${rankBreakdownHtml(r,true)}
             </div>
           `;}).join("") || `<div class="empty-row">Belum ada data.</div>`}
         </div>
@@ -1636,9 +1654,9 @@ function secAnggota(){
           <div class="mtotal mono">${rupiah(tot.saldo)}</div>
           <div class="mlabel">sisa saldo kas pribadi</div>
           <div class="rank-breakdown compact" style="margin:6px 0 10px;">
-            <span class="rb-in">${rupiah(tot.masuk)}</span>
+            <div class="rb-chip rb-in"><span class="rb-chip-label">Setor</span><span class="rb-chip-val mono">${rupiah(tot.masuk)}</span></div>
             <span class="rb-op">&minus;</span>
-            <span class="rb-out">${rupiah(tot.keluar)}</span>
+            <div class="rb-chip rb-out"><span class="rb-chip-label">Keluar</span><span class="rb-chip-val mono">${rupiah(tot.keluar)}</span></div>
           </div>
           <span class="stamp ${m.status}">${m.status==='active'?'Aktif':'Nonaktif'}</span>
           <div class="member-actions">
