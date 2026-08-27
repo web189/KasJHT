@@ -4,44 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>JHT KAS Adm PRG</title>
-  
-  <!-- Primary Meta -->
-<title>Kas JHT | Kelola Kas Lebih Mudah & Transparan</title>
-
-<meta name="title" content="Kas JHT | Sistem Pengelolaan Kas Digital Modern">
-
-<meta name="description" content="Kelola pemasukan, pengeluaran, saldo, dan riwayat transaksi dengan lebih mudah melalui Kas JHT. Sistem kas digital yang modern, praktis, transparan, dan mudah digunakan.">
-
-<!-- Open Graph / WhatsApp / Facebook -->
-<meta property="og:type" content="website">
-<meta property="og:url" content="https://web189.github.io/KasJHT/">
-
-<meta property="og:title" content="💰 Kas JHT | Kelola Kas Lebih Mudah & Transparan">
-
-<meta property="og:description" content="Pantau pemasukan, pengeluaran, saldo, dan seluruh riwayat transaksi dalam satu sistem digital. Praktis, modern, rapi, transparan, dan mudah diakses kapan saja.">
-
-<meta property="og:image" content="https://web189.github.io/KasJHT/preview.jpg">
-
-<meta property="og:image:secure_url" content="https://web189.github.io/KasJHT/preview.jpg">
-
-<meta property="og:image:type" content="image/jpeg">
-<meta property="og:image:width" content="1200">
-<meta property="og:image:height" content="630">
-
-<!-- Twitter / X -->
-<meta name="twitter:card" content="summary_large_image">
-
-<meta name="twitter:title" content="Kas JHT | Sistem Kas Digital Modern">
-
-<meta name="twitter:description" content="Satu sistem untuk memantau pemasukan, pengeluaran, saldo, grafik, dan riwayat transaksi. Kelola kas lebih praktis, rapi, dan transparan.">
-
-<meta name="twitter:image" content="https://web189.github.io/KasJHT/preview.jpg">
-  
+<link rel="icon" type="image/png" href="./assets/piggy-sm.png">
+<link rel="apple-touch-icon" href="./assets/piggy-sm.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Mono:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="./style.css">
-<link rel="icon" type="image/png" href="./assets/piggy-sm.png">
 </head>
 <body data-theme="dark">
 
@@ -118,6 +86,11 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<!-- Firebase (Firestore + Auth) — harus dimuat sebelum script.js -->
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
+<script src="./firebase-config.js"></script>
 <script src="./script.js"></script>
 </body>
 </html>

@@ -477,6 +477,27 @@ a{color:inherit;}
 .rank-row.off-member .off-tag{opacity:1;text-decoration:none;}
 .rank-row.off-member .rank-bar-fill{filter:grayscale(60%);}
 
+/* Rincian saldo per anggota: Total Masuk − Total Keluar = Sisa Saldo */
+.rank-breakdown{
+  grid-column:1 / -1;grid-row:2;
+  display:flex;align-items:baseline;flex-wrap:wrap;gap:5px;
+  margin-top:6px;padding-top:8px;border-top:1px dashed var(--border-soft);
+  font-family:var(--font-mono);font-size:11.5px;
+}
+.rank-row .rank-bar-track{grid-row:3;}
+.rb-in{color:var(--forest);font-weight:700;}
+.rb-out{color:var(--rust);font-weight:700;}
+.rb-op{color:var(--ink-faint);font-weight:700;}
+.rb-label{color:var(--ink-faint);text-transform:uppercase;font-size:9.5px;letter-spacing:.03em;font-family:var(--font-sans);margin-left:auto;}
+.rb-saldo{color:var(--ink);font-weight:800;font-size:13px;}
+.rank-breakdown.compact{
+  grid-column:1 / -1;grid-row:2;margin-top:5px;padding-top:6px;font-size:10.5px;
+}
+@media (max-width:480px){
+  .rank-breakdown{font-size:10px;}
+  .rb-saldo{font-size:12px;}
+}
+
 /* ============================================================
    TABEL TRANSAKSI ALA-EXCEL — modern, scrollable 2 arah,
    header sticky, dibangun dari <table> asli (paling stabil

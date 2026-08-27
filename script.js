@@ -1,7 +1,8 @@
 /* ============================================================
    JHT KAS Adm PRG — Aplikasi Buku Kas Admin Gudang
-   Penyimpanan: localStorage (mode uji). Ganti ke backend asli
-   sebelum dipakai produksi sungguhan.
+   Penyimpanan: Firebase Firestore (real-time, lintas perangkat).
+   Login admin: Firebase Authentication.
+   Lihat firebase-config.js untuk konfigurasi & lapisan data.
 ============================================================ */
 
 /* ---------------- KONSTANTA & WARNA ANGGOTA ---------------- */
@@ -74,7 +75,7 @@ const RAW_TX = [
 ["2025-10-29","DAUD","Shift 2",5000,0,""],
 ["2025-11-05","RANDHIKA","Shift 1",2500,0,""],
 ["2025-11-05","TAHIR","Shift 1",2500,0,""],
-["2025-11-05","UANG RIBA",null,10000,0,"Setoran uang riba"],
+["2025-11-05","UANG RIBA",null,10000,0,""],
 ["2025-11-20","RIKI","Shift 1",2500,0,""],
 ["2025-11-20","BUDI","Shift 1",2500,0,""],
 ["2025-11-21","RIKI","Shift 1",2500,0,""],
@@ -87,7 +88,7 @@ const RAW_TX = [
 ["2025-11-24","BUDI","Shift 1",2500,0,""],
 ["2025-11-25","RIKI","Shift 1",2500,0,""],
 ["2025-11-25","DAUD","Shift 1",2500,0,""],
-["2025-12-05","UANG RIBA",null,10000,0,"Setoran uang riba"],
+["2025-12-05","UANG RIBA",null,10000,0,""],
 ["2025-12-18","RIKI",null,0,10000,"Patungan kado nikah (dari saldo kas masing2)"],
 ["2025-12-18","TAHIR",null,0,10000,"Patungan kado nikah (dari saldo kas masing2)"],
 ["2025-12-18","KAMIL",null,0,10000,"Patungan kado nikah (dari saldo kas masing2)"],
@@ -101,18 +102,18 @@ const RAW_TX = [
 ["2026-01-21","BUDI","Shift 3",25000,0,""],
 ["2026-01-24","DAUD","Shift 1",2500,0,""],
 ["2026-01-24","TAHIR","Shift 1",2500,0,""],
-["2026-02-05","UANG RIBA",null,10000,0,"Setoran uang riba"],
+["2026-02-05","UANG RIBA",null,10000,0,""],
 ["2026-02-06","RIKI","Shift 1",2500,0,""],
 ["2026-02-06","KAMIL","Shift 1",2500,0,""],
 ["2026-02-11","DAUD","Shift 3",5000,0,""],
 ["2026-02-12","DAUD","Shift 3",5000,0,""],
-["2026-02-20","BUDI","Shift 1",20000,0,""],
-["2026-02-20","DAUD","Shift 2",5000,0,""],
+["2025-02-20","BUDI","Shift 1",20000,0,""],
+["2025-02-20","DAUD","Shift 2",5000,0,""],
 ["2026-02-23","BUDI","Shift 1",10000,0,""],
-["2026-02-25","BUDI","Shift 1",9000,0,""],
-["2026-03-05","UANG RIBA",null,10000,0,"Setoran uang riba"],
-["2026-03-07","TAHIR","Shift 1",2500,0,""],
+["2026-03-25","BUDI","Shift 1",9000,0,""],
+["2026-03-05","UANG RIBA",null,10000,0,""],
 ["2026-03-07","DAUD","Shift 1",2500,0,""],
+["2026-03-07","TAHIR","Shift 1",2500,0,""],
 ["2026-03-11","BUDI",null,0,80000,"Isi steples + bantal"],
 ["2026-03-30","DAUD",null,0,35000,"Colokan listrik"],
 ["2026-05-14","RANDHIKA","Shift 1",5000,0,""],
@@ -143,7 +144,7 @@ const RAW_TX = [
 ["2026-07-11","KAMIL",null,0,10000,"Kunci gembok 2pcs"],
 ["2026-07-12","KAMIL","Shift 2",10000,0,""],
 ["2026-07-13","BUDI","Shift 2",24000,0,""],
-["2026-07-20","RIKI","Shift 1",3500,0,""],
+["2026-07-20","KAMIL","Shift 1",3500,0,""],
 ["2026-07-20","BUDI","Shift 1",3500,0,""],
 ["2026-07-30","BUDI","Shift 1",10000,0,""],
 ["2026-07-31","BUDI","Shift 1",5000,0,""],
@@ -152,10 +153,13 @@ const RAW_TX = [
 ["2026-08-01","DAUD",null,0,6400,"Plastik ripack tisu"],
 ["2026-08-01","KAMIL",null,0,6400,"Plastik ripack tisu"],
 ["2026-08-01","RANDHIKA",null,0,6400,"Plastik ripack tisu"],
-["2026-08-06","RANDHIKA","Shift 1",10000,0,""],
+["2026-08-01","BUDI","Shift 1",10000,0,""],
+["2026-08-06","RANDHIKA","Shift 3",10000,0,""],
 ["2026-08-18","BUDI","Shift 2",25000,0,""],
-["2026-08-20","KAMIL","Shift 2",8000,0,""],
 ["2026-08-20","BUDI","Shift 2",8000,0,""],
+["2026-08-20","BUDI","Shift 2",8000,0,""],
+["2026-08-25","RIKI","Shift 2",7500,0,""],
+["2026-08-25","BUDI","Shift 2",7500,0,""],
 ];
 
 function buildSeedTransactions(){
@@ -168,33 +172,82 @@ function buildSeedTransactions(){
 }
 
 /* ---------------- STORAGE ---------------- */
-const LS_KEYS = { members:"jht_members", tx:"jht_transactions", auth:"jht_auth", theme:"jht_theme", cred:"jht_admin_cred", requests:"jht_requests" };
+// Data (members/transaksi/requests) & sesi admin sekarang berasal dari Firebase
+// (Firestore + Authentication) — lihat firebase-config.js. LS_KEYS tersisa cuma
+// untuk preferensi tampilan lokal (tema), yang memang wajar per-perangkat.
+const LS_KEYS = { theme:"jht_theme" };
 
-/* ---------------- SEED DATA: PENGAJUAN PEMBELIAN ---------------- */
-const SEED_REQUESTS = [
-  { id:"req1", tgl:"2026-08-15", keterangan:"Ganti selang galon dispenser", nominal:15000, mode:"solo", admins:["BUDI"], pemohon:"Budi", status:"approved", decidedAt:"2026-08-16" },
-  { id:"req2", tgl:"2026-08-19", keterangan:"Sewa jasa servis printer kantor", nominal:60000, mode:"patungan", admins:["RIKI","KAMIL","DAUD","RANDHIKA","BUDI","TAHIR"], pemohon:"Riki", status:"pending", decidedAt:null },
-  { id:"req3", tgl:"2026-08-10", keterangan:"Beli parfum ruangan isi ulang", nominal:25000, mode:"solo", admins:["KAMIL"], pemohon:"Kamil", status:"rejected", decidedAt:"2026-08-11", catatan:"Belum mendesak, tunda dulu" },
-];
-
-function loadDB(){
-  let members = JSON.parse(localStorage.getItem(LS_KEYS.members) || "null");
-  let tx = JSON.parse(localStorage.getItem(LS_KEYS.tx) || "null");
-  let requests = JSON.parse(localStorage.getItem(LS_KEYS.requests) || "null");
-  if(!members){ members = SEED_MEMBERS; saveMembers(members); }
-  if(!tx){ tx = buildSeedTransactions(); saveTx(tx); }
-  if(!requests){ requests = SEED_REQUESTS.map(r=>({...r})); saveRequests(requests); }
-  if(!localStorage.getItem(LS_KEYS.cred)){
-    localStorage.setItem(LS_KEYS.cred, JSON.stringify({user:"admin", pass:"admin123"}));
-  }
-  return { members, tx, requests };
+/* ---------------- SEED DATA: PENGAJUAN PEMBELIAN ----------------
+   Diturunkan otomatis dari transaksi kas keluar (BKB) di RAW_TX yang
+   punya keterangan pembelian barang/jasa nyata (bukan kasbon/uang riba),
+   supaya halaman "Aset Barang/Jasa Milik Pribadi Admin" & Riwayat Pengajuan
+   konsisten dengan data asli buku kas.
+------------------------------------------------------------------ */
+function titleCaseName(id){
+  if(!id) return id;
+  return id.charAt(0) + id.slice(1).toLowerCase();
 }
-function saveMembers(m){ localStorage.setItem(LS_KEYS.members, JSON.stringify(m)); }
-function saveTx(t){ localStorage.setItem(LS_KEYS.tx, JSON.stringify(t)); }
-function saveRequests(r){ localStorage.setItem(LS_KEYS.requests, JSON.stringify(r)); }
-function isAuthed(){ return localStorage.getItem(LS_KEYS.auth) === "1"; }
+function buildSeedRequestsFromTx(rawTx){
+  const groups = {};
+  const order = [];
+  rawTx.forEach(([tgl, admin, shift, btb, bkb, ket])=>{
+    if(!(bkb>0) || !ket || admin==="UANG RIBA") return;
+    if(/kasbon/i.test(ket)) return;
+    const key = tgl+"|"+ket;
+    if(!groups[key]){ groups[key] = { tgl, ket, admins:[], each:bkb }; order.push(key); }
+    groups[key].admins.push(admin);
+  });
+  return order.map((key,i)=>{
+    const g = groups[key];
+    const mode = g.admins.length>1 ? "patungan" : "solo";
+    const nominal = g.each * g.admins.length;
+    return {
+      id:"req_seed"+(i+1), tgl:g.tgl, keterangan:g.ket, nominal, mode,
+      admins:[...g.admins], pemohon:titleCaseName(g.admins[0]),
+      status:"approved", decidedAt:g.tgl,
+    };
+  });
+}
+const SEED_REQUESTS = buildSeedRequestsFromTx(RAW_TX);
 
-let DB = loadDB();
+
+/** Simpan ke Firestore. DB lokal sudah dimutasi duluan oleh pemanggil (pola lama
+ *  dipertahankan), fungsi ini cuma mendorong array terbaru ke server. */
+function saveMembers(m){ FJHT.saveMembers(m).catch(err=>toast("Gagal menyimpan anggota: "+err.message)); }
+function saveTx(t){ FJHT.saveTx(t).catch(err=>toast("Gagal menyimpan transaksi: "+err.message)); }
+function saveRequests(r){ FJHT.saveRequests(r).catch(err=>toast("Gagal menyimpan pengajuan: "+err.message)); }
+function isAuthed(){ return FJHT.isAdmin(); }
+
+let DB = { members: [], tx: [], requests: [] };
+let DB_READY = false;
+
+/** Boot: tunggu status login Firebase Auth siap, ambil data dari Firestore
+ *  (seed otomatis kalau koleksi masih kosong), lalu render pertama kali.
+ *  Sesudahnya, langganan real-time menjaga semua perangkat tetap sinkron. */
+async function bootFromFirebase(){
+  try{
+    await FJHT.waitForAuthReady();
+    const seeded = await FJHT.migrateSeedIfEmpty(
+      SEED_MEMBERS,
+      buildSeedTransactions(),
+      SEED_REQUESTS.map(r=>({...r}))
+    );
+    DB = seeded;
+    DB_READY = true;
+    render();
+    FJHT.subscribe(data=>{
+      DB = data;
+      render();
+    });
+  }catch(err){
+    DB_READY = true;
+    document.getElementById("app").innerHTML =
+      `<div style="padding:32px;text-align:center;">
+         <p><b>Gagal terhubung ke database.</b></p>
+         <p style="opacity:.7;font-size:13px;">${(err && err.message) || err}</p>
+       </div>`;
+  }
+}
 
 /* ---------------- STATE APLIKASI ---------------- */
 const state = {
@@ -419,17 +472,24 @@ function rejectRequest(id){
 function depositRanking(){
   const map = {};
   DB.tx.forEach(t=>{
-    if(t.kat==="kas" && t.admin!=="UANG RIBA"){
-      if(!map[t.admin]) map[t.admin] = { total:0, count:0 };
-      map[t.admin].total += Number(t.btb||0);
-      map[t.admin].count += 1;
-    }
+    if(t.admin==="UANG RIBA") return;
+    if(!map[t.admin]) map[t.admin] = { total:0, keluar:0, count:0 };
+    map[t.admin].total += Number(t.btb||0);
+    map[t.admin].keluar += Number(t.bkb||0);
+    if(t.btb>0) map[t.admin].count += 1;
   });
   const total = Object.values(map).reduce((s,x)=>s+x.total,0) || 1;
   return DB.members
     .filter(m=>map[m.id])
-    .map(m=>({ id:m.id, total:map[m.id].total, count:map[m.id].count, pct: map[m.id].total/total*100 }))
-    .sort((a,b)=>b.total-a.total);
+    .map(m=>({
+      id:m.id,
+      total:map[m.id].total,        // dipakai untuk peringkat (total setoran kas masuk)
+      keluar:map[m.id].keluar,      // total kas keluar milik anggota ini (kasbon/pembelian dll)
+      saldo: map[m.id].total - map[m.id].keluar, // sisa saldo kas pribadi anggota
+      count:map[m.id].count,
+      pct: map[m.id].total/total*100
+    }))
+    .sort((a,b)=>b.total-a.total); // urutan peringkat TETAP berdasarkan total kas masuk
 }
 
 /* ---------------- EKSPOR EXCEL & PDF ---------------- */
@@ -519,6 +579,10 @@ function goto(route){ location.hash = route; }
 function render(){
   document.body.classList.toggle("money-revealed", !!state.moneyRevealed);
   const root = document.getElementById("app");
+  if(!DB_READY){
+    root.innerHTML = `<div style="padding:60px 20px;text-align:center;opacity:.7;">Memuat data…</div>`;
+    return;
+  }
   if(state.route === "/admin"){
     if(!isAuthed()){ goto("/login"); return; }
     root.innerHTML = renderAdmin();
@@ -761,6 +825,14 @@ function renderGuest(){
               <div class="rank-figures">
                 <span class="rank-amt money-blur">${rupiah(r.total)}</span>
                 <span class="rank-pct money-blur">${r.pct.toFixed(1)}%</span>
+              </div>
+              <div class="rank-breakdown money-blur">
+                <span class="rb-in">${rupiah(r.total)}</span>
+                <span class="rb-op">&minus;</span>
+                <span class="rb-out">${rupiah(r.keluar)}</span>
+                <span class="rb-op">=</span>
+                <span class="rb-label">Sisa Saldo</span>
+                <span class="rb-saldo">${rupiah(r.saldo)}</span>
               </div>
               <div class="rank-bar-track"><div class="rank-bar-fill"></div></div>
             </div>
@@ -1256,7 +1328,7 @@ function renderLogin(){
         <span class="stamp active" style="font-size:9px;">Akses Terbatas</span>
       </div>
       <div class="field">
-        <label>Username</label>
+        <label>Username / Email</label>
         <input type="text" id="loginUser" placeholder="admin" autocomplete="username">
       </div>
       <div class="field">
@@ -1265,21 +1337,26 @@ function renderLogin(){
       </div>
       <div class="login-error" id="loginErr"></div>
       <button class="btn btn-primary" id="loginSubmit" style="width:100%;justify-content:center;">${icon('shield')}<span>Masuk</span></button>
-      <p class="login-hint">Mode uji — akun default <b>admin / admin123</b>.<br>Ganti kredensial ini sebelum dipakai produksi sungguhan.</p>
+      <p class="login-hint">Login dengan username <b>admin</b> (atau email langsung) — akun dikelola lewat Firebase Authentication.</p>
     </div>
   </div>`;
 }
 function bindLogin(){
   document.getElementById("backHome").addEventListener("click", ()=>goto("/"));
-  const submit = ()=>{
+  const submit = async ()=>{
     const u = document.getElementById("loginUser").value.trim();
     const p = document.getElementById("loginPass").value;
-    const cred = JSON.parse(localStorage.getItem(LS_KEYS.cred));
-    if(u === cred.user && p === cred.pass){
-      localStorage.setItem(LS_KEYS.auth, "1");
+    const btn = document.getElementById("loginSubmit");
+    const errEl = document.getElementById("loginErr");
+    errEl.textContent = "";
+    btn.disabled = true;
+    try{
+      await FJHT.signInAdmin(u, p);
       goto("/admin");
-    } else {
-      document.getElementById("loginErr").textContent = "Username atau password salah.";
+    }catch(err){
+      errEl.textContent = "Username atau password salah.";
+    }finally{
+      btn.disabled = false;
     }
   };
   document.getElementById("loginSubmit").addEventListener("click", submit);
@@ -1439,6 +1516,10 @@ function secDashboard(){
                 <span class="rank-amt">${rupiah(r.total)}</span>
                 <span class="rank-pct">${r.pct.toFixed(1)}%</span>
               </div>
+              <div class="rank-breakdown compact">
+                <span class="rb-label">Sisa Saldo</span>
+                <span class="rb-saldo">${rupiah(r.saldo)}</span>
+              </div>
             </div>
           `;}).join("") || `<div class="empty-row">Belum ada data.</div>`}
         </div>
@@ -1480,8 +1561,13 @@ function secAnggota(){
               <span class="mrole">Sejak ${fmtDate(m.sejak)}</span>
             </div>
           </div>
-          <div class="mtotal mono">${rupiah(tot.masuk)}</div>
-          <div class="mlabel">total kontribusi masuk</div>
+          <div class="mtotal mono">${rupiah(tot.saldo)}</div>
+          <div class="mlabel">sisa saldo kas pribadi</div>
+          <div class="rank-breakdown compact" style="margin:6px 0 10px;">
+            <span class="rb-in">${rupiah(tot.masuk)}</span>
+            <span class="rb-op">&minus;</span>
+            <span class="rb-out">${rupiah(tot.keluar)}</span>
+          </div>
           <span class="stamp ${m.status}">${m.status==='active'?'Aktif':'Nonaktif'}</span>
           <div class="member-actions">
             <button class="btn btn-sm" data-edit-member="${m.id}">${icon('edit')}Edit</button>
@@ -1722,8 +1808,8 @@ function bindAdmin(){
   document.getElementById("mAdminExportExcel")?.addEventListener("click", ()=>{ exportExcel(getFilteredTxList(true)); closeAdminMobileMenu(); });
   document.getElementById("mAdminExportPdf")?.addEventListener("click", ()=>{ exportPdf(getFilteredTxList(true)); closeAdminMobileMenu(); });
   document.getElementById("viewGuestBtnM")?.addEventListener("click", ()=> goto("/"));
-  const doLogout = ()=>{
-    localStorage.removeItem(LS_KEYS.auth);
+  const doLogout = async ()=>{
+    await FJHT.signOutAdmin();
     toast("Berhasil keluar");
     goto("/");
   };
@@ -2265,8 +2351,9 @@ function runBootLoader(){
    INIT
 ============================================================ */
 applyTheme();
-render();
+render(); // render layar "Memuat data…" sambil menunggu Firebase
 runBootLoader();
+bootFromFirebase();
 
 let _resizeTimer = null;
 let _lastWidth = window.innerWidth;
