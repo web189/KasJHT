@@ -14,6 +14,7 @@ const MEMBER_COLORS = {
   RANDHIKA: "#2E8B57",
   BUDI:     "#8B5FBF",
   TAHIR:    "#14919B",
+  RIAN:     "#F0A93A",
 };
 const COLOR_CHOICES = ["#3B82F6","#E4574C","#7A2E2E","#2E8B57","#8B5FBF","#14919B","#F0A93A","#6B7280","#D9534F","#0EA5A5"];
 const RIBA_COLOR = "#9CA3AF";
@@ -27,6 +28,12 @@ const SEED_MEMBERS = [
   { id:"RANDHIKA", nama:"Randhika", color:MEMBER_COLORS.RANDHIKA, status:"active", sejak:"2025-09-16" },
   { id:"BUDI",     nama:"Budi",     color:MEMBER_COLORS.BUDI,     status:"active", sejak:"2025-11-20" },
   { id:"TAHIR",    nama:"Tahir",    color:MEMBER_COLORS.TAHIR,    status:"active", sejak:"2025-10-02" },
+  { id:"RIAN",      nama:"Rian",      color:MEMBER_COLORS.RIAN, status:"active", sejak:"2026-08-27" },
+  // "Uang Riba" bukan anggota manusia — ini pos kas hasil bunga/riba yang sejak awal
+  // sudah tercatat rutin di RAW_TX (kas masuk tiap tgl 5) & RAW_ASET (Kasur Palembang).
+  // Dijadikan anggota resmi (id sama persis dgn yg dipakai di RAW_TX/RAW_ASET) supaya
+  // otomatis muncul di Anggota & Peringkat Setoran dgn kas masuk/keluar/aset/saldo-nya.
+  { id:"UANG RIBA", nama:"Uang Riba", color:RIBA_COLOR, status:"active", sejak:"2025-11-05" },
 ];
 
 /* ---------------- SEED DATA TRANSAKSI ----------------
@@ -177,38 +184,48 @@ function buildSeedTransactions(){
 // untuk preferensi tampilan lokal (tema), yang memang wajar per-perangkat.
 const LS_KEYS = { theme:"jht_theme" };
 
-/* ---------------- SEED DATA: PENGAJUAN PEMBELIAN ----------------
-   Diturunkan otomatis dari transaksi kas keluar (BKB) di RAW_TX yang
-   punya keterangan pembelian barang/jasa nyata (bukan kasbon/uang riba),
-   supaya halaman "Aset Barang/Jasa Milik Pribadi Admin" & Riwayat Pengajuan
-   konsisten dengan data asli buku kas.
------------------------------------------------------------------- */
 function titleCaseName(id){
   if(!id) return id;
+  if(id === "UANG RIBA") return "Uang Riba";
   return id.charAt(0) + id.slice(1).toLowerCase();
 }
-function buildSeedRequestsFromTx(rawTx){
-  const groups = {};
-  const order = [];
-  rawTx.forEach(([tgl, admin, shift, btb, bkb, ket])=>{
-    if(!(bkb>0) || !ket || admin==="UANG RIBA") return;
-    if(/kasbon/i.test(ket)) return;
-    const key = tgl+"|"+ket;
-    if(!groups[key]){ groups[key] = { tgl, ket, admins:[], each:bkb }; order.push(key); }
-    groups[key].admins.push(admin);
-  });
-  return order.map((key,i)=>{
-    const g = groups[key];
-    const mode = g.admins.length>1 ? "patungan" : "solo";
-    const nominal = g.each * g.admins.length;
+/* ---------------- SEED DATA: ASET BARANG/JASA MILIK PRIBADI ADMIN ----------------
+   Diambil LANGSUNG dari tabel "Aset Barang/Jasa Milik Pribadi Admin" di dokumen
+   Riki — bukan hasil turunan dari RAW_TX — supaya SEMUA baris ikut masuk tanpa
+   kecuali, termasuk barang Rp0 (sumbangan pribadi tanpa ganti kas) dan Kasbon.
+   format tuple: [tanggalISO, admins[], mode('solo'|'patungan'), nominalTotal, keterangan, jenis('barang'|'jasa')]
+------------------------------------------------------------------------------- */
+const RAW_ASET = [
+  ["2025-09-11",["RIKI"],"solo",0,"4Box Pulpel Biru","barang"],
+  ["2025-09-11",["RIKI"],"solo",0,"4Box Pulpen Belang","barang"],
+  ["2025-09-14",["RIKI"],"solo",0,"Sapu, Kain pel, Tempat sampah","barang"],
+  ["2025-09-14",["RIKI"],"solo",0,"Kanton plastik Paket PO","barang"],
+  ["2025-09-14",["RIKI"],"solo",0,"Staples Niceso","barang"],
+  ["2025-09-14",["RIKI"],"solo",0,"Plastik Paket+Lakban","barang"],
+  ["2025-09-15",["RIKI"],"solo",0,"Karet Gelang+Tip X","barang"],
+  ["2025-09-15",["RIKI"],"solo",0,"Colokan Listrik","barang"],
+  ["2025-12-18",["RIKI","TAHIR","KAMIL","RANDHIKA","DAUD","BUDI"],"patungan",60000,"Kado Teten Kawin","barang"],
+  ["2026-03-11",["BUDI"],"solo",80000,"Isi Steples + Bantal","barang"],
+  ["2026-03-30",["DAUD"],"solo",35000,"Colokan Listrik","barang"],
+  ["2026-06-23",["BUDI"],"solo",30000,"Mouse Pad","barang"],
+  ["2026-06-29",["RIKI","TAHIR","RANDHIKA","BUDI","KAMIL","DAUD"],"patungan",60000,"Pulpen 6 Box","barang"],
+  ["2026-07-05",["KARTIKA"],"solo",67500,"Kasbon 150k","jasa"],
+  ["2026-07-11",["KAMIL","RANDHIKA","RIKI","BUDI","DAUD"],"patungan",50000,"Kipas CPU 2pcs","barang"],
+  ["2026-07-11",["UANG RIBA"],"solo",50000,"Kasur Palembang","barang"],
+  ["2026-07-11",["KAMIL"],"solo",10000,"Kunci Gembok 2pcs","barang"],
+  ["2026-08-01",["RIKI","BUDI","DAUD","KAMIL","RANDHIKA"],"patungan",32000,"Plastik Ripack Tisu","barang"],
+];
+function buildSeedRequestsFromAset(rawAset){
+  return rawAset.map((r,i)=>{
+    const [tgl, admins, mode, nominal, ket, jenis] = r;
     return {
-      id:"req_seed"+(i+1), tgl:g.tgl, keterangan:g.ket, nominal, mode,
-      admins:[...g.admins], pemohon:titleCaseName(g.admins[0]),
-      status:"approved", decidedAt:g.tgl,
+      id:"req_seed"+(i+1), tgl, keterangan:ket, nominal, mode,
+      admins:[...admins], pemohon:titleCaseName(admins[0]),
+      status:"approved", decidedAt:tgl, jenis: jenis||"barang",
     };
   });
 }
-const SEED_REQUESTS = buildSeedRequestsFromTx(RAW_TX);
+const SEED_REQUESTS = buildSeedRequestsFromAset(RAW_ASET);
 
 
 /** Simpan ke Firestore. DB lokal sudah dimutasi duluan oleh pemanggil (pola lama
@@ -233,6 +250,62 @@ async function bootFromFirebase(){
       SEED_REQUESTS.map(r=>({...r}))
     );
     DB = seeded;
+
+    // Firestore cuma di-seed SEKALI waktu koleksinya masih kosong (lihat
+    // migrateSeedIfEmpty). Supaya anggota/transaksi/aset BARU yang ditambahkan
+    // lewat update kode nanti tetap ikut nongol di app yang datanya sudah lebih
+    // dulu terisi — tanpa menimpa/menghapus data yang sudah diedit lewat
+    // aplikasi — gabungkan apa saja dari seed kode yang belum ada di Firestore.
+    //
+    // PENTING — dicocokkan berdasarkan ISI (signature), BUKAN id:
+    // Baris baru di RAW_TX / RAW_ASET seringkali disisipkan DI TENGAH array
+    // (bukan selalu di akhir), sedangkan id lama untuk transaksi/pengajuan
+    // dibangkitkan dari POSISI ("tx"+index, "req_seed"+index). Begitu ada
+    // sisipan di tengah, semua id sesudahnya ikut bergeser, sehingga baris yang
+    // sebelumnya sudah tersimpan di Firestore dengan id lama akan "bentrok" id
+    // dengan baris seed yang isinya BEDA di posisi yang sama — akibatnya
+    // pengecekan "sudah ada apa belum" berdasarkan id jadi salah: baris baru
+    // (mis. entri "Uang Riba") dianggap sudah ada padahal isinya belum pernah
+    // tersimpan. Untuk anggota, id memang bermakna (KARTIKA, RIKI, dst) jadi
+    // tetap dicocokkan lewat id; untuk transaksi & pengajuan dicocokkan lewat
+    // signature isi baris supaya kebal terhadap pergeseran posisi.
+    const txSignature  = t => [t.tgl, t.admin, t.shift||"", t.btb, t.bkb, t.ket||""].join("|");
+    const reqSignature = r => [r.tgl, (r.admins||[]).join(","), r.mode, r.nominal, r.keterangan||"", r.jenis||""].join("|");
+    const mergeMissing = (live, seed, sigFn) => {
+      const liveSigs = new Set(live.map(sigFn));
+      const existingIds = new Set(live.map(x=>x.id));
+      const missing = [];
+      seed.forEach(s=>{
+        if(liveSigs.has(sigFn(s))) return; // isinya sudah ada, lewati
+        let id = s.id, n = 2;
+        while(existingIds.has(id)){ id = `${s.id}_${n++}`; } // hindari id bentrok saat ditambahkan
+        existingIds.add(id);
+        missing.push({ ...s, id });
+      });
+      return { merged: missing.length ? [...live, ...missing] : live, changed: missing.length>0 };
+    };
+    const mMembers = mergeMissing(DB.members, SEED_MEMBERS, m=>m.id);
+    const mTx      = mergeMissing(DB.tx, buildSeedTransactions(), txSignature);
+    const mReq     = mergeMissing(DB.requests, SEED_REQUESTS, reqSignature);
+    if(mMembers.changed) DB.members = mMembers.merged;
+    if(mTx.changed) DB.tx = mTx.merged;
+    if(mReq.changed) DB.requests = mReq.merged;
+    // Menulis hasil merge ke Firestore butuh login admin (lihat firestore.rules:
+    // update/delete pada kas/members & kas/transaksi wajib isAdmin()). Kalau yang
+    // membuka app adalah tamu (belum login), JANGAN coba menulis — cukup tampilkan
+    // data gabungan itu secara lokal. Begitu ada admin yang login, hasil merge yang
+    // sama akan otomatis ikut tersimpan ke server. Ini mencegah error
+    // "Missing or insufficient permissions" muncul untuk tamu biasa.
+    if(isAuthed()){
+      try{
+        if(mMembers.changed) await FJHT.saveMembers(DB.members);
+        if(mTx.changed) await FJHT.saveTx(DB.tx);
+        if(mReq.changed) await FJHT.saveRequests(DB.requests);
+      }catch(err){
+        console.warn("Gagal menyimpan hasil merge seed:", err);
+      }
+    }
+
     DB_READY = true;
     render();
     FJHT.subscribe(data=>{
@@ -472,7 +545,6 @@ function rejectRequest(id){
 function depositRanking(){
   const map = {};
   DB.tx.forEach(t=>{
-    if(t.admin==="UANG RIBA") return;
     if(!map[t.admin]) map[t.admin] = { total:0, keluar:0, count:0 };
     map[t.admin].total += Number(t.btb||0);
     map[t.admin].keluar += Number(t.bkb||0);
@@ -943,7 +1015,7 @@ function excelTableHtml(list, withActions, maxHeightPx){
 }
 
 function adminOptions(){
-  const ids = [...DB.members.map(m=>m.id), "UANG RIBA"];
+  const ids = DB.members.map(m=>m.id); // "UANG RIBA" sudah termasuk (anggota resmi)
   return ids.map(id=>`<option value="${id}">${nameOf(id)}</option>`).join("");
 }
 function monthOptions(){
@@ -1292,7 +1364,7 @@ function renderAsetPage(){
           ${approved.length ? approved.map(r=>`
             <div class="req-card">
               <div class="req-top">
-                <span class="stamp approved">Aset</span>
+                <span class="stamp approved">${r.jenis==='jasa' ? 'Jasa' : 'Barang'}</span>
                 <span class="req-amt mono money-blur">${rupiah(r.nominal)}</span>
               </div>
               <div class="req-ket">${escapeHtml(r.keterangan)}</div>
@@ -1637,7 +1709,7 @@ function closeModal(){
 
 function txFormModal(existing){
   const isEdit = !!existing;
-  const ids = [...DB.members.map(m=>m.id), "UANG RIBA"];
+  const ids = DB.members.map(m=>m.id); // "UANG RIBA" sudah termasuk (anggota resmi)
   const jenis = existing ? (existing.bkb>0 ? "keluar" : "masuk") : "masuk";
   const jumlah = existing ? (existing.bkb>0 ? existing.bkb : existing.btb) : 0;
   return `
