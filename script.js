@@ -726,30 +726,31 @@ function topbar(){
       <button class="icon-btn hamburger-btn" id="hamburgerBtn" title="Menu">${icon('menu')}${pendingCount>0?`<span class="menu-dot"></span>`:""}</button>
     </div>
     <div class="mobile-menu-panel" id="mobileMenuPanel">
+      <div class="mm-panel-head"><span class="mm-panel-head-icon">${icon('menu')}</span><span>Menu Navigasi</span></div>
       <button class="mm-item" id="mmHome"><span class="mm-ico-wrap">${icon('home')}</span><span>Home</span></button>
       <button class="mm-item" id="themeBtnMob"><span class="mm-ico-wrap">${icon(theme==='dark'?'sun':'moon')}</span><span>Ganti Tema</span></button>
       <button class="mm-item" id="loginBtnMob"><span class="mm-ico-wrap">${icon('lock')}</span><span>Masuk Admin</span></button>
       <div class="mm-sep"></div>
-      <div class="mm-label">Tautan Cepat</div>
-      <button class="mm-item" id="mmJadwal"><span class="mm-ico-wrap">${icon('calendar')}</span><span>Jadwal Admin GDNG PRG</span><span class="mm-ext">${icon('external')}</span></button>
-      <button class="mm-item" id="mmRekapLama"><span class="mm-ico-wrap">${icon('sheet')}</span><span>Data Rekap Lama (Spreadsheet)</span><span class="mm-ext">${icon('external')}</span></button>
-      <button class="mm-item" id="mmRitase"><span class="mm-ico-wrap">${icon('report')}</span><span>Uang Ritase TUA</span><span class="mm-ext">${icon('external')}</span></button>
+      <div class="mm-label" style="--tone:var(--blue);">Tautan Cepat</div>
+      <button class="mm-item" id="mmJadwal" data-tone="info"><span class="mm-ico-wrap">${icon('calendar')}</span><span>Jadwal Admin GDNG PRG</span><span class="mm-ext">${icon('external')}</span></button>
+      <button class="mm-item" id="mmRekapLama" data-tone="info"><span class="mm-ico-wrap">${icon('sheet')}</span><span>Data Rekap Lama (Spreadsheet)</span><span class="mm-ext">${icon('external')}</span></button>
+      <button class="mm-item" id="mmRitase" data-tone="info"><span class="mm-ico-wrap">${icon('report')}</span><span>Uang Ritase TUA</span><span class="mm-ext">${icon('external')}</span></button>
       <div class="mm-sep"></div>
-      <div class="mm-label">Pengajuan Pembelian</div>
-      <button class="mm-item" id="mmPengajuan"><span class="mm-ico-wrap">${icon('plus-circle')}</span><span>Ajukan Pembelian</span></button>
-      <button class="mm-item" id="mmRiwayat"><span class="mm-ico-wrap">${icon('inbox')}</span><span>Riwayat Pengajuan</span>${pendingCount>0?`<span class="mm-badge">${pendingCount}</span>`:""}</button>
-      <button class="mm-item" id="mmAset"><span class="mm-ico-wrap">${icon('box')}</span><span>Aset Barang/Jasa Milik Pribadi Admin</span></button>
+      <div class="mm-label" style="--tone:var(--forest);">Pengajuan Pembelian</div>
+      <button class="mm-item" id="mmPengajuan" data-tone="action"><span class="mm-ico-wrap">${icon('plus-circle')}</span><span>Ajukan Pembelian</span></button>
+      <button class="mm-item" id="mmRiwayat" data-tone="action"><span class="mm-ico-wrap">${icon('inbox')}</span><span>Riwayat Pengajuan</span>${pendingCount>0?`<span class="mm-badge">${pendingCount}</span>`:""}</button>
+      <button class="mm-item" id="mmAset" data-tone="action"><span class="mm-ico-wrap">${icon('box')}</span><span>Aset Barang/Jasa Milik Pribadi Admin</span></button>
       <div class="mm-sep"></div>
-      <div class="mm-label">Unduh Data</div>
-      <button class="mm-item" id="mmExportExcel"><span class="mm-ico-wrap">${icon('file-excel')}</span><span>Unduh Excel</span></button>
-      <button class="mm-item" id="mmExportPdf"><span class="mm-ico-wrap">${icon('file-pdf')}</span><span>Unduh PDF</span></button>
+      <div class="mm-label" style="--tone:var(--amber);">Unduh Data</div>
+      <button class="mm-item" id="mmExportExcel" data-tone="download"><span class="mm-ico-wrap">${icon('file-excel')}</span><span>Unduh Excel</span></button>
+      <button class="mm-item" id="mmExportPdf" data-tone="download"><span class="mm-ico-wrap">${icon('file-pdf')}</span><span>Unduh PDF</span></button>
       <div class="mm-sep"></div>
-      <div class="mm-label">Hiburan</div>
-      <button class="mm-item mm-expandable" id="mmGameToggle" aria-expanded="false"><span class="mm-ico-wrap">${icon('gamepad')}</span><span>Game</span><span class="mm-chev">${icon('chevron-right')}</span></button>
+      <div class="mm-label" style="--tone:#8B5CF6;">Hiburan</div>
+      <button class="mm-item mm-expandable" id="mmGameToggle" data-tone="fun" aria-expanded="false"><span class="mm-ico-wrap">${icon('gamepad')}</span><span>Game</span><span class="mm-chev">${icon('chevron-right')}</span></button>
       <div class="mm-submenu" id="mmGameSubmenu">
-        <button class="mm-item" data-game="catur"><span class="mm-ico-wrap">♟️</span><span>Catur</span></button>
-        <button class="mm-item" data-game="ular"><span class="mm-ico-wrap">🐍</span><span>Ular Tangga</span></button>
-        <button class="mm-item" data-game="monopoli"><span class="mm-ico-wrap">🎲</span><span>Monopoly</span></button>
+        <button class="mm-item" data-game="catur" data-tone="fun"><span class="mm-ico-wrap">♟️</span><span>Catur</span></button>
+        <button class="mm-item" data-game="ular" data-tone="fun"><span class="mm-ico-wrap">🐍</span><span>Ular Tangga</span></button>
+        <button class="mm-item" data-game="monopoli" data-tone="fun"><span class="mm-ico-wrap">${icon('dice')}</span><span>Monopoly</span></button>
       </div>
       <div class="mm-footer">Website Developer <a href="https://benyoriki.com/" target="_blank" rel="noopener">benyoriki.com</a></div>
     </div>
@@ -1365,6 +1366,8 @@ function reqCardHtml(r, withActions){
 function renderAsetPage(){
   const approved = DB.requests.filter(r=>r.status==="approved").sort((a,b)=> b.decidedAt.localeCompare(a.decidedAt));
   const totalNilai = approved.reduce((s,r)=>s+r.nominal,0);
+  const totalBarang = approved.filter(r=>r.jenis!=="jasa").length;
+  const totalJasa = approved.filter(r=>r.jenis==="jasa").length;
   return `
   ${topbar()}
   <div class="container">
@@ -1375,26 +1378,47 @@ function renderAsetPage(){
       <p class="hero-sub">Daftar barang/jasa yang sudah dibeli menggunakan saldo kas pribadi admin, hasil dari pengajuan yang disetujui.</p>
       ${!isAuthed() ? `<button class="money-toggle-btn" id="moneyToggleBtn" style="margin-bottom:16px;">${icon(state.moneyRevealed?'eye-off':'eye')}<span>${state.moneyRevealed?'Sembunyikan Semua Nominal':'Tampilkan Semua Nominal'}</span></button>` : ""}
 
-      <div class="stat-card accent reveal" style="max-width:280px;margin-bottom:18px;">
-        <div class="label">Total Nilai Aset</div>
-        <div class="value mono money-blur">${rupiah(totalNilai)}</div>
+      <div class="asset-summary reveal">
+        <div class="asset-summary-main">
+          <div class="asset-summary-icon">${icon('box')}</div>
+          <div>
+            <div class="label">Total Nilai Aset</div>
+            <div class="value mono money-blur">${rupiah(totalNilai)}</div>
+          </div>
+        </div>
+        <div class="asset-summary-stats">
+          <div class="asu-stat"><span class="asu-num mono">${approved.length}</span><span class="asu-label">Total Item</span></div>
+          <div class="asu-stat"><span class="asu-num mono">${totalBarang}</span><span class="asu-label">Barang</span></div>
+          <div class="asu-stat"><span class="asu-num mono">${totalJasa}</span><span class="asu-label">Jasa</span></div>
+        </div>
       </div>
 
       <div class="panel">
-        <div class="req-list">
-          ${approved.length ? approved.map(r=>`
-            <div class="req-card">
-              <div class="req-top">
-                <span class="stamp approved">${r.jenis==='jasa' ? 'Jasa' : 'Barang'}</span>
-                <span class="req-amt mono money-blur">${rupiah(r.nominal)}</span>
+        <div class="asset-list">
+          ${approved.length ? approved.map((r,i)=>{
+            const isJasa = r.jenis==='jasa';
+            const namesFull = r.admins.map(nameOf).join(", ");
+            const shown = r.admins.slice(0,5);
+            const extra = r.admins.length - shown.length;
+            return `
+            <div class="asset-card" style="--i:${i};">
+              <div class="asset-card-top">
+                <span class="asset-type-badge ${isJasa?'jasa':'barang'}">${icon(isJasa?'report':'box')}<span>${isJasa ? 'Jasa' : 'Barang'}</span></span>
+                <span class="asset-amt mono money-blur">${rupiah(r.nominal)}</span>
               </div>
-              <div class="req-ket">${escapeHtml(r.keterangan)}</div>
-              <div class="req-meta">
-                <span>📅 Disetujui ${fmtDateShort(r.decidedAt)}</span>
-                <span>${r.mode==='solo' ? '💰 Dana dari' : '🤝 Patungan'}: ${r.admins.map(nameOf).join(", ")}</span>
+              <div class="asset-ket">${escapeHtml(r.keterangan)}</div>
+              <div class="asset-meta-row">
+                <span class="asset-meta-chip">${icon('calendar')}<span>Disetujui ${fmtDateShort(r.decidedAt)}</span></span>
+              </div>
+              <div class="asset-funding">
+                <div class="asset-avatars">
+                  ${shown.map(id=>avatarHtml(id,'sm')).join("")}
+                  ${extra>0 ? `<span class="asset-avatar-more">+${extra}</span>` : ""}
+                </div>
+                <span class="asset-funding-label" title="${escapeHtml(namesFull)}">${r.mode==='solo' ? 'Dana dari' : 'Patungan'}: ${namesFull}</span>
               </div>
             </div>
-          `).join("") : `<div class="empty-row">Belum ada aset tercatat.</div>`}
+          `;}).join("") : `<div class="empty-row">Belum ada aset tercatat.</div>`}
         </div>
       </div>
     </div>
@@ -1477,14 +1501,15 @@ function renderAdmin(){
     <div class="brand-text"><b>JHT KAS Adm</b></div>
     <button class="icon-btn hamburger-btn" id="adminHamburgerBtn" style="margin-left:auto;" title="Menu">${icon('menu')}${pendingCount>0?`<span class="menu-dot"></span>`:""}</button>
     <div class="mobile-menu-panel" id="adminMobileMenuPanel">
-      <div class="mm-label">Navigasi</div>
+      <div class="mm-panel-head"><span class="mm-panel-head-icon">${icon('menu')}</span><span>Menu Navigasi</span></div>
+      <div class="mm-label" style="--tone:var(--blue);">Navigasi</div>
       ${ADMIN_NAV.map(n=>`
-        <button class="mm-item ${state.adminSection===n.id?'active':''}" data-sec="${n.id}"><span class="mm-ico-wrap">${icon(n.icon)}</span><span>${n.label}</span>${n.id==='pengajuan'&&pendingCount>0?`<span class="mm-badge">${pendingCount}</span>`:''}</button>
+        <button class="mm-item ${state.adminSection===n.id?'active':''}" data-sec="${n.id}" data-tone="info"><span class="mm-ico-wrap">${icon(n.icon)}</span><span>${n.label}</span>${n.id==='pengajuan'&&pendingCount>0?`<span class="mm-badge">${pendingCount}</span>`:''}</button>
       `).join("")}
       <div class="mm-sep"></div>
-      <div class="mm-label">Unduh Data</div>
-      <button class="mm-item" id="mAdminExportExcel"><span class="mm-ico-wrap">${icon('file-excel')}</span><span>Unduh Excel</span></button>
-      <button class="mm-item" id="mAdminExportPdf"><span class="mm-ico-wrap">${icon('file-pdf')}</span><span>Unduh PDF</span></button>
+      <div class="mm-label" style="--tone:var(--amber);">Unduh Data</div>
+      <button class="mm-item" id="mAdminExportExcel" data-tone="download"><span class="mm-ico-wrap">${icon('file-excel')}</span><span>Unduh Excel</span></button>
+      <button class="mm-item" id="mAdminExportPdf" data-tone="download"><span class="mm-ico-wrap">${icon('file-pdf')}</span><span>Unduh PDF</span></button>
       <div class="mm-sep"></div>
       <button class="mm-item" id="themeBtnM"><span class="mm-ico-wrap">${icon(theme==='dark'?'sun':'moon')}</span><span>Ganti Tema</span></button>
       <button class="mm-item" id="viewGuestBtnM"><span class="mm-ico-wrap">${icon('grid')}</span><span>Lihat Tampilan Tamu</span></button>
