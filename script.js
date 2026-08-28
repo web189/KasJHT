@@ -610,6 +610,20 @@ function computeCountdown(targetIso){
   };
 }
 function saveArisanList(){ saveArisan(DB.arisan); }
+/** Anggota arisan tidak selalu terdaftar sebagai anggota kas (DB.members), jadi
+ *  warnanya perlu dibangkitkan sendiri dari nama (hash sederhana -> palet warna)
+ *  supaya tiap orang konsisten dapat 1 warna yang sama di avatar & roda kocok. */
+function _hashStr(s){ let h=0; for(let i=0;i<s.length;i++){ h=(h*31+s.charCodeAt(i))>>>0; } return h; }
+function arisanColorFor(nama){ return COLOR_CHOICES[_hashStr(String(nama||"?")) % COLOR_CHOICES.length]; }
+function arisanAvatarHtml(nama, size){
+  const cls = size==="sm" ? "avatar sm" : "avatar";
+  return `<span class="${cls}" style="background:${avatarBg(arisanColorFor(nama))}">${initials(nama)}</span>`;
+}
+/** Nama pendek untuk label di roda (biar tidak numpuk): ambil kata pertama, potong kalau kepanjangan. */
+function arisanShortName(nama){
+  const first = String(nama||"?").trim().split(/\s+/)[0] || "?";
+  return first.length>10 ? first.slice(0,9)+"…" : first;
+}
 function arisanPendingCount(){
   const b = activeArisanBatch();
   return b ? arisanPendingMembers(b).length : 0;
@@ -1265,12 +1279,12 @@ function arisanCountdownHtml(targetIso, idPrefix, caption){
 }
 function arisanMemberRowHtml(m, mode){
   if(mode==="pending"){
-    return `<div class="arisan-mem-row is-pending">${avatarHtml(m.nama,"sm")}<span class="am-name">${escapeHtml(m.nama)}</span><span class="am-badge am-badge-pending">${icon('history')}<span>Menunggu ACC</span></span></div>`;
+    return `<div class="arisan-mem-row is-pending">${arisanAvatarHtml(m.nama,"sm")}<span class="am-name">${escapeHtml(m.nama)}</span><span class="am-badge am-badge-pending">${icon('history')}<span>Menunggu ACC</span></span></div>`;
   }
   if(m.sudahMenang){
     return `<div class="arisan-mem-row is-winner"><span class="am-trophy">${icon('trophy')}</span><span class="am-name">${escapeHtml(m.nama)}</span><span class="am-badge am-badge-winner">Menang ronde ${m.menangRound}</span></div>`;
   }
-  return `<div class="arisan-mem-row is-eligible">${avatarHtml(m.nama,"sm")}<span class="am-name">${escapeHtml(m.nama)}</span><span class="am-badge am-badge-eligible">${icon('check')}<span>Aktif</span></span></div>`;
+  return `<div class="arisan-mem-row is-eligible">${arisanAvatarHtml(m.nama,"sm")}<span class="am-name">${escapeHtml(m.nama)}</span><span class="am-badge am-badge-eligible">${icon('check')}<span>Aktif</span></span></div>`;
 }
 function arisanBatchHtml(batch){
   const meta = arisanStatusMeta(batch.status);
@@ -1335,7 +1349,7 @@ function arisanBatchHtml(batch){
       ${history.map(h=>`
         <div class="arisan-history-item">
           <span class="ahi-round">Ronde ${h.round}</span>
-          <span class="ahi-winner">${avatarHtml(h.winnerNama,"sm")}${escapeHtml(h.winnerNama)}</span>
+          <span class="ahi-winner">${arisanAvatarHtml(h.winnerNama,"sm")}${escapeHtml(h.winnerNama)}</span>
           <span class="ahi-date mono">${fmtDateShort(h.tgl)}</span>
         </div>
       `).join("")}
@@ -1942,7 +1956,7 @@ function secArisanBatchHtml(batch){
     <div class="arisan-mem-list">
       ${pending.map(m=>`
         <div class="arisan-mem-row is-pending">
-          ${avatarHtml(m.nama,"sm")}<span class="am-name">${escapeHtml(m.nama)}${m.hp?` · ${escapeHtml(m.hp)}`:''}</span>
+          ${arisanAvatarHtml(m.nama,"sm")}<span class="am-name">${escapeHtml(m.nama)}${m.hp?` · ${escapeHtml(m.hp)}`:''}</span>
           <div class="req-actions" style="margin-left:auto;">
             <button class="btn btn-sm" style="color:var(--forest);border-color:var(--forest);" data-arisan-acc="${batch.id}|${m.id}">${icon('check')}<span>ACC</span></button>
             <button class="btn btn-sm btn-danger" data-arisan-tolak="${batch.id}|${m.id}">${icon('close')}<span>Tolak</span></button>
@@ -1955,7 +1969,7 @@ function secArisanBatchHtml(batch){
     <div class="arisan-mem-list">
       ${approved.length ? approved.map(m=>`
         <div class="arisan-mem-row ${m.sudahMenang?'is-winner':'is-eligible'}">
-          ${m.sudahMenang ? `<span class="am-trophy">${icon('trophy')}</span>` : avatarHtml(m.nama,"sm")}
+          ${m.sudahMenang ? `<span class="am-trophy">${icon('trophy')}</span>` : arisanAvatarHtml(m.nama,"sm")}
           <span class="am-name">${escapeHtml(m.nama)}</span>
           <span class="am-badge ${m.sudahMenang?'am-badge-winner':'am-badge-eligible'}">${m.sudahMenang ? `Menang ronde ${m.menangRound}` : 'Aktif'}</span>
           ${batch.status==="pendaftaran" ? `<button class="icon-btn sm" style="color:var(--rust);margin-left:auto;" data-arisan-remove="${batch.id}|${m.id}" title="Keluarkan">${icon('trash')}</button>` : ""}
@@ -1969,7 +1983,7 @@ function secArisanBatchHtml(batch){
       ${history.map(h=>`
         <div class="arisan-history-item">
           <span class="ahi-round">Ronde ${h.round}</span>
-          <span class="ahi-winner">${avatarHtml(h.winnerNama,"sm")}${escapeHtml(h.winnerNama)}</span>
+          <span class="ahi-winner">${arisanAvatarHtml(h.winnerNama,"sm")}${escapeHtml(h.winnerNama)}</span>
           <span class="ahi-date mono">${fmtDateShort(h.tgl)}</span>
         </div>
       `).join("")}
@@ -2016,15 +2030,45 @@ function bindArisanBatchForm(){
   });
 }
 
-/* ---- modal animasi pengocokan arisan ---- */
+/* ---- modal animasi pengocokan arisan: RODA PUTAR (wheel of fortune) ----
+   Murni CSS conic-gradient + transform rotate (tanpa canvas/SVG/library),
+   supaya tetap ringan di HP maupun PC namun terlihat premium. */
+function _arisanWheelSlicesHtml(eligible, radiusPx){
+  const n = eligible.length || 1;
+  const per = 360/n;
+  return eligible.map((m,i)=>{
+    const mid = i*per + per/2;
+    // trik: rotate ke sudut tengah slice, geser keluar sepanjang radius, lalu rotate balik
+    // supaya teks nama tetap tegak & gampang dibaca dari sudut manapun.
+    return `<div class="wheel-label" style="transform:rotate(${mid}deg) translate(${radiusPx}px) rotate(${-mid}deg);">${escapeHtml(arisanShortName(m.nama))}</div>`;
+  }).join("");
+}
+function _arisanWheelGradient(eligible){
+  const n = eligible.length || 1;
+  const per = 360/n;
+  const stops = eligible.map((m,i)=>{
+    const c = arisanColorFor(m.nama);
+    return `${c} ${(i*per).toFixed(2)}deg ${((i+1)*per).toFixed(2)}deg`;
+  }).join(", ");
+  return n===1 ? arisanColorFor(eligible[0]?.nama||"?") : `conic-gradient(${stops})`;
+}
 function arisanDrawModalHtml(batch, eligible){
+  const lightsHtml = Array.from({length:16}).map((_,i)=>
+    `<span class="wheel-light" style="--i:${i};animation-delay:${(i*0.09).toFixed(2)}s;"></span>`
+  ).join("");
   return `
     <div class="modal-head"><h3>🎲 Mengocok Pemenang — Ronde ${batch.currentRound+1}</h3><button class="icon-btn" id="modalClose" disabled style="opacity:.3;">&times;</button></div>
-    <div class="draw-stage">
-      <div class="draw-reel" id="drawReel">
-        ${eligible.map(m=>`<div class="draw-reel-item">${avatarHtml(m.nama,"sm")}<span>${escapeHtml(m.nama)}</span></div>`).join("")}
+    <div class="wheel-status-label" id="wheelStatus">Bersiap mengocok ${eligible.length} peserta…</div>
+    <div class="wheel-wrap">
+      <div class="wheel-lights">${lightsHtml}</div>
+      <div class="wheel-pointer" id="wheelPointer"></div>
+      <div class="wheel-outer">
+        <div class="wheel-dial" id="wheelDial" style="background:${_arisanWheelGradient(eligible)};">
+          <div class="wheel-lines" style="--n:${eligible.length||1};"></div>
+          ${_arisanWheelSlicesHtml(eligible, 78)}
+        </div>
+        <div class="wheel-hub">${icon('gift')}</div>
       </div>
-      <div class="draw-reel-marker"></div>
     </div>
     <div class="draw-result" id="drawResult" style="display:none;">
       <div class="draw-confetti" id="drawConfetti"></div>
@@ -2043,32 +2087,33 @@ function bindArisanDrawModal(batch){
   if(!eligible.length){ toast("Tidak ada anggota yang eligible untuk dikocok","err"); return; }
   const winnerIdx = Math.floor(Math.random()*eligible.length);
   const winner = eligible[winnerIdx];
+  const n = eligible.length;
+  const per = 360/n;
+  const sliceMid = winnerIdx*per + per/2;
+  // jitter kecil di dalam slice supaya berhenti tidak selalu pas di tengah (terasa lebih "acak" & natural),
+  // tapi dijaga jauh dari batas slice (aman dari salah baca pemenang).
+  const safeMargin = Math.min(per*0.32, 10);
+  const jitter = n>1 ? (Math.random()*2-1) * (per/2 - safeMargin) : 0;
+  const laps = 6; // jumlah putaran penuh sebelum berhenti, biar dramatis
+  const targetDeg = laps*360 + (360 - sliceMid - jitter + 360) % 360;
 
-  const reel = document.getElementById("drawReel");
-  const stage = reel.closest(".draw-stage");
-  const itemW = 128; // harus selaras dengan lebar .draw-reel-item di CSS
-  // reel diperpanjang beberapa putaran penuh supaya animasi berhenti mulus di pemenang
-  const laps = 6;
-  const totalItems = eligible.length;
-  let extended = "";
-  for(let lap=0; lap<laps; lap++){
-    extended += eligible.map(m=>`<div class="draw-reel-item">${avatarHtml(m.nama,"sm")}<span>${escapeHtml(m.nama)}</span></div>`).join("");
-  }
-  reel.innerHTML = extended;
-  const finalIndex = totalItems*(laps-1) + winnerIdx;
-  const targetCenter = finalIndex*itemW + itemW/2;
-  const stageWidth = stage.getBoundingClientRect().width || 320;
-  const targetX = (stageWidth/2) - targetCenter;
-
-  reel.style.transform = "translateX(0px)";
+  const dial = document.getElementById("wheelDial");
+  const status = document.getElementById("wheelStatus");
+  const wrap = dial.closest(".wheel-wrap");
+  wrap.classList.add("is-spinning");
+  dial.style.transform = "rotate(0deg)";
   requestAnimationFrame(()=>{
     requestAnimationFrame(()=>{
-      reel.style.transition = "transform 3.2s cubic-bezier(.13,.85,.16,1)";
-      reel.style.transform = `translateX(${targetX}px)`;
+      dial.style.transition = "transform 4.4s cubic-bezier(.11,.82,.13,1)";
+      dial.style.transform = `rotate(${targetDeg}deg)`;
     });
   });
 
+  const SPIN_MS = 4500;
   setTimeout(()=>{
+    wrap.classList.remove("is-spinning");
+    wrap.classList.add("is-done");
+    if(status) status.textContent = `🎉 Pemenangnya adalah ${winner.nama}!`;
     document.getElementById("drawResult").style.display = "flex";
     document.getElementById("drawWinnerName").textContent = winner.nama;
     spawnConfetti(document.getElementById("drawConfetti"));
@@ -2076,7 +2121,7 @@ function bindArisanDrawModal(batch){
     actions.style.visibility = "visible";
     const closeBtn = document.getElementById("modalClose");
     if(closeBtn){ closeBtn.disabled = false; closeBtn.style.opacity = "1"; closeBtn.addEventListener("click", closeModal); }
-  }, 3400);
+  }, SPIN_MS);
 
   document.getElementById("drawCancel").addEventListener("click", closeModal);
   document.getElementById("drawConfirm").addEventListener("click", ()=>{
