@@ -2030,44 +2030,51 @@ function bindArisanBatchForm(){
   });
 }
 
-/* ---- modal animasi pengocokan arisan: RODA PUTAR (wheel of fortune) ----
-   Murni CSS conic-gradient + transform rotate (tanpa canvas/SVG/library),
-   supaya tetap ringan di HP maupun PC namun terlihat premium. */
-function _arisanWheelSlicesHtml(eligible, radiusPx){
-  const n = eligible.length || 1;
-  const per = 360/n;
-  return eligible.map((m,i)=>{
-    const mid = i*per + per/2;
-    // trik: rotate ke sudut tengah slice, geser keluar sepanjang radius, lalu rotate balik
-    // supaya teks nama tetap tegak & gampang dibaca dari sudut manapun.
-    return `<div class="wheel-label" style="transform:rotate(${mid}deg) translate(${radiusPx}px) rotate(${-mid}deg);">${escapeHtml(arisanShortName(m.nama))}</div>`;
-  }).join("");
+/* ---- modal animasi pengocokan arisan: MESIN SLOT 3-REEL ----
+   Murni CSS transform + transition (tanpa canvas/library), tiap reel berisi
+   nama-nama anggota yang scroll vertikal lalu berhenti satu-satu — reel
+   terakhir dibuat paling lambat & paling "slow-motion" biar bikin tegang,
+   dan ketiga reel dijamin berhenti di nama yang sama (efek jackpot align). */
+const SLOT_CELL = 72;   // px — HARUS sinkron dengan tinggi .slot-cell di CSS
+const SLOT_REELS = 3;
+const SLOT_LAPS = 9;    // jumlah putaran penuh daftar anggota sebelum berhenti di pemenang
+const SLOT_REEL_CFG = [
+  { duration: 2.6, ease: "cubic-bezier(.15,.8,.2,1)" },
+  { duration: 3.7, ease: "cubic-bezier(.09,.85,.13,1)" },
+  { duration: 5.2, ease: "cubic-bezier(.04,.93,.07,1)" }, // reel terakhir: creep slow-motion di ujung
+];
+function _shuffleCopy(arr){
+  const a = arr.slice();
+  for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); const t=a[i]; a[i]=a[j]; a[j]=t; }
+  return a;
 }
-function _arisanWheelGradient(eligible){
-  const n = eligible.length || 1;
-  const per = 360/n;
-  const stops = eligible.map((m,i)=>{
-    const c = arisanColorFor(m.nama);
-    return `${c} ${(i*per).toFixed(2)}deg ${((i+1)*per).toFixed(2)}deg`;
-  }).join(", ");
-  return n===1 ? arisanColorFor(eligible[0]?.nama||"?") : `conic-gradient(${stops})`;
+function _slotCellHtml(m){
+  return `<div class="slot-cell"><span class="slot-avatar" style="background:${avatarBg(arisanColorFor(m.nama))}">${initials(m.nama)}</span><span class="slot-name">${escapeHtml(arisanShortName(m.nama))}</span></div>`;
+}
+function _buildSlotReelHtml(eligible, winner){
+  let seq = [];
+  for(let lap=0; lap<SLOT_LAPS; lap++) seq.push(..._shuffleCopy(eligible));
+  const targetIndex = seq.length; // index tempat pemenang akan berada
+  seq.push(winner);
+  seq.push(..._shuffleCopy(eligible).slice(0,2)); // 2 sel ekstra biar baris bawah payline tetap terisi
+  return { html: seq.map(_slotCellHtml).join(""), targetIndex };
 }
 function arisanDrawModalHtml(batch, eligible){
-  const lightsHtml = Array.from({length:16}).map((_,i)=>
-    `<span class="wheel-light" style="--i:${i};animation-delay:${(i*0.09).toFixed(2)}s;"></span>`
-  ).join("");
+  const bulb = (n,cls)=>Array.from({length:n}).map((_,i)=>`<span class="slot-bulb ${cls||''}" style="--i:${i}"></span>`).join("");
+  const reelsHtml = Array.from({length:SLOT_REELS}).map((_,i)=>`
+    <div class="slot-reel-window"><div class="slot-reel-strip" id="slotReel${i}"></div></div>
+  `).join("");
   return `
-    <div class="modal-head"><h3>🎲 Mengocok Pemenang — Ronde ${batch.currentRound+1}</h3><button class="icon-btn" id="modalClose" disabled style="opacity:.3;">&times;</button></div>
+    <div class="modal-head"><h3>🎰 Mengocok Pemenang — Ronde ${batch.currentRound+1}</h3><button class="icon-btn" id="modalClose" disabled style="opacity:.3;">&times;</button></div>
     <div class="wheel-status-label" id="wheelStatus">Bersiap mengocok ${eligible.length} peserta…</div>
-    <div class="wheel-wrap">
-      <div class="wheel-lights">${lightsHtml}</div>
-      <div class="wheel-pointer" id="wheelPointer"></div>
-      <div class="wheel-outer">
-        <div class="wheel-dial" id="wheelDial" style="background:${_arisanWheelGradient(eligible)};">
-          <div class="wheel-lines" style="--n:${eligible.length||1};"></div>
-          ${_arisanWheelSlicesHtml(eligible, 78)}
+    <div class="slot-machine" id="slotMachine">
+      <div class="slot-inner">
+        <div class="slot-marquee">${bulb(14)}</div>
+        <div class="slot-reels-row">
+          ${reelsHtml}
+          <div class="slot-payline"><span class="pl-arrow left"></span><span class="pl-arrow right"></span></div>
         </div>
-        <div class="wheel-hub">${icon('gift')}</div>
+        <div class="slot-marquee bottom">${bulb(14)}</div>
       </div>
     </div>
     <div class="draw-result" id="drawResult" style="display:none;">
@@ -2087,41 +2094,46 @@ function bindArisanDrawModal(batch){
   if(!eligible.length){ toast("Tidak ada anggota yang eligible untuk dikocok","err"); return; }
   const winnerIdx = Math.floor(Math.random()*eligible.length);
   const winner = eligible[winnerIdx];
-  const n = eligible.length;
-  const per = 360/n;
-  const sliceMid = winnerIdx*per + per/2;
-  // jitter kecil di dalam slice supaya berhenti tidak selalu pas di tengah (terasa lebih "acak" & natural),
-  // tapi dijaga jauh dari batas slice (aman dari salah baca pemenang).
-  const safeMargin = Math.min(per*0.32, 10);
-  const jitter = n>1 ? (Math.random()*2-1) * (per/2 - safeMargin) : 0;
-  const laps = 6; // jumlah putaran penuh sebelum berhenti, biar dramatis
-  const targetDeg = laps*360 + (360 - sliceMid - jitter + 360) % 360;
-
-  const dial = document.getElementById("wheelDial");
   const status = document.getElementById("wheelStatus");
-  const wrap = dial.closest(".wheel-wrap");
-  wrap.classList.add("is-spinning");
-  dial.style.transform = "rotate(0deg)";
-  requestAnimationFrame(()=>{
-    requestAnimationFrame(()=>{
-      dial.style.transition = "transform 4.4s cubic-bezier(.11,.82,.13,1)";
-      dial.style.transform = `rotate(${targetDeg}deg)`;
-    });
-  });
+  const machine = document.getElementById("slotMachine");
+  machine.classList.add("is-spinning");
 
-  const SPIN_MS = 4500;
-  setTimeout(()=>{
-    wrap.classList.remove("is-spinning");
-    wrap.classList.add("is-done");
-    if(status) status.textContent = `🎉 Pemenangnya adalah ${winner.nama}!`;
-    document.getElementById("drawResult").style.display = "flex";
-    document.getElementById("drawWinnerName").textContent = winner.nama;
-    spawnConfetti(document.getElementById("drawConfetti"));
-    const actions = document.getElementById("drawActions");
-    actions.style.visibility = "visible";
-    const closeBtn = document.getElementById("modalClose");
-    if(closeBtn){ closeBtn.disabled = false; closeBtn.style.opacity = "1"; closeBtn.addEventListener("click", closeModal); }
-  }, SPIN_MS);
+  let stoppedCount = 0;
+  for(let i=0; i<SLOT_REELS; i++){
+    const strip = document.getElementById("slotReel"+i);
+    const { html, targetIndex } = _buildSlotReelHtml(eligible, winner);
+    strip.innerHTML = html;
+    strip.style.transition = "none";
+    strip.style.transform = "translateY(0px)";
+    const targetY = -(targetIndex-1) * SLOT_CELL;
+    const cfg = SLOT_REEL_CFG[i] || SLOT_REEL_CFG[SLOT_REEL_CFG.length-1];
+    requestAnimationFrame(()=>{
+      requestAnimationFrame(()=>{
+        strip.style.transition = `transform ${cfg.duration}s ${cfg.ease}`;
+        strip.style.transform = `translateY(${targetY}px)`;
+      });
+    });
+    strip.addEventListener("transitionend", function onEnd(e){
+      if(e.propertyName!=="transform") return;
+      strip.removeEventListener("transitionend", onEnd);
+      strip.closest(".slot-reel-window").classList.add("is-settled");
+      stoppedCount++;
+      if(stoppedCount < SLOT_REELS){
+        if(status) status.textContent = i===SLOT_REELS-2 ? `Reel terakhir masih berputar… tahan napas!` : `Reel ${stoppedCount}/${SLOT_REELS} berhenti…`;
+      } else {
+        machine.classList.remove("is-spinning");
+        machine.classList.add("is-jackpot");
+        if(status) status.textContent = `🎉 Pemenangnya adalah ${winner.nama}!`;
+        document.getElementById("drawResult").style.display = "flex";
+        document.getElementById("drawWinnerName").textContent = winner.nama;
+        spawnConfetti(document.getElementById("drawConfetti"));
+        const actions = document.getElementById("drawActions");
+        actions.style.visibility = "visible";
+        const closeBtn = document.getElementById("modalClose");
+        if(closeBtn){ closeBtn.disabled = false; closeBtn.style.opacity = "1"; closeBtn.addEventListener("click", closeModal); }
+      }
+    });
+  }
 
   document.getElementById("drawCancel").addEventListener("click", closeModal);
   document.getElementById("drawConfirm").addEventListener("click", ()=>{
