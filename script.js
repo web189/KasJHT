@@ -227,15 +227,40 @@ function buildSeedRequestsFromAset(rawAset){
 }
 const SEED_REQUESTS = buildSeedRequestsFromAset(RAW_ASET);
 
+/* ---------------- SEED DATA: ARISAN TANTEH SUSI ----------------
+   Contoh batch pendaftaran arisan bulanan. Kocokan pertama tgl 05 Oktober 2026,
+   iuran Rp150.000/orang, kuota 5 slot — persis skenario contoh dari admin.
+------------------------------------------------------------------ */
+const SEED_ARISAN = [
+  {
+    id: "arisan_seed1",
+    nama: "Arisan Tanteh Susi — Batch Oktober 2026",
+    biaya: 150000,
+    kuota: 5,
+    tglMulai: "2026-10-05",
+    status: "pendaftaran",
+    currentRound: 0,
+    createdAt: "2026-08-20",
+    members: [
+      { id:"am1", nama:"Riki", hp:"", status:"approved", daftarAt:"2026-08-20", sudahMenang:false, menangRound:null, menangTgl:null },
+      { id:"am2", nama:"Budiansyah", hp:"", status:"approved", daftarAt:"2026-08-21", sudahMenang:false, menangRound:null, menangTgl:null },
+      { id:"am3", nama:"Daud", hp:"", status:"approved", daftarAt:"2026-08-24", sudahMenang:false, menangRound:null, menangTgl:null },
+      { id:"am4", nama:"Rian", hp:"", status:"pending", daftarAt:"2026-08-27", sudahMenang:false, menangRound:null, menangTgl:null },
+    ],
+    drawHistory: [],
+  },
+];
+
 
 /** Simpan ke Firestore. DB lokal sudah dimutasi duluan oleh pemanggil (pola lama
  *  dipertahankan), fungsi ini cuma mendorong array terbaru ke server. */
 function saveMembers(m){ FJHT.saveMembers(m).catch(err=>toast("Gagal menyimpan anggota: "+err.message)); }
 function saveTx(t){ FJHT.saveTx(t).catch(err=>toast("Gagal menyimpan transaksi: "+err.message)); }
 function saveRequests(r){ FJHT.saveRequests(r).catch(err=>toast("Gagal menyimpan pengajuan: "+err.message)); }
+function saveArisan(a){ FJHT.saveArisan(a).catch(err=>toast("Gagal menyimpan data arisan: "+err.message)); }
 function isAuthed(){ return FJHT.isAdmin(); }
 
-let DB = { members: [], tx: [], requests: [] };
+let DB = { members: [], tx: [], requests: [], arisan: [] };
 let DB_READY = false;
 
 /** Boot: tunggu status login Firebase Auth siap, ambil data dari Firestore
@@ -247,9 +272,11 @@ async function bootFromFirebase(){
     const seeded = await FJHT.migrateSeedIfEmpty(
       SEED_MEMBERS,
       buildSeedTransactions(),
-      SEED_REQUESTS.map(r=>({...r}))
+      SEED_REQUESTS.map(r=>({...r})),
+      SEED_ARISAN.map(a=>({...a, members:a.members.map(x=>({...x})), drawHistory:a.drawHistory.map(x=>({...x}))}))
     );
     DB = seeded;
+    if(!DB.arisan) DB.arisan = [];
 
     // Firestore cuma di-seed SEKALI waktu koleksinya masih kosong (lihat
     // migrateSeedIfEmpty). Supaya anggota/transaksi/aset BARU yang ditambahkan
@@ -340,6 +367,8 @@ const state = {
   moneyRevealed: false,   // samarkan (blur) semua nominal uang di tampilan tamu sampai user klik "Tampilkan Semua Nominal"
   // draft form "Pengajuan Pembelian" — dipertahankan lintas re-render
   pengajuan: { mode:"solo", soloAdmin:"", patunganSet:null, ket:"", nominal:"", pemohon:"", editingReqId:null },
+  // draft form pendaftaran arisan (tampilan tamu)
+  arisanReg: { nama:"", hp:"" },
 };
 
 /* ---------------- UTIL ---------------- */
@@ -541,6 +570,58 @@ function rejectRequest(id){
   toast("Pengajuan ditolak");
 }
 
+/* ============================================================
+   ARISAN TANTEH SUSI — logika inti
+   Model 1 dokumen "kas/arisan" -> { list: [ batch, ... ] }, tiap batch:
+   { id, nama, biaya, kuota, tglMulai, status('pendaftaran'|'berjalan'|'selesai'),
+     currentRound, createdAt, members:[{id,nama,hp,status,daftarAt,sudahMenang,
+     menangRound,menangTgl}], drawHistory:[{round,tgl,winnerId,winnerNama}] }
+============================================================ */
+function addMonthsISO(iso, n){
+  const [y,m,d] = iso.split("-").map(Number);
+  const dt = new Date(y, (m-1)+n, d);
+  return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,"0")}-${String(dt.getDate()).padStart(2,"0")}`;
+}
+/** Batch "aktif" = batch terbaru yang belum selesai (pendaftaran atau berjalan). */
+function activeArisanBatch(){
+  const list = DB.arisan||[];
+  const open = list.filter(a=>a.status!=="selesai");
+  if(!open.length) return null;
+  return [...open].sort((a,b)=> b.createdAt.localeCompare(a.createdAt))[0];
+}
+function finishedArisanBatches(){
+  return (DB.arisan||[]).filter(a=>a.status==="selesai").sort((a,b)=> b.createdAt.localeCompare(a.createdAt));
+}
+function arisanApprovedMembers(batch){ return (batch.members||[]).filter(m=>m.status==="approved"); }
+function arisanPendingMembers(batch){ return (batch.members||[]).filter(m=>m.status==="pending"); }
+function arisanEligibleMembers(batch){ return arisanApprovedMembers(batch).filter(m=>!m.sudahMenang); }
+function arisanNextDrawDate(batch){ return addMonthsISO(batch.tglMulai, batch.currentRound); }
+function arisanQuotaTaken(batch){ return (batch.members||[]).filter(m=>m.status!=="rejected").length; }
+function arisanQuotaFull(batch){ return !!batch.kuota && arisanQuotaTaken(batch) >= batch.kuota; }
+function computeCountdown(targetIso){
+  const target = new Date(targetIso+"T00:00:00").getTime();
+  const diff = Math.max(0, target - Date.now());
+  return {
+    d: Math.floor(diff/86400000),
+    h: Math.floor((diff%86400000)/3600000),
+    m: Math.floor((diff%3600000)/60000),
+    s: Math.floor((diff%60000)/1000),
+    done: diff<=0,
+  };
+}
+function saveArisanList(){ saveArisan(DB.arisan); }
+function arisanPendingCount(){
+  const b = activeArisanBatch();
+  return b ? arisanPendingMembers(b).length : 0;
+}
+function arisanMenuBadge(){
+  const b = activeArisanBatch();
+  if(!b) return "";
+  if(b.status==="pendaftaran") return `<span class="mm-badge mm-badge-pink">Buka</span>`;
+  if(b.status==="berjalan") return `<span class="mm-badge mm-badge-pink">Live</span>`;
+  return "";
+}
+
 /* ---------------- PERINGKAT SETORAN (KAS MASUK) PER ANGGOTA ---------------- */
 function depositRanking(){
   const map = {};
@@ -700,6 +781,9 @@ function render(){
   } else if(state.route === "/aset"){
     root.innerHTML = renderAsetPage();
     bindSimplePage();
+  } else if(state.route === "/arisan"){
+    root.innerHTML = renderArisanPage();
+    bindArisanPage();
   } else {
     root.innerHTML = renderGuest();
     bindGuest();
@@ -735,6 +819,9 @@ function topbar(){
       <button class="mm-item" id="mmPengajuan" data-tone="action"><span class="mm-ico-wrap">${icon('plus-circle')}</span><span>Ajukan Pembelian</span></button>
       <button class="mm-item" id="mmRiwayat" data-tone="action"><span class="mm-ico-wrap">${icon('inbox')}</span><span>Riwayat Pengajuan</span>${pendingCount>0?`<span class="mm-badge">${pendingCount}</span>`:""}</button>
       <button class="mm-item" id="mmAset" data-tone="action"><span class="mm-ico-wrap">${icon('box')}</span><span>Aset Barang/Jasa Milik Pribadi Admin</span></button>
+      <div class="mm-sep"></div>
+      <div class="mm-label" style="--tone:#D6488E;">Arisan</div>
+      <button class="mm-item mm-arisan-item" id="mmArisan" data-tone="arisan"><span class="mm-ico-wrap">${icon('gift')}</span><span>Arisan Tanteh Susi</span>${arisanMenuBadge()}</button>
       <div class="mm-sep"></div>
       <div class="mm-label" style="--tone:var(--amber);">Unduh Data</div>
       <button class="mm-item" id="mmExportExcel" data-tone="download"><span class="mm-ico-wrap">${icon('file-excel')}</span><span>Unduh Excel</span></button>
@@ -985,7 +1072,7 @@ function excelPanelHtml(withActions){
   return `
     <div class="panel panel-ledger">
       <div class="panel-head ${collapsible ? 'panel-head-toggle' : ''}" ${collapsible ? `id="ledgerToggle" role="button" tabindex="0" aria-expanded="${isOpen}"` : ""}>
-        <h3>📋 Tabel Transaksi</h3>
+        <h3>📋 Tabel Excel Real Time</h3>
         ${collapsible ? `<span class="panel-head-hint">${isOpen?'Sembunyikan filter':'Tampilkan filter'}<span class="panel-head-chev">${icon('chevron-right')}</span></span>` : ""}
       </div>
       ${isDesktopWidth() ? `
@@ -1073,6 +1160,7 @@ function bindTopbarCommon(){
   document.getElementById("mmPengajuan")?.addEventListener("click", ()=>{ closeMobileMenu(); goto("/pengajuan"); });
   document.getElementById("mmRiwayat")?.addEventListener("click", ()=>{ closeMobileMenu(); goto("/riwayat"); });
   document.getElementById("mmAset")?.addEventListener("click", ()=>{ closeMobileMenu(); goto("/aset"); });
+  document.getElementById("mmArisan")?.addEventListener("click", ()=>{ closeMobileMenu(); goto("/arisan"); });
   document.getElementById("mmGameToggle")?.addEventListener("click", (e)=>{
     e.stopPropagation();
     const sub = document.getElementById("mmGameSubmenu");
@@ -1149,6 +1237,188 @@ function scrollExcelTablesToLatest(){
   requestAnimationFrame(()=>{
     document.querySelectorAll(".excel-wrap").forEach(el=>{ el.scrollTop = el.scrollHeight; });
   });
+}
+
+/* ============================================================
+   HALAMAN: ARISAN TANTEH SUSI (publik — lihat & daftar)
+============================================================ */
+function arisanStatusMeta(status){
+  if(status==="berjalan") return {label:"Sedang Berjalan", cls:"berjalan"};
+  if(status==="selesai") return {label:"Selesai", cls:"selesai"};
+  return {label:"Pendaftaran Dibuka", cls:"pendaftaran"};
+}
+function arisanCountdownHtml(targetIso, idPrefix, caption){
+  const c = computeCountdown(targetIso);
+  return `
+  <div class="arisan-countdown">
+    <div class="arisan-countdown-caption">${caption} <b class="mono">${fmtDate(targetIso)}</b></div>
+    <div class="cd-grid" id="${idPrefix}Grid" data-target="${targetIso}">
+      <div class="cd-box"><span class="cd-num mono" id="${idPrefix}Day">${String(c.d).padStart(2,"0")}</span><span class="cd-label">Hari</span></div>
+      <span class="cd-colon">:</span>
+      <div class="cd-box"><span class="cd-num mono" id="${idPrefix}Hour">${String(c.h).padStart(2,"0")}</span><span class="cd-label">Jam</span></div>
+      <span class="cd-colon">:</span>
+      <div class="cd-box"><span class="cd-num mono" id="${idPrefix}Min">${String(c.m).padStart(2,"0")}</span><span class="cd-label">Menit</span></div>
+      <span class="cd-colon">:</span>
+      <div class="cd-box"><span class="cd-num mono" id="${idPrefix}Sec">${String(c.s).padStart(2,"0")}</span><span class="cd-label">Detik</span></div>
+    </div>
+  </div>`;
+}
+function arisanMemberRowHtml(m, mode){
+  if(mode==="pending"){
+    return `<div class="arisan-mem-row is-pending">${avatarHtml(m.nama,"sm")}<span class="am-name">${escapeHtml(m.nama)}</span><span class="am-badge am-badge-pending">${icon('history')}<span>Menunggu ACC</span></span></div>`;
+  }
+  if(m.sudahMenang){
+    return `<div class="arisan-mem-row is-winner"><span class="am-trophy">${icon('trophy')}</span><span class="am-name">${escapeHtml(m.nama)}</span><span class="am-badge am-badge-winner">Menang ronde ${m.menangRound}</span></div>`;
+  }
+  return `<div class="arisan-mem-row is-eligible">${avatarHtml(m.nama,"sm")}<span class="am-name">${escapeHtml(m.nama)}</span><span class="am-badge am-badge-eligible">${icon('check')}<span>Aktif</span></span></div>`;
+}
+function arisanBatchHtml(batch){
+  const meta = arisanStatusMeta(batch.status);
+  const approved = arisanApprovedMembers(batch);
+  const pending = arisanPendingMembers(batch);
+  const taken = arisanQuotaTaken(batch);
+  const quotaFull = arisanQuotaFull(batch);
+  const quotaPct = batch.kuota ? Math.min(100, taken/batch.kuota*100) : 0;
+  const nextDraw = arisanNextDrawDate(batch);
+  const history = [...(batch.drawHistory||[])].sort((a,b)=>b.round-a.round);
+
+  const regBlock = (batch.status==="pendaftaran" && !quotaFull) ? `
+    <div class="arisan-reg-card">
+      <div class="pg-card-head">
+        <span class="pg-card-head-icon">${icon('gift')}</span>
+        <div>
+          <div class="pg-card-head-title">Daftar Arisan Ini</div>
+          <div class="pg-card-head-sub">Iuran ${rupiah(batch.biaya)}/bulan — kirim data diri, tunggu di-ACC admin.</div>
+        </div>
+      </div>
+      <div class="field"><label>${icon('edit')} Nama Lengkap</label><input type="text" id="arNama" placeholder="Nama kamu" value="${escapeHtml(state.arisanReg.nama)}"></div>
+      <div class="field"><label>${icon('edit')} No. WhatsApp <span style="font-weight:400;color:var(--ink-faint);">(opsional)</span></label><input type="text" id="arHp" placeholder="0812xxxxxxx" value="${escapeHtml(state.arisanReg.hp)}"></div>
+      <div class="modal-actions pg-actions">
+        <button class="btn btn-primary" id="arSubmit">${icon('gift')}<span>Daftar Sekarang</span></button>
+      </div>
+    </div>
+  ` : (batch.status==="pendaftaran" ? `<div class="arisan-full-note">${icon('alert')}<span>Kuota pendaftaran sudah penuh (${taken}/${batch.kuota}). Nantikan batch arisan berikutnya!</span></div>` : "");
+
+  return `
+  <div class="panel arisan-panel reveal" style="margin-top:16px;">
+    <div class="arisan-panel-head">
+      <div>
+        <div class="arisan-batch-name">${escapeHtml(batch.nama)}</div>
+        <span class="arisan-status-badge ${meta.cls}">${meta.label}</span>
+      </div>
+      <div class="arisan-fee-chip"><span class="label">Iuran / bulan</span><span class="val mono">${rupiah(batch.biaya)}</span></div>
+    </div>
+
+    ${batch.kuota ? `
+    <div class="arisan-quota-wrap">
+      <div class="arisan-quota-label"><span>Slot Anggota</span><span class="mono">${taken}/${batch.kuota}</span></div>
+      <div class="arisan-quota-track"><div class="arisan-quota-fill" style="width:${quotaPct}%;"></div></div>
+    </div>` : ""}
+
+    ${arisanCountdownHtml(nextDraw, "arCd", batch.status==="berjalan" ? "⏱️ Kocokan berikutnya:" : "🎯 Kocokan pertama dijadwalkan:")}
+
+    ${regBlock}
+
+    <div class="arisan-members-block">
+      ${approved.length ? `
+      <div class="arisan-mem-group-label">Anggota Aktif (${approved.length})</div>
+      <div class="arisan-mem-list">${approved.map(m=>arisanMemberRowHtml(m,"approved")).join("")}</div>` : ""}
+      ${pending.length ? `
+      <div class="arisan-mem-group-label">Menunggu Persetujuan Admin (${pending.length})</div>
+      <div class="arisan-mem-list">${pending.map(m=>arisanMemberRowHtml(m,"pending")).join("")}</div>` : ""}
+      ${!approved.length && !pending.length ? `<div class="empty-row">Belum ada yang mendaftar. Jadilah yang pertama!</div>` : ""}
+    </div>
+
+    ${history.length ? `
+    <div class="arisan-mem-group-label">🏆 Riwayat Kocokan</div>
+    <div class="arisan-history-list">
+      ${history.map(h=>`
+        <div class="arisan-history-item">
+          <span class="ahi-round">Ronde ${h.round}</span>
+          <span class="ahi-winner">${avatarHtml(h.winnerNama,"sm")}${escapeHtml(h.winnerNama)}</span>
+          <span class="ahi-date mono">${fmtDateShort(h.tgl)}</span>
+        </div>
+      `).join("")}
+    </div>` : ""}
+
+    ${isAuthed() ? `<div style="margin-top:14px;"><button class="btn btn-sm" id="arGoAdminManage">${icon('shield')}<span>Kelola Arisan di Dashboard Admin</span></button></div>` : ""}
+  </div>`;
+}
+function arisanEmptyHtml(){
+  return `
+  <div class="panel arisan-panel reveal" style="margin-top:16px;">
+    <div class="empty-row" style="padding:36px 12px;">${icon('gift')}<div style="margin-top:8px;">Belum ada arisan yang dibuka saat ini. Nantikan pengumuman dari admin ya!</div></div>
+    ${isAuthed() ? `<div style="text-align:center;margin-top:6px;"><button class="btn btn-primary btn-sm" id="arGoAdminManage">${icon('plus-circle')}<span>Buka Pendaftaran Arisan</span></button></div>` : ""}
+  </div>`;
+}
+function arisanHistoryHtml(list){
+  return `
+  <div class="panel" style="margin-top:16px;">
+    <div class="panel-head"><h3>📜 Riwayat Batch Arisan Selesai</h3></div>
+    <div class="arisan-mem-list">
+      ${list.map(b=>`
+        <div class="arisan-mem-row is-eligible">
+          <span class="am-name">${escapeHtml(b.nama)}</span>
+          <span class="am-badge am-badge-eligible">${b.drawHistory.length} ronde · ${rupiah(b.biaya)}/orang</span>
+        </div>
+      `).join("")}
+    </div>
+  </div>`;
+}
+
+function renderArisanPage(){
+  const batch = activeArisanBatch();
+  const history = finishedArisanBatches();
+  return `
+  ${topbar()}
+  <div class="container">
+    <div class="hero">
+      <button class="back-link" id="backHome2">&larr; Kembali ke beranda</button>
+      <div class="hero-eyebrow">🎁 Kocok Tiap Tanggal 05 · Transparan &amp; Seru</div>
+      <h1>Arisan Tanteh Susi</h1>
+      <p class="hero-sub">Ikut arisan bulanan, iuran ringan, dikocok terbuka di depan semua anggota. Daftar, tunggu di-ACC admin, lalu nantikan giliranmu menang!</p>
+      ${batch ? arisanBatchHtml(batch) : arisanEmptyHtml()}
+      ${history.length ? arisanHistoryHtml(history) : ""}
+    </div>
+  </div>
+  <footer class="site-footer">JHT KAS Adm PRG — mode uji, data tersimpan di penyimpanan lokal perangkat ini.</footer>
+  `;
+}
+
+const _arisanCountdownTimers = {};
+function startCountdownTicker(idPrefix){
+  if(_arisanCountdownTimers[idPrefix]) clearInterval(_arisanCountdownTimers[idPrefix]);
+  _arisanCountdownTimers[idPrefix] = setInterval(()=>{
+    const grid = document.getElementById(idPrefix+"Grid");
+    if(!grid){ clearInterval(_arisanCountdownTimers[idPrefix]); delete _arisanCountdownTimers[idPrefix]; return; }
+    const c = computeCountdown(grid.dataset.target);
+    document.getElementById(idPrefix+"Day").textContent = String(c.d).padStart(2,"0");
+    document.getElementById(idPrefix+"Hour").textContent = String(c.h).padStart(2,"0");
+    document.getElementById(idPrefix+"Min").textContent = String(c.m).padStart(2,"0");
+    document.getElementById(idPrefix+"Sec").textContent = String(c.s).padStart(2,"0");
+  }, 1000);
+}
+
+function bindArisanPage(){
+  bindTopbarCommon();
+  document.getElementById("backHome2")?.addEventListener("click", ()=> goto("/"));
+  document.getElementById("arGoAdminManage")?.addEventListener("click", ()=>{ state.adminSection="arisan"; goto("/admin"); });
+  document.getElementById("arNama")?.addEventListener("input", e=> state.arisanReg.nama = e.target.value);
+  document.getElementById("arHp")?.addEventListener("input", e=> state.arisanReg.hp = e.target.value);
+  document.getElementById("arSubmit")?.addEventListener("click", ()=>{
+    const batch = activeArisanBatch();
+    if(!batch || batch.status!=="pendaftaran"){ toast("Pendaftaran sudah ditutup","err"); return; }
+    if(arisanQuotaFull(batch)){ toast("Kuota sudah penuh","err"); return; }
+    const nama = (document.getElementById("arNama").value||"").trim();
+    const hp = (document.getElementById("arHp").value||"").trim();
+    if(!nama){ toast("Nama wajib diisi","err"); return; }
+    batch.members.push({ id: uid("am"), nama, hp, status:"pending", daftarAt: new Date().toISOString().slice(0,10), sudahMenang:false, menangRound:null, menangTgl:null });
+    saveArisanList();
+    state.arisanReg = { nama:"", hp:"" };
+    toast("Pendaftaran terkirim, menunggu ACC admin");
+    render();
+  });
+  startCountdownTicker("arCd");
 }
 
 /* ============================================================
@@ -1521,6 +1791,7 @@ const ADMIN_NAV = [
   { id:"transaksi", label:"Transaksi", icon:"book" },
   { id:"pengajuan", label:"Pengajuan", icon:"inbox" },
   { id:"anggota", label:"Anggota", icon:"users" },
+  { id:"arisan", label:"Arisan", icon:"gift" },
   { id:"histori", label:"Histori", icon:"history" },
   { id:"laporan", label:"Laporan", icon:"report" },
 ];
@@ -1537,7 +1808,7 @@ function renderAdmin(){
       <div class="mm-panel-head"><span class="mm-panel-head-icon">${icon('menu')}</span><span>Menu Navigasi</span></div>
       <div class="mm-label" style="--tone:var(--blue);">Navigasi</div>
       ${ADMIN_NAV.map(n=>`
-        <button class="mm-item ${state.adminSection===n.id?'active':''}" data-sec="${n.id}" data-tone="info"><span class="mm-ico-wrap">${icon(n.icon)}</span><span>${n.label}</span>${n.id==='pengajuan'&&pendingCount>0?`<span class="mm-badge">${pendingCount}</span>`:''}</button>
+        <button class="mm-item ${state.adminSection===n.id?'active':''}" data-sec="${n.id}" data-tone="info"><span class="mm-ico-wrap">${icon(n.icon)}</span><span>${n.label}</span>${n.id==='pengajuan'&&pendingCount>0?`<span class="mm-badge">${pendingCount}</span>`:''}${n.id==='arisan'&&arisanPendingCount()>0?`<span class="mm-badge">${arisanPendingCount()}</span>`:''}</button>
       `).join("")}
       <div class="mm-sep"></div>
       <div class="mm-label" style="--tone:var(--amber);">Unduh Data</div>
@@ -1557,7 +1828,7 @@ function renderAdmin(){
       </div>
       ${ADMIN_NAV.map(n=>`
         <button class="nav-item ${state.adminSection===n.id?'active':''}" data-sec="${n.id}">
-          ${icon(n.icon)}<span>${n.label}</span>${n.id==='pengajuan'&&pendingCount>0?`<span class="mm-badge">${pendingCount}</span>`:''}
+          ${icon(n.icon)}<span>${n.label}</span>${n.id==='pengajuan'&&pendingCount>0?`<span class="mm-badge">${pendingCount}</span>`:''}${n.id==='arisan'&&arisanPendingCount()>0?`<span class="mm-badge">${arisanPendingCount()}</span>`:''}
         </button>
       `).join("")}
       <div class="nav-sep"></div>
@@ -1580,6 +1851,7 @@ function adminContentHtml(){
     case "transaksi": return secTransaksi();
     case "pengajuan": return secPengajuan();
     case "anggota": return secAnggota();
+    case "arisan": return secArisan();
     case "histori": return secHistori();
     case "laporan": return secLaporan();
     default: return secDashboard();
@@ -1607,6 +1879,235 @@ function secPengajuan(){
       </div>
     </div>
   `;
+}
+
+/* ============================================================
+   ADMIN — KELOLA ARISAN TANTEH SUSI
+============================================================ */
+function secArisan(){
+  const batch = activeArisanBatch();
+  const finished = finishedArisanBatches();
+  return `
+    <div class="admin-topline">
+      <div><h2>🎁 Arisan Tanteh Susi</h2><div class="sub">Buka pendaftaran, ACC anggota, dan kocok pemenang tiap bulan</div></div>
+      ${!batch ? `<button class="btn btn-primary" id="arisanNewBatchBtn">${icon('plus-circle')}<span>Buka Pendaftaran Baru</span></button>` : ""}
+    </div>
+
+    ${batch ? secArisanBatchHtml(batch) : `<div class="panel"><div class="empty-row" style="padding:30px;">Belum ada batch arisan yang dibuka.</div></div>`}
+
+    ${finished.length ? `
+    <div class="panel" style="margin-top:16px;">
+      <div class="panel-head"><h3>📜 Riwayat Batch Selesai</h3></div>
+      <div class="arisan-mem-list">
+        ${finished.map(b=>`
+          <div class="arisan-mem-row is-eligible">
+            <span class="am-name">${escapeHtml(b.nama)}</span>
+            <span class="am-badge am-badge-eligible">${b.drawHistory.length} ronde selesai · ${rupiah(b.biaya)}/orang</span>
+            <button class="icon-btn sm" style="color:var(--rust);" data-del-arisan-batch="${b.id}" title="Hapus riwayat">${icon('trash')}</button>
+          </div>
+        `).join("")}
+      </div>
+    </div>` : ""}
+  `;
+}
+function secArisanBatchHtml(batch){
+  const meta = arisanStatusMeta(batch.status);
+  const approved = arisanApprovedMembers(batch);
+  const pending = arisanPendingMembers(batch);
+  const eligible = arisanEligibleMembers(batch);
+  const taken = arisanQuotaTaken(batch);
+  const nextDraw = arisanNextDrawDate(batch);
+  const history = [...(batch.drawHistory||[])].sort((a,b)=>b.round-a.round);
+  return `
+  <div class="panel arisan-panel" style="margin-bottom:16px;">
+    <div class="arisan-panel-head">
+      <div>
+        <div class="arisan-batch-name">${escapeHtml(batch.nama)}</div>
+        <span class="arisan-status-badge ${meta.cls}">${meta.label}</span>
+      </div>
+      <div class="arisan-fee-chip"><span class="label">Iuran / bulan</span><span class="val mono">${rupiah(batch.biaya)}</span></div>
+    </div>
+    <div class="hint" style="margin-bottom:10px;">Kuota: ${batch.kuota ? `${taken}/${batch.kuota}` : "Tanpa batas"} · Mulai kocok: ${fmtDateShort(batch.tglMulai)} · Ronde berjalan: ${batch.currentRound}</div>
+
+    ${arisanCountdownHtml(nextDraw, "adCd", batch.status==="berjalan" ? "⏱️ Kocokan berikutnya:" : "🎯 Kocokan pertama dijadwalkan:")}
+
+    <div class="admin-arisan-actions">
+      ${batch.status==="pendaftaran" ? `<button class="btn btn-primary btn-sm" id="arisanStartBtn" ${approved.length===0?'disabled':''}>${icon('check')}<span>Tutup Pendaftaran &amp; Mulai</span></button>` : ""}
+      ${batch.status==="berjalan" ? `<button class="btn btn-primary btn-sm" id="arisanDrawBtn" ${eligible.length===0?'disabled':''}>${icon('dice')}<span>Kocok Sekarang!</span></button>` : ""}
+      <button class="btn btn-sm btn-danger" id="arisanDeleteBatchBtn">${icon('trash')}<span>Hapus Batch</span></button>
+    </div>
+
+    ${pending.length ? `
+    <div class="arisan-mem-group-label">⏳ Menunggu Persetujuan (${pending.length})</div>
+    <div class="arisan-mem-list">
+      ${pending.map(m=>`
+        <div class="arisan-mem-row is-pending">
+          ${avatarHtml(m.nama,"sm")}<span class="am-name">${escapeHtml(m.nama)}${m.hp?` · ${escapeHtml(m.hp)}`:''}</span>
+          <div class="req-actions" style="margin-left:auto;">
+            <button class="btn btn-sm" style="color:var(--forest);border-color:var(--forest);" data-arisan-acc="${batch.id}|${m.id}">${icon('check')}<span>ACC</span></button>
+            <button class="btn btn-sm btn-danger" data-arisan-tolak="${batch.id}|${m.id}">${icon('close')}<span>Tolak</span></button>
+          </div>
+        </div>
+      `).join("")}
+    </div>` : ""}
+
+    <div class="arisan-mem-group-label">👥 Anggota Aktif (${approved.length})</div>
+    <div class="arisan-mem-list">
+      ${approved.length ? approved.map(m=>`
+        <div class="arisan-mem-row ${m.sudahMenang?'is-winner':'is-eligible'}">
+          ${m.sudahMenang ? `<span class="am-trophy">${icon('trophy')}</span>` : avatarHtml(m.nama,"sm")}
+          <span class="am-name">${escapeHtml(m.nama)}</span>
+          <span class="am-badge ${m.sudahMenang?'am-badge-winner':'am-badge-eligible'}">${m.sudahMenang ? `Menang ronde ${m.menangRound}` : 'Aktif'}</span>
+          ${batch.status==="pendaftaran" ? `<button class="icon-btn sm" style="color:var(--rust);margin-left:auto;" data-arisan-remove="${batch.id}|${m.id}" title="Keluarkan">${icon('trash')}</button>` : ""}
+        </div>
+      `).join("") : `<div class="empty-row">Belum ada anggota disetujui.</div>`}
+    </div>
+
+    ${history.length ? `
+    <div class="arisan-mem-group-label">🏆 Riwayat Kocokan</div>
+    <div class="arisan-history-list">
+      ${history.map(h=>`
+        <div class="arisan-history-item">
+          <span class="ahi-round">Ronde ${h.round}</span>
+          <span class="ahi-winner">${avatarHtml(h.winnerNama,"sm")}${escapeHtml(h.winnerNama)}</span>
+          <span class="ahi-date mono">${fmtDateShort(h.tgl)}</span>
+        </div>
+      `).join("")}
+    </div>` : ""}
+  </div>`;
+}
+function arisanBatchFormModal(){
+  const defaultDate = (()=>{ const d=new Date(); d.setMonth(d.getMonth()+1); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-05`; })();
+  return `
+    <div class="modal-head"><h3>🎁 Buka Pendaftaran Arisan</h3><button class="icon-btn" id="modalClose">&times;</button></div>
+    <div class="field"><label>Nama Batch</label><input type="text" id="abNama" placeholder="mis. Arisan Tanteh Susi — Batch Oktober 2026" value="Arisan Tanteh Susi — Batch ${monthLabel(defaultDate.slice(0,7))}"></div>
+    <div class="form-row2">
+      <div class="field"><label>Iuran / bulan (Rp)</label><input type="number" id="abBiaya" value="150000"></div>
+      <div class="field"><label>Kuota Anggota <span style="font-weight:400;color:var(--ink-faint);">(0 = tanpa batas)</span></label><input type="number" id="abKuota" value="5"></div>
+    </div>
+    <div class="field"><label>Tanggal Kocokan Pertama</label><input type="date" id="abTgl" value="${defaultDate}"></div>
+    <p class="field-hint">Kocokan berikutnya otomatis dijadwalkan tiap tanggal yang sama setiap bulan.</p>
+    <div class="modal-actions">
+      <button class="btn" id="modalClose2">Batal</button>
+      <button class="btn btn-primary" id="abSave">${icon('gift')}<span>Buka Pendaftaran</span></button>
+    </div>
+  `;
+}
+function bindArisanBatchForm(){
+  document.getElementById("modalClose").addEventListener("click", closeModal);
+  document.getElementById("modalClose2").addEventListener("click", closeModal);
+  document.getElementById("abSave").addEventListener("click", ()=>{
+    const nama = (document.getElementById("abNama").value||"").trim();
+    const biaya = Number(document.getElementById("abBiaya").value)||0;
+    const kuota = Number(document.getElementById("abKuota").value)||0;
+    const tgl = document.getElementById("abTgl").value;
+    if(!nama){ toast("Nama batch wajib diisi","err"); return; }
+    if(biaya<=0){ toast("Iuran harus lebih dari 0","err"); return; }
+    if(!tgl){ toast("Tanggal kocokan pertama wajib diisi","err"); return; }
+    DB.arisan.push({
+      id: uid("arisan"), nama, biaya, kuota: kuota>0?kuota:0, tglMulai: tgl,
+      status:"pendaftaran", currentRound:0, createdAt: new Date().toISOString().slice(0,10),
+      members: [], drawHistory: [],
+    });
+    saveArisanList();
+    toast("Pendaftaran arisan dibuka!");
+    closeModal();
+    refreshAdminContent();
+  });
+}
+
+/* ---- modal animasi pengocokan arisan ---- */
+function arisanDrawModalHtml(batch, eligible){
+  return `
+    <div class="modal-head"><h3>🎲 Mengocok Pemenang — Ronde ${batch.currentRound+1}</h3><button class="icon-btn" id="modalClose" disabled style="opacity:.3;">&times;</button></div>
+    <div class="draw-stage">
+      <div class="draw-reel" id="drawReel">
+        ${eligible.map(m=>`<div class="draw-reel-item">${avatarHtml(m.nama,"sm")}<span>${escapeHtml(m.nama)}</span></div>`).join("")}
+      </div>
+      <div class="draw-reel-marker"></div>
+    </div>
+    <div class="draw-result" id="drawResult" style="display:none;">
+      <div class="draw-confetti" id="drawConfetti"></div>
+      <div class="draw-winner-trophy">${icon('trophy')}</div>
+      <div class="draw-winner-label">Selamat kepada</div>
+      <div class="draw-winner-name" id="drawWinnerName"></div>
+    </div>
+    <div class="modal-actions" id="drawActions" style="visibility:hidden;">
+      <button class="btn" id="drawCancel">Batal</button>
+      <button class="btn btn-primary" id="drawConfirm">${icon('check')}<span>Simpan Hasil Kocokan</span></button>
+    </div>
+  `;
+}
+function bindArisanDrawModal(batch){
+  const eligible = arisanEligibleMembers(batch);
+  if(!eligible.length){ toast("Tidak ada anggota yang eligible untuk dikocok","err"); return; }
+  const winnerIdx = Math.floor(Math.random()*eligible.length);
+  const winner = eligible[winnerIdx];
+
+  const reel = document.getElementById("drawReel");
+  const stage = reel.closest(".draw-stage");
+  const itemW = 128; // harus selaras dengan lebar .draw-reel-item di CSS
+  // reel diperpanjang beberapa putaran penuh supaya animasi berhenti mulus di pemenang
+  const laps = 6;
+  const totalItems = eligible.length;
+  let extended = "";
+  for(let lap=0; lap<laps; lap++){
+    extended += eligible.map(m=>`<div class="draw-reel-item">${avatarHtml(m.nama,"sm")}<span>${escapeHtml(m.nama)}</span></div>`).join("");
+  }
+  reel.innerHTML = extended;
+  const finalIndex = totalItems*(laps-1) + winnerIdx;
+  const targetCenter = finalIndex*itemW + itemW/2;
+  const stageWidth = stage.getBoundingClientRect().width || 320;
+  const targetX = (stageWidth/2) - targetCenter;
+
+  reel.style.transform = "translateX(0px)";
+  requestAnimationFrame(()=>{
+    requestAnimationFrame(()=>{
+      reel.style.transition = "transform 3.2s cubic-bezier(.13,.85,.16,1)";
+      reel.style.transform = `translateX(${targetX}px)`;
+    });
+  });
+
+  setTimeout(()=>{
+    document.getElementById("drawResult").style.display = "flex";
+    document.getElementById("drawWinnerName").textContent = winner.nama;
+    spawnConfetti(document.getElementById("drawConfetti"));
+    const actions = document.getElementById("drawActions");
+    actions.style.visibility = "visible";
+    const closeBtn = document.getElementById("modalClose");
+    if(closeBtn){ closeBtn.disabled = false; closeBtn.style.opacity = "1"; closeBtn.addEventListener("click", closeModal); }
+  }, 3400);
+
+  document.getElementById("drawCancel").addEventListener("click", closeModal);
+  document.getElementById("drawConfirm").addEventListener("click", ()=>{
+    const today = new Date().toISOString().slice(0,10);
+    const mem = batch.members.find(x=>x.id===winner.id);
+    mem.sudahMenang = true;
+    mem.menangRound = batch.currentRound+1;
+    mem.menangTgl = today;
+    batch.drawHistory.push({ round: batch.currentRound+1, tgl: today, winnerId: winner.id, winnerNama: winner.nama });
+    batch.currentRound += 1;
+    const stillEligible = arisanEligibleMembers(batch);
+    if(stillEligible.length===0) batch.status = "selesai";
+    saveArisanList();
+    toast(`🎉 ${winner.nama} menang ronde ${mem.menangRound}!`);
+    closeModal();
+    refreshAdminContent();
+  });
+}
+function spawnConfetti(container){
+  if(!container) return;
+  const colors = ["#F0A93A","#3D7A5D","#B34632","#2C5A88","#D6488E"];
+  let html = "";
+  for(let i=0;i<36;i++){
+    const left = Math.random()*100;
+    const delay = (Math.random()*0.4).toFixed(2);
+    const dur = (1.4+Math.random()*0.9).toFixed(2);
+    const color = colors[i%colors.length];
+    const rot = Math.floor(Math.random()*360);
+    html += `<span class="confetti-piece" style="left:${left}%;background:${color};animation-delay:${delay}s;animation-duration:${dur}s;--rot:${rot}deg;"></span>`;
+  }
+  container.innerHTML = html;
 }
 
 function secDashboard(){
@@ -1947,6 +2448,7 @@ function bindReqForm(existing){
 function refreshAdminContent(){
   document.getElementById("adminContent").innerHTML = adminContentHtml();
   bindAdminContentEvents();
+  if(state.adminSection==="arisan") startCountdownTicker("adCd");
 }
 
 function bindAdmin(){
@@ -2009,6 +2511,86 @@ function bindAdminContentEvents(){
     b.addEventListener("click", ()=>{
       rejectRequest(b.dataset.tolak);
       refreshAdminContent();
+    });
+  });
+
+  // arisan tanteh susi
+  document.getElementById("arisanNewBatchBtn")?.addEventListener("click", ()=>{
+    openModal(arisanBatchFormModal()); bindArisanBatchForm();
+  });
+  document.getElementById("arisanStartBtn")?.addEventListener("click", ()=>{
+    const batch = activeArisanBatch();
+    if(!batch) return;
+    if(confirm("Tutup pendaftaran & mulai arisan? Anggota yang masih menunggu ACC akan otomatis ditolak.")){
+      batch.members.forEach(m=>{ if(m.status==="pending") m.status="rejected"; });
+      batch.status = "berjalan";
+      saveArisanList();
+      toast("Arisan dimulai! Countdown kocokan pertama aktif.");
+      refreshAdminContent();
+    }
+  });
+  document.getElementById("arisanDrawBtn")?.addEventListener("click", ()=>{
+    const batch = activeArisanBatch();
+    if(!batch) return;
+    openModal(arisanDrawModalHtml(batch, arisanEligibleMembers(batch)));
+    bindArisanDrawModal(batch);
+  });
+  document.getElementById("arisanDeleteBatchBtn")?.addEventListener("click", ()=>{
+    const batch = activeArisanBatch();
+    if(!batch) return;
+    if(confirm(`Hapus batch "${batch.nama}"? Semua data pendaftar & riwayat kocokan batch ini ikut terhapus.`)){
+      DB.arisan = DB.arisan.filter(a=>a.id!==batch.id);
+      saveArisanList();
+      toast("Batch arisan dihapus");
+      refreshAdminContent();
+    }
+  });
+  document.querySelectorAll("[data-arisan-acc]").forEach(b=>{
+    b.addEventListener("click", ()=>{
+      const [batchId, memberId] = b.dataset.arisanAcc.split("|");
+      const batch = DB.arisan.find(a=>a.id===batchId);
+      const mem = batch?.members.find(m=>m.id===memberId);
+      if(!mem) return;
+      mem.status = "approved";
+      saveArisanList();
+      toast(`${mem.nama} disetujui ikut arisan`);
+      refreshAdminContent();
+    });
+  });
+  document.querySelectorAll("[data-arisan-tolak]").forEach(b=>{
+    b.addEventListener("click", ()=>{
+      const [batchId, memberId] = b.dataset.arisanTolak.split("|");
+      const batch = DB.arisan.find(a=>a.id===batchId);
+      const mem = batch?.members.find(m=>m.id===memberId);
+      if(!mem) return;
+      mem.status = "rejected";
+      saveArisanList();
+      toast(`Pendaftaran ${mem.nama} ditolak`);
+      refreshAdminContent();
+    });
+  });
+  document.querySelectorAll("[data-arisan-remove]").forEach(b=>{
+    b.addEventListener("click", ()=>{
+      const [batchId, memberId] = b.dataset.arisanRemove.split("|");
+      const batch = DB.arisan.find(a=>a.id===batchId);
+      if(!batch) return;
+      const mem = batch.members.find(m=>m.id===memberId);
+      if(mem && confirm(`Keluarkan ${mem.nama} dari arisan ini?`)){
+        batch.members = batch.members.filter(m=>m.id!==memberId);
+        saveArisanList();
+        toast(`${mem.nama} dikeluarkan dari arisan`);
+        refreshAdminContent();
+      }
+    });
+  });
+  document.querySelectorAll("[data-del-arisan-batch]").forEach(b=>{
+    b.addEventListener("click", ()=>{
+      if(confirm("Hapus riwayat batch arisan ini secara permanen?")){
+        DB.arisan = DB.arisan.filter(a=>a.id!==b.dataset.delArisanBatch);
+        saveArisanList();
+        toast("Riwayat batch dihapus");
+        refreshAdminContent();
+      }
     });
   });
 

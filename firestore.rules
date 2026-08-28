@@ -51,6 +51,11 @@ service cloud.firestore {
       allow write: if true; // tamu bisa mengajukan; admin mem-ACC/tolak
     }
 
+    match /kas/arisan {
+      allow read: if true;
+      allow write: if true; // tamu bisa daftar arisan; admin buka batch/ACC/kocok
+    }
+
     // Blokir semua koleksi/dokumen lain secara default.
     match /{document=**} {
       allow read, write: if false;

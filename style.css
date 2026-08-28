@@ -1290,3 +1290,162 @@ footer.site-footer{
   .boot-piggy-wrap{width:140px;height:140px;}
   .boot-piggy-img{width:108px;}
 }
+
+/* ============================================================
+   ARISAN TANTEH SUSI
+============================================================ */
+.mm-item[data-tone="arisan"] .mm-ico-wrap{background:color-mix(in srgb, #D6488E 18%, var(--bg-elev-2));color:#D6488E;}
+.mm-badge-pink{
+  margin-left:auto;background:#D6488E;color:#fff;font-size:10px;font-weight:700;
+  padding:2px 7px;border-radius:20px;animation:pulseDot 2.2s ease-in-out infinite;
+}
+
+.arisan-panel{position:relative;overflow:hidden;}
+.arisan-panel::before{
+  content:"";position:absolute;top:-60px;right:-60px;width:180px;height:180px;border-radius:50%;
+  background:radial-gradient(circle, color-mix(in srgb, #D6488E 18%, transparent), transparent 70%);
+  pointer-events:none;
+}
+.arisan-panel-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px;}
+.arisan-batch-name{font-family:var(--font-display);font-weight:700;font-size:16px;margin-bottom:6px;}
+.arisan-status-badge{
+  display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;
+  padding:4px 10px;border-radius:20px;letter-spacing:.02em;
+}
+.arisan-status-badge.pendaftaran{background:var(--amber-soft);color:var(--amber-ink,#8a5a12);}
+.arisan-status-badge.berjalan{background:color-mix(in srgb, #D6488E 16%, transparent);color:#D6488E;}
+.arisan-status-badge.selesai{background:var(--forest-soft);color:var(--forest);}
+.arisan-fee-chip{
+  display:flex;flex-direction:column;align-items:flex-end;gap:2px;
+  padding:8px 14px;border-radius:12px;background:var(--bg-elev-2);border:1px solid var(--border);
+}
+.arisan-fee-chip .label{font-size:10.5px;color:var(--ink-faint);}
+.arisan-fee-chip .val{font-size:15px;font-weight:700;color:var(--amber-ink,#8a5a12);}
+[data-theme="dark"] .arisan-fee-chip .val{color:var(--amber);}
+
+.arisan-quota-wrap{margin-bottom:16px;}
+.arisan-quota-label{display:flex;justify-content:space-between;font-size:12px;color:var(--ink-soft);margin-bottom:6px;}
+.arisan-quota-track{height:7px;border-radius:6px;background:var(--border-soft);overflow:hidden;}
+.arisan-quota-fill{
+  height:100%;border-radius:6px;width:0%;
+  background:linear-gradient(90deg, color-mix(in srgb, #D6488E 70%, transparent), #D6488E);
+  transition:width .6s var(--ease);
+}
+
+/* ---- countdown ---- */
+.arisan-countdown{
+  margin:16px 0;padding:16px;border-radius:var(--radius-md);
+  background:linear-gradient(155deg, color-mix(in srgb, #D6488E 8%, var(--bg-elev-2)), var(--bg-elev-2));
+  border:1px solid color-mix(in srgb, #D6488E 25%, var(--border));
+  text-align:center;
+}
+.arisan-countdown-caption{font-size:12px;color:var(--ink-soft);margin-bottom:10px;}
+.cd-grid{display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;}
+.cd-box{
+  display:flex;flex-direction:column;align-items:center;gap:2px;min-width:56px;
+  background:var(--bg-elev);border:1px solid var(--border);border-radius:10px;padding:8px 6px;
+  box-shadow:var(--shadow-soft);
+}
+.cd-num{font-size:22px;font-weight:700;color:#D6488E;line-height:1;}
+.cd-label{font-size:9.5px;color:var(--ink-faint);text-transform:uppercase;letter-spacing:.05em;margin-top:3px;}
+.cd-colon{font-size:20px;font-weight:700;color:var(--ink-faint);}
+
+/* ---- registration ---- */
+.arisan-reg-card{
+  padding:16px;border-radius:var(--radius-md);background:var(--bg-elev-2);
+  border:1px solid var(--border);margin-bottom:16px;
+}
+.arisan-full-note{
+  display:flex;align-items:center;gap:8px;padding:12px 14px;margin-bottom:16px;
+  border-radius:10px;background:var(--rust-soft);color:var(--rust);font-size:12.5px;font-weight:600;
+}
+.arisan-full-note svg{width:16px;height:16px;flex-shrink:0;}
+
+/* ---- member rows ---- */
+.arisan-mem-group-label{font-size:11px;font-weight:700;color:var(--ink-faint);text-transform:uppercase;letter-spacing:.05em;margin:14px 0 8px;}
+.arisan-mem-list{display:flex;flex-direction:column;gap:6px;margin-bottom:6px;}
+.arisan-mem-row{
+  display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:10px;
+  background:var(--bg-elev-2);border:1px solid var(--border-soft);font-size:13px;font-weight:600;
+}
+.arisan-mem-row.is-pending{border-style:dashed;opacity:.9;}
+.arisan-mem-row.is-winner{
+  background:linear-gradient(90deg, color-mix(in srgb, var(--amber) 14%, var(--bg-elev-2)), var(--bg-elev-2));
+  border-color:color-mix(in srgb, var(--amber) 45%, var(--border));
+}
+.am-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.am-trophy{
+  width:22px;height:22px;border-radius:7px;display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  background:var(--amber-soft);color:var(--amber-ink,#8a5a12);
+}
+.am-trophy svg{width:13px;height:13px;}
+.am-badge{
+  display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:700;
+  padding:3px 9px;border-radius:20px;flex-shrink:0;
+}
+.am-badge svg{width:11px;height:11px;}
+.am-badge-pending{background:var(--amber-soft);color:var(--amber-ink,#8a5a12);}
+.am-badge-eligible{background:var(--forest-soft);color:var(--forest);}
+.am-badge-winner{background:var(--amber-soft);color:var(--amber-ink,#8a5a12);}
+
+/* ---- draw history ---- */
+.arisan-history-list{display:flex;flex-direction:column;gap:6px;}
+.arisan-history-item{
+  display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:10px;
+  background:var(--bg-elev-2);border:1px solid var(--border-soft);font-size:12.5px;
+}
+.ahi-round{font-weight:700;color:var(--ink-soft);min-width:64px;}
+.ahi-winner{flex:1;display:flex;align-items:center;gap:8px;font-weight:600;}
+.ahi-date{color:var(--ink-faint);}
+
+.admin-arisan-actions{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;}
+
+/* ---- draw modal (pengocokan) ---- */
+.draw-stage{
+  position:relative;height:64px;overflow:hidden;border-radius:12px;
+  background:linear-gradient(180deg, var(--bg-elev-2), var(--bg));
+  border:1px solid var(--border);margin-bottom:6px;
+}
+.draw-reel{display:flex;position:absolute;left:0;top:0;height:100%;will-change:transform;}
+.draw-reel-item{
+  width:128px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
+  font-size:11.5px;font-weight:700;color:var(--ink-soft);
+}
+.draw-stage::before,.draw-stage::after{
+  content:"";position:absolute;top:0;bottom:0;width:36px;z-index:2;pointer-events:none;
+}
+.draw-stage::before{left:0;background:linear-gradient(90deg, var(--bg-elev), transparent);}
+.draw-stage::after{right:0;background:linear-gradient(270deg, var(--bg-elev), transparent);}
+.draw-reel-marker{
+  position:absolute;left:50%;top:0;bottom:0;width:2px;transform:translateX(-50%);
+  background:#D6488E;z-index:3;box-shadow:0 0 8px 1px color-mix(in srgb, #D6488E 60%, transparent);
+}
+.draw-result{
+  display:flex;flex-direction:column;align-items:center;gap:4px;margin:18px 0 4px;position:relative;
+  animation:cardIn .4s var(--ease);
+}
+.draw-confetti{position:absolute;inset:-30px 0 auto 0;height:1px;overflow:visible;pointer-events:none;}
+.confetti-piece{
+  position:absolute;top:0;width:7px;height:11px;border-radius:2px;
+  animation-name:confettiFall;animation-timing-function:ease-in;animation-fill-mode:forwards;
+  transform:rotate(var(--rot,0deg));
+}
+@keyframes confettiFall{
+  0%{transform:translateY(-10px) rotate(0deg);opacity:1;}
+  100%{transform:translateY(120px) rotate(var(--rot,180deg));opacity:0;}
+}
+.draw-winner-trophy{
+  width:52px;height:52px;border-radius:16px;display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(155deg, var(--amber), #e79c26);color:#241a06;box-shadow:var(--shadow-lift);
+  animation:winnerPop .5s var(--ease);
+}
+.draw-winner-trophy svg{width:26px;height:26px;}
+@keyframes winnerPop{0%{transform:scale(.4) rotate(-15deg);opacity:0;}70%{transform:scale(1.1) rotate(4deg);}100%{transform:scale(1) rotate(0);opacity:1;}}
+.draw-winner-label{font-size:12px;color:var(--ink-soft);margin-top:6px;}
+.draw-winner-name{font-family:var(--font-display);font-size:22px;font-weight:700;color:#D6488E;}
+
+@media (max-width:480px){
+  .cd-box{min-width:48px;padding:7px 4px;}
+  .cd-num{font-size:18px;}
+  .arisan-fee-chip{align-items:flex-start;}
+}
