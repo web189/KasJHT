@@ -731,11 +731,6 @@ function topbar(){
       <button class="mm-item" id="themeBtnMob"><span class="mm-ico-wrap">${icon(theme==='dark'?'sun':'moon')}</span><span>Ganti Tema</span></button>
       <button class="mm-item" id="loginBtnMob"><span class="mm-ico-wrap">${icon('lock')}</span><span>Masuk Admin</span></button>
       <div class="mm-sep"></div>
-      <div class="mm-label" style="--tone:var(--blue);">Tautan Cepat</div>
-      <button class="mm-item" id="mmJadwal" data-tone="info"><span class="mm-ico-wrap">${icon('calendar')}</span><span>Jadwal Admin GDNG PRG</span><span class="mm-ext">${icon('external')}</span></button>
-      <button class="mm-item" id="mmRekapLama" data-tone="info"><span class="mm-ico-wrap">${icon('sheet')}</span><span>Data Rekap Lama (Spreadsheet)</span><span class="mm-ext">${icon('external')}</span></button>
-      <button class="mm-item" id="mmRitase" data-tone="info"><span class="mm-ico-wrap">${icon('report')}</span><span>Uang Ritase TUA</span><span class="mm-ext">${icon('external')}</span></button>
-      <div class="mm-sep"></div>
       <div class="mm-label" style="--tone:var(--forest);">Pengajuan Pembelian</div>
       <button class="mm-item" id="mmPengajuan" data-tone="action"><span class="mm-ico-wrap">${icon('plus-circle')}</span><span>Ajukan Pembelian</span></button>
       <button class="mm-item" id="mmRiwayat" data-tone="action"><span class="mm-ico-wrap">${icon('inbox')}</span><span>Riwayat Pengajuan</span>${pendingCount>0?`<span class="mm-badge">${pendingCount}</span>`:""}</button>
@@ -744,6 +739,11 @@ function topbar(){
       <div class="mm-label" style="--tone:var(--amber);">Unduh Data</div>
       <button class="mm-item" id="mmExportExcel" data-tone="download"><span class="mm-ico-wrap">${icon('file-excel')}</span><span>Unduh Excel</span></button>
       <button class="mm-item" id="mmExportPdf" data-tone="download"><span class="mm-ico-wrap">${icon('file-pdf')}</span><span>Unduh PDF</span></button>
+      <div class="mm-sep"></div>
+      <div class="mm-label" style="--tone:var(--blue);">Tautan Cepat</div>
+      <button class="mm-item" id="mmJadwal" data-tone="info"><span class="mm-ico-wrap">${icon('calendar')}</span><span>Jadwal Admin GDNG PRG</span><span class="mm-ext">${icon('external')}</span></button>
+      <button class="mm-item" id="mmRekapLama" data-tone="info"><span class="mm-ico-wrap">${icon('sheet')}</span><span>Data Rekap Lama (Spreadsheet)</span><span class="mm-ext">${icon('external')}</span></button>
+      <button class="mm-item" id="mmRitase" data-tone="info"><span class="mm-ico-wrap">${icon('report')}</span><span>Uang Ritase TUA</span><span class="mm-ext">${icon('external')}</span></button>
       <div class="mm-sep"></div>
       <div class="mm-label" style="--tone:#8B5CF6;">Hiburan</div>
       <button class="mm-item mm-expandable" id="mmGameToggle" data-tone="fun" aria-expanded="false"><span class="mm-ico-wrap">${icon('gamepad')}</span><span>Game</span><span class="mm-chev">${icon('chevron-right')}</span></button>
@@ -1172,27 +1172,38 @@ function renderPengajuanPage(){
       <h1>Ajukan Pembelian Barang/Jasa</h1>
       <p class="hero-sub">Isi kebutuhan barang/jasa yang mau dibeli pakai kas. Pengajuan akan masuk ke dashboard admin untuk disetujui atau ditolak.</p>
 
-      <div class="panel" style="max-width:560px;">
-        <div class="field">
-          <label>Keterangan Barang/Jasa</label>
-          <textarea id="pgKet" rows="3" placeholder="mis. Beli tinta printer 1 botol">${escapeHtml(d.ket)}</textarea>
-        </div>
-        <div class="field">
-          <label>Nominal (Rp)</label>
-          <input type="number" inputmode="numeric" id="pgNominal" value="${d.nominal||""}" placeholder="mis. 25000">
+      <div class="pg-card">
+        <div class="pg-card-head">
+          <span class="pg-card-head-icon">${icon('plus-circle')}</span>
+          <div>
+            <div class="pg-card-head-title">Detail Pengajuan</div>
+            <div class="pg-card-head-sub">Lengkapi data di bawah, admin akan meninjau pengajuanmu.</div>
+          </div>
         </div>
 
         <div class="field">
-          <label>Sumber Dana</label>
-          <div class="sheet-tabs" id="pgModeTabs" style="width:100%;">
-            <button class="sheet-tab ${d.mode==='solo'?'active':''}" data-mode="solo" style="flex:1;">Solo (1 Admin)</button>
-            <button class="sheet-tab ${d.mode==='patungan'?'active':''}" data-mode="patungan" style="flex:1;">Patungan</button>
+          <label><span class="field-ico">${icon('edit')}</span>Keterangan Barang/Jasa</label>
+          <textarea id="pgKet" rows="3" placeholder="mis. Beli tinta printer 1 botol">${escapeHtml(d.ket)}</textarea>
+        </div>
+        <div class="field">
+          <label><span class="field-ico">${icon('sheet')}</span>Nominal</label>
+          <div class="field-money">
+            <span class="field-money-prefix">Rp</span>
+            <input type="number" inputmode="numeric" id="pgNominal" value="${d.nominal||""}" placeholder="25.000">
+          </div>
+        </div>
+
+        <div class="field">
+          <label><span class="field-ico">${icon('users')}</span>Sumber Dana</label>
+          <div class="sheet-tabs pg-mode-tabs" id="pgModeTabs" style="width:100%;">
+            <button class="sheet-tab ${d.mode==='solo'?'active':''}" data-mode="solo" style="flex:1;">${icon('lock')}<span>Solo (1 Admin)</span></button>
+            <button class="sheet-tab ${d.mode==='patungan'?'active':''}" data-mode="patungan" style="flex:1;">${icon('users')}<span>Patungan</span></button>
           </div>
         </div>
 
         ${d.mode==='solo' ? `
         <div class="field">
-          <label>Pilih Admin (saldo orang tsb harus mencukupi)</label>
+          <label><span class="field-ico">${icon('lock')}</span>Pilih Admin (saldo orang tsb harus mencukupi)</label>
           <select id="pgSoloAdmin">
             <option value="">— pilih admin —</option>
             ${actives.map(m=>`<option value="${m.id}" ${d.soloAdmin===m.id?'selected':''}>${m.nama} — saldo ${rupiah(memberAvailableSaldo(m.id))}</option>`).join("")}
@@ -1200,7 +1211,7 @@ function renderPengajuanPage(){
         </div>
         ` : `
         <div class="field">
-          <label>Pilih Admin yang Patungan</label>
+          <label><span class="field-ico">${icon('users')}</span>Pilih Admin yang Patungan</label>
           <div class="check-list">
             ${actives.map(m=>`
               <label class="check-row">
@@ -1215,13 +1226,13 @@ function renderPengajuanPage(){
         `}
 
         <div class="field">
-          <label>Nama Pemohon <span style="font-weight:400;color:var(--ink-faint);">(opsional)</span></label>
+          <label><span class="field-ico">${icon('edit')}</span>Nama Pemohon <span style="font-weight:400;color:var(--ink-faint);">(opsional)</span></label>
           <input type="text" id="pgPemohon" value="${escapeHtml(d.pemohon)}" placeholder="Nama kamu">
         </div>
 
         <div class="pg-saldo-note ${initialValidation.note?'show':''}" id="pgSaldoNote">${initialValidation.note?`${icon('alert')}<span>${escapeHtml(initialValidation.note)}</span>`:''}</div>
 
-        <div class="modal-actions" style="justify-content:flex-start;">
+        <div class="modal-actions pg-actions">
           <button class="btn btn-primary" id="pgSubmit" ${initialValidation.ok?'':'disabled'}>${icon('plus-circle')}<span>Kirim Pengajuan</span></button>
           <button class="btn" id="pgCancel">Batal</button>
         </div>
@@ -1306,6 +1317,9 @@ function bindPengajuanPage(){
 ============================================================ */
 function renderRiwayatPage(){
   const list = [...DB.requests].sort((a,b)=> b.tgl.localeCompare(a.tgl) || b.id.localeCompare(a.id));
+  const nPending = list.filter(r=>r.status==='pending').length;
+  const nApproved = list.filter(r=>r.status==='approved').length;
+  const nRejected = list.filter(r=>r.status==='rejected').length;
   return `
   ${topbar()}
   <div class="container">
@@ -1315,6 +1329,13 @@ function renderRiwayatPage(){
       <h1>Riwayat Pengajuan Pembelian</h1>
       <p class="hero-sub">Semua pengajuan pembelian—baik yang disetujui, ditolak, maupun masih menunggu—tercatat terbuka di sini.</p>
       ${!isAuthed() ? `<button class="money-toggle-btn" id="moneyToggleBtn" style="margin-bottom:16px;">${icon(state.moneyRevealed?'eye-off':'eye')}<span>${state.moneyRevealed?'Sembunyikan Semua Nominal':'Tampilkan Semua Nominal'}</span></button>` : ""}
+
+      ${list.length ? `
+      <div class="req-summary reveal">
+        <div class="rq-stat rq-stat-pending"><span class="rq-num mono">${nPending}</span><span class="rq-label">Menunggu</span></div>
+        <div class="rq-stat rq-stat-approved"><span class="rq-num mono">${nApproved}</span><span class="rq-label">Disetujui</span></div>
+        <div class="rq-stat rq-stat-rejected"><span class="rq-num mono">${nRejected}</span><span class="rq-label">Ditolak</span></div>
+      </div>` : ""}
 
       <div class="panel">
         <div class="req-list">
@@ -1334,6 +1355,8 @@ function reqCardHtml(r, withActions){
   const meta = requestStatusMeta(r.status);
   const adminNames = r.admins.map(nameOf).join(", ");
   const blur = !isAuthed() ? "money-blur" : "";
+  const shown = r.admins.slice(0,5);
+  const extra = r.admins.length - shown.length;
   return `
     <div class="req-card">
       <div class="req-top">
@@ -1341,12 +1364,22 @@ function reqCardHtml(r, withActions){
         <span class="req-amt mono ${blur}">${rupiah(r.nominal)}</span>
       </div>
       <div class="req-ket">${escapeHtml(r.keterangan)}</div>
-      <div class="req-meta">
-        <span>📅 ${fmtDateShort(r.tgl)}</span>
-        <span>👤 ${escapeHtml(r.pemohon||"Tamu")}</span>
-        <span>${r.mode==='solo' ? '💰 Solo' : '🤝 Patungan'}: ${adminNames}</span>
+      <div class="req-meta-row">
+        <span class="asset-meta-chip">${icon('calendar')}<span>Diajukan ${fmtDateShort(r.tgl)}</span></span>
+        <span class="asset-meta-chip">${avatarHtml(r.pemohon||"Tamu","sm")}<span>${escapeHtml(r.pemohon||"Tamu")}</span></span>
       </div>
-      ${r.status!=="pending" ? `<div class="req-meta" style="margin-top:4px;">${r.status==='approved'?'✅':'❌'} Diputuskan ${r.decidedAt?fmtDateShort(r.decidedAt):''}${r.catatan?` · "${escapeHtml(r.catatan)}"`:''}</div>` : ""}
+      <div class="asset-funding">
+        <div class="asset-avatars">
+          ${shown.map(id=>avatarHtml(id,'sm')).join("")}
+          ${extra>0 ? `<span class="asset-avatar-more">+${extra}</span>` : ""}
+        </div>
+        <span class="asset-funding-label" title="${escapeHtml(adminNames)}">${r.mode==='solo' ? 'Solo' : 'Patungan'}: ${adminNames}</span>
+      </div>
+      ${r.status!=="pending" ? `
+        <div class="req-decision ${meta.cls}">
+          ${icon(r.status==='approved'?'check':'close')}
+          <span>Diputuskan ${r.decidedAt?fmtDateShort(r.decidedAt):''}${r.catatan?` — "${escapeHtml(r.catatan)}"`:''}</span>
+        </div>` : ""}
       ${withActions ? `
         <div class="req-actions">
           ${r.status==="pending" ? `
@@ -1601,10 +1634,10 @@ function secDashboard(){
       <span class="alert-cta">Lihat &rarr;</span>
     </div>` : ""}
     <div class="stat-grid">
-      <div class="stat-card accent reveal"><div class="label">Saldo Kas</div><div class="value mono">${rupiah(t.saldo)}</div></div>
-      <div class="stat-card reveal"><div class="label">Total Masuk</div><div class="value mono">${rupiah(t.masuk)}</div></div>
-      <div class="stat-card reveal"><div class="label">Total Keluar</div><div class="value mono">${rupiah(t.keluar)}</div></div>
-      <div class="stat-card reveal"><div class="label">Anggota Aktif</div><div class="value mono">${activeCount}/${DB.members.length}</div></div>
+      <div class="stat-card accent reveal"><div class="stat-card-top"><span class="stat-card-icon">${icon('sheet')}</span><div class="label">Saldo Kas</div></div><div class="value mono">${rupiah(t.saldo)}</div></div>
+      <div class="stat-card tone-forest reveal"><div class="stat-card-top"><span class="stat-card-icon">${icon('up')}</span><div class="label">Total Masuk</div></div><div class="value mono">${rupiah(t.masuk)}</div></div>
+      <div class="stat-card tone-rust reveal"><div class="stat-card-top"><span class="stat-card-icon">${icon('down')}</span><div class="label">Total Keluar</div></div><div class="value mono">${rupiah(t.keluar)}</div></div>
+      <div class="stat-card tone-blue reveal"><div class="stat-card-top"><span class="stat-card-icon">${icon('users')}</span><div class="label">Anggota Aktif</div></div><div class="value mono">${activeCount}/${DB.members.length}</div></div>
     </div>
     <div class="split">
       <div class="panel">

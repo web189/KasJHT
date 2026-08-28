@@ -278,11 +278,14 @@ a{color:inherit;}
 /* ---------- sheet-style tab switcher (mirrors the user's own spreadsheet tabs) ---------- */
 .sheet-tabs{display:flex;gap:4px;background:var(--bg-elev-2);padding:4px;border-radius:11px;border:1px solid var(--border);}
 .sheet-tab{
+  display:flex;align-items:center;justify-content:center;gap:6px;
   border:none;background:transparent;color:var(--ink-soft);font-weight:600;font-size:13px;
   padding:8px 14px;border-radius:8px;cursor:pointer;transition:all .2s var(--ease);
   font-family:var(--font-body);
 }
+.sheet-tab svg{width:14px;height:14px;flex-shrink:0;opacity:.8;}
 .sheet-tab.active{background:var(--bg-elev);color:var(--ink);box-shadow:var(--shadow-soft);}
+.sheet-tab.active svg{opacity:1;color:var(--amber);}
 
 /* ============================================================
    Signature element: "folder tab" — die-cut index tab shape
@@ -434,7 +437,13 @@ a{color:inherit;}
   transition:transform .25s var(--ease),box-shadow .25s var(--ease);
 }
 .stat-card:hover{transform:translateY(-3px);box-shadow:var(--shadow-lift);}
-.stat-card .label{font-size:12px;color:var(--ink-faint);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;}
+.stat-card-top{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+.stat-card-icon{
+  width:32px;height:32px;border-radius:9px;flex-shrink:0;display:flex;align-items:center;justify-content:center;
+  background:var(--bg-elev-2);color:var(--ink-soft);
+}
+.stat-card-icon svg{width:16px;height:16px;}
+.stat-card .label{font-size:12px;color:var(--ink-faint);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:0;}
 .stat-card .value{font-size:26px;font-weight:700;}
 .stat-card.hero-stat .value{font-size:32px;}
 .stat-card .delta{font-size:12px;margin-top:6px;color:var(--ink-soft);}
@@ -443,6 +452,10 @@ a{color:inherit;}
   content:"";position:absolute;top:-30px;right:-30px;width:110px;height:110px;border-radius:50%;
   background:radial-gradient(circle,var(--amber) 0%,transparent 70%);opacity:.25;
 }
+.stat-card.accent .stat-card-icon{background:color-mix(in srgb, var(--amber) 22%, var(--bg-elev-2));color:var(--amber);}
+.stat-card.tone-forest .stat-card-icon{background:var(--forest-soft);color:var(--forest);}
+.stat-card.tone-rust .stat-card-icon{background:var(--rust-soft);color:var(--rust);}
+.stat-card.tone-blue .stat-card-icon{background:color-mix(in srgb, var(--blue) 18%, var(--bg-elev-2));color:var(--blue);}
 
 .split{display:grid;grid-template-columns:1.15fr 1fr;gap:16px;margin-bottom:22px;align-items:stretch;}
 .panel{background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px 22px;}
@@ -728,24 +741,69 @@ footer.site-footer{
 @keyframes cardIn{from{opacity:0;transform:translateY(10px) scale(.98);}to{opacity:1;transform:none;}}
 .login-brand{display:flex;flex-direction:column;align-items:center;gap:10px;margin-bottom:22px;}
 .field{margin-bottom:14px;}
-.field label{display:block;font-size:12.5px;font-weight:600;color:var(--ink-soft);margin-bottom:6px;}
+.field label{display:flex;align-items:center;font-size:12.5px;font-weight:600;color:var(--ink-soft);margin-bottom:6px;}
 .field input,.field select,.field textarea{
   width:100%;background:var(--bg-elev-2);border:1px solid var(--border);color:var(--ink);
   padding:10px 12px;border-radius:9px;font-size:14px;font-family:var(--font-body);
 }
 .field textarea{resize:vertical;min-height:70px;}
 .field-hint{font-size:11.5px;color:var(--ink-faint);margin-top:6px;}
+.field-ico{
+  display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;margin-right:6px;
+  color:var(--ink-faint);flex-shrink:0;
+}
+.field-ico svg{width:14px;height:14px;}
+.field-money{position:relative;}
+.field-money-prefix{
+  position:absolute;left:12px;top:50%;transform:translateY(-50%);
+  font-weight:700;color:var(--ink-faint);font-size:14px;pointer-events:none;
+}
+.field-money input{padding-left:34px !important;}
 
 /* ---------------- Pengajuan Pembelian: checklist patungan ---------------- */
 .check-list{display:flex;flex-direction:column;gap:7px;}
 .check-row{
   display:flex;align-items:center;gap:9px;padding:9px 12px;
   border:1px solid var(--border);border-radius:9px;cursor:pointer;
-  background:var(--bg-elev-2);transition:border-color .15s;
+  background:var(--bg-elev-2);transition:border-color .15s,transform .15s var(--ease);
 }
-.check-row:hover{border-color:var(--amber);}
+.check-row:hover{border-color:var(--amber);transform:translateY(-1px);}
 .check-row input[type="checkbox"]{width:16px;height:16px;accent-color:var(--amber);flex-shrink:0;}
-.check-row-saldo{margin-left:auto;font-size:11.5px;color:var(--ink-faint);flex-shrink:0;}
+.check-row-saldo{
+  margin-left:auto;font-size:10.5px;color:var(--ink-soft);flex-shrink:0;
+  background:var(--bg-elev);border:1px solid var(--border-soft);padding:3px 9px;border-radius:20px;
+}
+
+/* ---------------- Kartu form "Ajukan Pembelian Barang/Jasa" ---------------- */
+.pg-card{
+  background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius-lg);
+  padding:22px 22px 24px;max-width:560px;position:relative;overflow:hidden;
+  box-shadow:var(--shadow-soft);
+}
+.pg-card::before{
+  content:"";position:absolute;top:0;left:0;right:0;height:4px;
+  background:linear-gradient(90deg, var(--amber), color-mix(in srgb, var(--amber) 35%, transparent) 55%, transparent);
+}
+.pg-card-head{display:flex;align-items:flex-start;gap:12px;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--border-soft);}
+.pg-card-head-icon{
+  width:40px;height:40px;border-radius:12px;flex-shrink:0;display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(155deg,var(--amber-soft),var(--bg-elev-2));color:var(--amber);
+  border:1px solid color-mix(in srgb, var(--amber) 35%, var(--border));
+}
+.pg-card-head-icon svg{width:20px;height:20px;}
+.pg-card-head-title{font-family:var(--font-display);font-weight:700;font-size:15.5px;color:var(--ink);}
+.pg-card-head-sub{font-size:12px;color:var(--ink-faint);margin-top:2px;}
+.pg-mode-tabs .sheet-tab{padding:11px 14px;font-size:13.5px;}
+.pg-actions{justify-content:flex-start;gap:10px;}
+.pg-actions .btn-primary{padding:11px 22px;font-size:14px;}
+@media (max-width:480px){
+  .pg-card{padding:18px 16px 20px;}
+  .pg-card-head{gap:10px;margin-bottom:16px;padding-bottom:13px;}
+  .pg-card-head-icon{width:36px;height:36px;border-radius:10px;}
+  .pg-card-head-title{font-size:14px;}
+  .pg-actions{flex-direction:column-reverse;align-items:stretch;}
+  .pg-actions .btn{width:100%;justify-content:center;}
+}
 
 /* ---------------- Kartu peringatan saldo (Pengajuan Pembelian) ---------------- */
 .pg-saldo-note{
@@ -762,14 +820,48 @@ footer.site-footer{
 /* ---------------- Kartu Pengajuan / Aset ---------------- */
 .req-list{display:flex;flex-direction:column;gap:12px;}
 .req-card{
-  background:var(--bg-elev-2);border:1px solid var(--border-soft);border-radius:12px;
-  padding:14px 16px;
+  background:var(--bg-elev-2);border:1px solid var(--border-soft);border-radius:14px;
+  padding:16px 18px;transition:transform .18s var(--ease),border-color .18s var(--ease),box-shadow .18s var(--ease);
 }
-.req-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px;}
-.req-amt{font-size:15px;font-weight:700;}
-.req-ket{font-size:14px;font-weight:600;margin-bottom:6px;}
-.req-meta{display:flex;flex-wrap:wrap;gap:12px;font-size:12px;color:var(--ink-soft);}
-.req-actions{display:flex;gap:8px;margin-top:12px;}
+.req-card:hover{transform:translateY(-2px);border-color:var(--border);box-shadow:var(--shadow-soft);}
+.req-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;}
+.req-amt{font-size:16px;font-weight:800;}
+.req-ket{font-size:15px;font-weight:700;margin-bottom:10px;}
+.req-meta-row{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;}
+.req-meta-row .asset-meta-chip .avatar{margin:-2px 0;}
+.req-decision{
+  display:flex;align-items:flex-start;gap:8px;margin-top:10px;padding:9px 12px;border-radius:9px;
+  font-size:12px;line-height:1.5;background:var(--bg-elev);border:1px solid var(--border-soft);color:var(--ink-soft);
+}
+.req-decision svg{width:14px;height:14px;flex-shrink:0;margin-top:1px;}
+.req-decision.approved{background:var(--forest-soft);border-color:color-mix(in srgb, var(--forest) 35%, var(--border-soft));color:var(--forest);}
+.req-decision.rejected{background:var(--rust-soft);border-color:color-mix(in srgb, var(--rust) 35%, var(--border-soft));color:var(--rust);}
+.req-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px;padding-top:12px;border-top:1px dashed var(--border-soft);}
+@media (max-width:480px){
+  .req-card{padding:13px 14px;}
+  .req-ket{font-size:13.5px;}
+  .req-amt{font-size:14.5px;}
+}
+
+/* ---------------- Ringkasan status di halaman Riwayat Pengajuan ---------------- */
+.req-summary{display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap;}
+.rq-stat{
+  flex:1;min-width:100px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+  padding:14px 10px;border-radius:14px;border:1px solid var(--border-soft);background:var(--bg-elev-2);
+}
+.rq-num{font-size:22px;font-weight:800;color:var(--ink);}
+.rq-label{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-faint);}
+.rq-stat-pending{background:var(--amber-soft);border-color:color-mix(in srgb, var(--amber) 40%, var(--border-soft));}
+.rq-stat-pending .rq-num{color:var(--amber-ink,#8a5a12);}
+[data-theme="dark"] .rq-stat-pending .rq-num{color:var(--amber);}
+.rq-stat-approved{background:var(--forest-soft);border-color:color-mix(in srgb, var(--forest) 40%, var(--border-soft));}
+.rq-stat-approved .rq-num{color:var(--forest);}
+.rq-stat-rejected{background:var(--rust-soft);border-color:color-mix(in srgb, var(--rust) 40%, var(--border-soft));}
+.rq-stat-rejected .rq-num{color:var(--rust);}
+@media (max-width:480px){
+  .rq-stat{padding:11px 8px;}
+  .rq-num{font-size:18px;}
+}
 
 /* ---------------- Halaman Aset Barang/Jasa Milik Pribadi Admin ---------------- */
 .asset-summary{
@@ -956,6 +1048,23 @@ footer.site-footer{
   .split{grid-template-columns:1fr;}
   .stat-strip{grid-template-columns:1fr;}
   .stat-grid{grid-template-columns:repeat(2,1fr);}
+}
+
+/* ---------- tampilan desktop/PC: manfaatkan lebar layar tanpa menambah beban ---------- */
+@media (min-width:900px){
+  .rank-list{display:grid;grid-template-columns:repeat(2,1fr);column-gap:14px;row-gap:12px;}
+  .rank-list .rank-row.podium-1{grid-column:1 / -1;}
+  .req-list{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;}
+  .asset-list{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;}
+  .rank-list .empty-row,.req-list .empty-row,.asset-list .empty-row{grid-column:1 / -1;}
+  .panel{padding:24px 26px;}
+  .hero-top{align-items:flex-start;}
+}
+@media (min-width:1440px){
+  .container{max-width:1280px;}
+}
+@media (min-width:1600px){
+  .admin-main{max-width:1420px;}
 }
 /* ---------- bar khusus admin di mobile (topbar + hamburger menu) ---------- */
 .admin-topbar-mobile{display:none;}
