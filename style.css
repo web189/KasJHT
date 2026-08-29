@@ -55,12 +55,20 @@
   /* Aksen forest/rust/blue/amber-ink dasar (di :root) dikalibrasi untuk latar
      TERANG. Di atas latar gelap, warna yang sama jadi kurang kontras (pernah
      serendah ~1.3:1 untuk teks abu tua di atas chip gelap — nyaris tak
-     terbaca). Override di bawah ini bikin versinya lebih terang/cerah khusus
+     terbaca). Override di bawah ini bikin warnanya lebih terang/cerah khusus
      tema gelap, supaya kontras teks & ikon tetap sehat di kedua tema. */
   --forest:#57A882;
   --rust:#DD7457;
   --blue:#5B9BD5;
   --amber-ink:#F0A93A;
+  /* --shadow-soft/--shadow-lift dasar dikalibrasi buat latar TERANG (abu
+     gelap tipis). Di atas latar yang SUDAH gelap, bayangan setipis itu nyaris
+     tak kelihatan, jadi kartu/modal terasa "gepeng" tanpa kedalaman — salah
+     satu sumber laporan tema gelap terasa tidak konsisten dgn tema terang.
+     Di sini bayangannya dibikin lebih pekat (hitam solid, opacity lebih
+     tinggi) supaya efek elevasinya tetap kerasa di latar gelap. */
+  --shadow-soft:0 8px 24px -10px rgba(0,0,0,.55);
+  --shadow-lift:0 18px 44px -14px rgba(0,0,0,.7);
 }
 
 *,*::before,*::after{box-sizing:border-box;}
@@ -522,28 +530,23 @@ a{color:inherit;}
   align-items:center;
   column-gap:10px;
   background:var(--bg-elev-2);border:1px solid var(--border-soft);border-radius:12px;
-  padding:11px 13px 11px 17px;cursor:pointer;transition:transform .18s var(--ease),border-color .18s var(--ease),box-shadow .18s var(--ease);
+  padding:11px 13px 11px 17px;cursor:pointer;
   overflow:hidden;
 }
 .rank-row::before{
   content:"";position:absolute;left:6px;top:10px;bottom:10px;width:3px;border-radius:3px;
   background:var(--m-color,var(--border));opacity:.75;
 }
-.rank-row:hover{border-color:var(--amber);transform:translateY(-1px);box-shadow:var(--shadow-soft);}
+.rank-row:hover{border-color:var(--amber);}
 .rank-row.active{background:var(--amber-soft);border-color:var(--amber);}
 
-/* Panggung podium: 3 besar dapat aksen warna medali yang lembut */
+/* Panggung podium: 3 besar dapat aksen warna medali yang lembut (statis,
+   tanpa animasi shine — biar ringan dan tidak "hidup" terus-menerus) */
 .rank-row.podium-1{
   border-color:color-mix(in srgb, var(--amber) 55%, var(--border-soft));
   background:linear-gradient(135deg, color-mix(in srgb, var(--amber) 13%, var(--bg-elev-2)), var(--bg-elev-2) 65%);
   box-shadow:0 10px 26px -16px color-mix(in srgb, var(--amber) 70%, transparent);
 }
-.rank-row.podium-1::after{
-  content:"";position:absolute;inset:0;pointer-events:none;
-  background:linear-gradient(115deg, transparent 40%, color-mix(in srgb, var(--amber) 22%, transparent) 50%, transparent 60%);
-  background-size:220% 100%;animation:rankShine 3.6s ease-in-out infinite;
-}
-@keyframes rankShine{0%{background-position:120% 0;}55%,100%{background-position:-40% 0;}}
 .rank-row.podium-2{
   border-color:color-mix(in srgb, #C7CDD1 55%, var(--border-soft));
   background:linear-gradient(135deg, color-mix(in srgb, #C7CDD1 10%, var(--bg-elev-2)), var(--bg-elev-2) 65%);
@@ -560,11 +563,8 @@ a{color:inherit;}
 .rank-bar-fill{
   height:100%;border-radius:6px;
   background:linear-gradient(90deg, color-mix(in srgb, var(--m-color,var(--amber)) 75%, transparent), var(--m-color,var(--amber)));
-  width:0%;
-  animation:growBar .9s var(--ease) forwards;
-  animation-delay:calc(var(--i,0) * 70ms);
+  width:var(--target-width,0%);
 }
-@keyframes growBar{ from{ width:0%; } to{ width:var(--target-width,0%); } }
 .rank-no{
   width:26px;height:26px;line-height:26px;text-align:center;
   border-radius:8px;font-family:var(--font-mono);font-weight:700;font-size:12px;
@@ -577,11 +577,19 @@ a{color:inherit;}
 .rank-no.top1{color:#F0A93A;text-shadow:0 0 12px rgba(240,169,58,.45);}
 .rank-no.top2{color:#C7CDD1;text-shadow:0 0 12px rgba(199,205,209,.35);}
 .rank-no.top3{color:#D69A6C;text-shadow:0 0 12px rgba(214,154,108,.35);}
-.rank-name{font-weight:700;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+/* Perak (top2) #C7CDD1 dikalibrasi terang buat kontras di atas kartu GELAP.
+   Di tema TERANG, warna terang yang sama nyaris menyatu dengan latar
+   (~1.6:1, gagal kontras) — jadi peringkat #2 nyaris tak kelihatan. Ini
+   salah satu titik "tema gelap tidak konsisten dgn tema terang" yang
+   dilaporkan. Turunkan ke abu lebih gelap khusus tema terang. */
+:root[data-theme="light"] .rank-no.top2{color:#7C8790;text-shadow:0 0 10px rgba(124,135,144,.25);}
+.rank-name{display:flex;align-items:center;min-width:0;font-weight:700;font-size:13.5px;gap:7px;}
+.rank-name-text{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .rank-name .off-tag{
-  font-weight:700;font-size:9.5px;color:var(--ink-soft);margin-left:7px;
+  flex-shrink:0;
+  font-weight:700;font-size:9.5px;color:var(--ink-soft);
   background:var(--bg-elev);border:1px solid var(--border);padding:1px 7px;border-radius:20px;
-  text-transform:uppercase;letter-spacing:.03em;vertical-align:1px;
+  text-transform:uppercase;letter-spacing:.03em;
 }
 .rank-row.off-member{opacity:.6;}
 .rank-row.off-member .avatar{filter:grayscale(70%);opacity:.7;box-shadow:none;}
@@ -1013,8 +1021,13 @@ footer.site-footer{
   transition:transform .15s var(--ease);
 }
 .alert-banner:hover{transform:translateY(-1px);}
-.alert-banner svg{width:18px;height:18px;color:#8a5a12;flex-shrink:0;}
-.alert-cta{margin-left:auto;font-weight:700;color:#8a5a12;white-space:nowrap;}
+/* Sebelumnya warna teks/ikon di-hardcode #8a5a12 (cokelat tua yang dikalibrasi
+   untuk latar TERANG). Di tema gelap, background-nya (--amber-soft) berubah
+   jadi cokelat gelap, sehingga teks #8a5a12 nyaris tak kelihatan — inilah
+   salah satu sumber laporan "tema gelap tidak konsisten". Ganti ke token
+   --amber-ink yang sudah dikalibrasi ulang per-tema (lihat :root[data-theme]). */
+.alert-banner svg{width:18px;height:18px;color:var(--amber-ink,#8a5a12);flex-shrink:0;}
+.alert-cta{margin-left:auto;font-weight:700;color:var(--amber-ink,#8a5a12);white-space:nowrap;}
 .section{display:none;}
 .section.active{display:block;animation:secIn .35s var(--ease) both;}
 @keyframes secIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:none;}}
@@ -1350,6 +1363,14 @@ footer.site-footer{
   border:1px solid color-mix(in srgb, #D6488E 40%, var(--border-soft));
   box-shadow:0 0 0 1px color-mix(in srgb, #D6488E 15%, transparent), 0 12px 28px -18px rgba(214,72,142,.6);
 }
+/* Versi idle (belum waktunya kocok): warna netral emas, bukan pink LIVE,
+   supaya jelas beda status tapi tetap satu keluarga desain dengan kartu live. */
+.arisan-idle-card{
+  background:linear-gradient(160deg, color-mix(in srgb, var(--amber) 10%, var(--bg-elev-2)), var(--bg-elev-2) 70%);
+  border-color:color-mix(in srgb, var(--amber) 30%, var(--border-soft));
+  box-shadow:none;
+}
+.arisan-idle-card .wheel-status-label{color:var(--ink-soft);}
 .arisan-live-badge{
   display:inline-flex;align-items:center;gap:7px;margin-bottom:2px;
   font-size:11.5px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:#D6488E;
@@ -1513,6 +1534,11 @@ footer.site-footer{
   100%{box-shadow:inset 0 0 0 2px rgba(240,169,58,.35), inset 0 14px 16px -8px rgba(0,0,0,.85), inset 0 -14px 16px -8px rgba(0,0,0,.85);}
 }
 .slot-reel-strip{position:absolute;left:0;top:0;width:100%;}
+/* Reel idle (belum berputar): satu kartu statis, diletakkan di tengah
+   jendela reel yang lebih pendek — bukan strip panjang buat efek spin. */
+.slot-reel-window.is-idle{height:96px;}
+.slot-reel-strip.is-idle{position:static;display:flex;align-items:center;justify-content:center;height:100%;}
+.slot-reel-window.is-idle .slot-avatar{opacity:.9;}
 .slot-cell{height:72px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:0 6px;}
 .slot-avatar{
   width:30px;height:30px;border-radius:50%;flex-shrink:0;

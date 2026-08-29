@@ -47,7 +47,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Mono:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="./style.css?v=20260829b">
+<link rel="stylesheet" href="./style.css?v=20260829e">
 </head>
 <body>
 
@@ -123,14 +123,17 @@
 </defs>
 </svg>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
-<!-- Firebase (Firestore + Auth) — harus dimuat sebelum script.js -->
-<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
-<script src="./firebase-config.js?v=20260829b"></script>
-<script src="./script.js?v=20260829b"></script>
+<!-- Excel/PDF (xlsx, jspdf, jspdf-autotable) TIDAK dimuat di sini lagi —
+     ukurannya ratusan KB dan dulu memblokir semua render pertama padahal
+     cuma dipakai kalau admin/tamu benar-benar klik tombol Excel/PDF.
+     Sekarang dimuat sesuai kebutuhan lewat ensureXlsxLib()/ensurePdfLib()
+     di script.js, langsung sebelum file dibuat. -->
+<!-- Firebase (Firestore + Auth) — harus dimuat sebelum script.js, tapi
+     "defer" supaya tidak memblokir parsing HTML/CSS lain di halaman. -->
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js" defer></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js" defer></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js" defer></script>
+<script src="./firebase-config.js?v=20260829e" defer></script>
+<script src="./script.js?v=20260829e" defer></script>
 </body>
 </html>
