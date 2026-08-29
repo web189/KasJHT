@@ -901,6 +901,46 @@ function topbar(){
       </div>
       <button class="icon-btn hamburger-btn" id="hamburgerBtn" title="Menu">${icon('menu')}${pendingCount>0?`<span class="menu-dot"></span>`:""}</button>
     </div>
+
+    <!-- ======= NAV DESKTOP (>760px): baris menu kedua yang SELALU
+         terlihat langsung, TANPA ikon hamburger — sesuai permintaan.
+         Dropdown dipakai hanya buat mengelompokkan item sekunder
+         (unduh/tautan/game) supaya baris menu tidak penuh sesak. Murni
+         CSS+JS ringan, tanpa library, dan disembunyikan total di layar
+         mobile (digantikan hamburger + panel seperti sebelumnya). ---- -->
+    <nav class="desktop-nav" id="desktopNav">
+      <div class="desktop-nav-inner">
+        <a class="dnav-link" href="#/" id="dnHome">${icon('home')}<span>Home</span></a>
+        <button class="dnav-link" id="dnPengajuan">${icon('plus-circle')}<span>Ajukan Pembelian</span></button>
+        <button class="dnav-link" id="dnRiwayat">${icon('inbox')}<span>Riwayat Pengajuan</span>${pendingCount>0?`<span class="dnav-badge">${pendingCount}</span>`:""}</button>
+        <button class="dnav-link" id="dnAset">${icon('box')}<span>Aset</span></button>
+        <button class="dnav-link dnav-arisan" id="dnArisan">${icon('gift')}<span>Arisan Tanteh Susi</span>${arisanMenuBadge()}</button>
+        <div class="dnav-dropdown" id="dnDownloadWrap">
+          <button class="dnav-link dnav-trigger" id="dnDownloadToggle">${icon('download')}<span>Unduh Data</span>${icon('down')}</button>
+          <div class="dnav-menu" id="dnDownloadMenu">
+            <button class="dnav-menu-item" id="dnExportExcel">${icon('file-excel')}<span>Unduh Excel</span></button>
+            <button class="dnav-menu-item" id="dnExportPdf">${icon('file-pdf')}<span>Unduh PDF</span></button>
+          </div>
+        </div>
+        <div class="dnav-dropdown" id="dnLinksWrap">
+          <button class="dnav-link dnav-trigger" id="dnLinksToggle">${icon('external')}<span>Tautan</span>${icon('down')}</button>
+          <div class="dnav-menu" id="dnLinksMenu">
+            <button class="dnav-menu-item" id="dnJadwal">${icon('calendar')}<span>Jadwal Admin GDNG PRG</span></button>
+            <button class="dnav-menu-item" id="dnRekapLama">${icon('sheet')}<span>Data Rekap Lama (Spreadsheet)</span></button>
+            <button class="dnav-menu-item" id="dnRitase">${icon('report')}<span>Uang Ritase TUA</span></button>
+          </div>
+        </div>
+        <div class="dnav-dropdown" id="dnGameWrap">
+          <button class="dnav-link dnav-trigger" id="dnGameToggle">${icon('gamepad')}<span>Game</span>${icon('down')}</button>
+          <div class="dnav-menu" id="dnGameMenu">
+            <button class="dnav-menu-item" data-game="catur"><span class="dnav-emoji">♟️</span><span>Catur</span></button>
+            <button class="dnav-menu-item" data-game="ular"><span class="dnav-emoji">🐍</span><span>Ular Tangga</span></button>
+            <button class="dnav-menu-item" data-game="monopoli">${icon('dice')}<span>Monopoly</span></button>
+          </div>
+        </div>
+      </div>
+    </nav>
+
     <div class="mobile-menu-panel" id="mobileMenuPanel">
       <div class="mm-panel-head"><span class="mm-panel-head-icon">${icon('menu')}</span><span>Menu Navigasi</span></div>
       <button class="mm-item" id="mmHome"><span class="mm-ico-wrap">${icon('home')}</span><span>Home</span></button>
@@ -1267,7 +1307,38 @@ function bindTopbarCommon(){
     e.stopPropagation();
     document.getElementById("mobileMenuPanel")?.classList.toggle("open");
   });
+
+  /* ---- NAV DESKTOP: item langsung + 3 dropdown kecil (unduh/tautan/game) ---- */
+  document.getElementById("dnHome")?.addEventListener("click", (e)=>{ e.preventDefault(); goto("/"); });
+  document.getElementById("dnPengajuan")?.addEventListener("click", ()=> goto("/pengajuan"));
+  document.getElementById("dnRiwayat")?.addEventListener("click", ()=> goto("/riwayat"));
+  document.getElementById("dnAset")?.addEventListener("click", ()=> goto("/aset"));
+  document.getElementById("dnArisan")?.addEventListener("click", ()=> goto("/arisan"));
+  document.getElementById("dnExportExcel")?.addEventListener("click", ()=>{ exportExcel(getFilteredTxList(false)); closeDesktopDropdowns(); });
+  document.getElementById("dnExportPdf")?.addEventListener("click", ()=>{ exportPdf(getFilteredTxList(false)); closeDesktopDropdowns(); });
+  document.getElementById("dnJadwal")?.addEventListener("click", ()=>{ closeDesktopDropdowns(); window.open("https://web189.github.io/Jadwal-Admin/","_blank","noopener"); });
+  document.getElementById("dnRekapLama")?.addEventListener("click", ()=>{ closeDesktopDropdowns(); window.open("https://docs.google.com/spreadsheets/d/18V_4io2MWv-dRpOp44gwLrfl_ZzLAoKbpB5OPECaA0c/edit?usp=drivesdk","_blank","noopener"); });
+  document.getElementById("dnRitase")?.addEventListener("click", ()=>{ closeDesktopDropdowns(); window.open("https://web189.github.io/UangRitase/","_blank","noopener"); });
+  document.querySelectorAll("#dnGameMenu [data-game]").forEach(btn=>{
+    btn.addEventListener("click", ()=>{ closeDesktopDropdowns(); openGameCenter(btn.dataset.game); });
+  });
+  [["dnDownloadToggle","dnDownloadWrap"],["dnLinksToggle","dnLinksWrap"],["dnGameToggle","dnGameWrap"]].forEach(([btnId,wrapId])=>{
+    document.getElementById(btnId)?.addEventListener("click", (e)=>{
+      e.stopPropagation();
+      const wrap = document.getElementById(wrapId);
+      const willOpen = !wrap.classList.contains("open");
+      closeDesktopDropdowns();
+      if(willOpen) wrap.classList.add("open");
+    });
+  });
 }
+function closeDesktopDropdowns(){
+  document.querySelectorAll(".dnav-dropdown.open").forEach(el=>el.classList.remove("open"));
+}
+/* Klik di luar dropdown nav desktop -> tutup otomatis */
+document.addEventListener("click", (e)=>{
+  if(!e.target.closest(".dnav-dropdown")) closeDesktopDropdowns();
+});
 
 /* Klik di luar panel menu -> tutup otomatis */
 document.addEventListener("click", (e)=>{
@@ -2206,18 +2277,16 @@ function bindArisanBatchForm(){
    2 FASE: (1) putaran cepat linear yang lama (bikin tegang, kelihatan masih
    acak), lalu (2) perlambatan dramatis di ujung yang presisi berhenti di
    pemenang. Reel terakhir dapat porsi fase-lambat paling besar & paling
-   panjang. Total durasi ~30 detik. Engine ini dipakai BERSAMA oleh modal
+   panjang. Total durasi 50 detik. Engine ini dipakai BERSAMA oleh modal
    admin maupun widget live di halaman tamu (lihat runSlotMachineSpin),
    dengan dukungan "elapsedMs" supaya penonton yang baru buka halaman di
-   tengah kocokan tetap mendarat di detik & pemenang yang SAMA.
-   Total durasi 160 detik — reel terakhir (yang menentukan SLOT_TOTAL_MS)
-   sengaja paling lama & paling "creep" di ujung supaya makin tegang. */
+   tengah kocokan tetap mendarat di detik & pemenang yang SAMA. */
 const SLOT_CELL = 72;   // px — HARUS sinkron dengan tinggi .slot-cell di CSS
-const SLOT_TOTAL_MS = 160000;
+const SLOT_TOTAL_MS = 50000;
 const SLOT_REEL_TIMING = [
-  { totalSec: 62,  slowPortion: 0.20, laps: 82,  ease: "cubic-bezier(.12,.84,.18,1)" },
-  { totalSec: 107, slowPortion: 0.26, laps: 139, ease: "cubic-bezier(.08,.87,.13,1)" },
-  { totalSec: 160, slowPortion: 0.38, laps: 206, ease: "cubic-bezier(.05,.92,.08,1)" }, // reel terakhir: paling lama & paling "creep" di akhir
+  { totalSec: 19, slowPortion: 0.20, laps: 25,  ease: "cubic-bezier(.12,.84,.18,1)" },
+  { totalSec: 33, slowPortion: 0.26, laps: 43,  ease: "cubic-bezier(.08,.87,.13,1)" },
+  { totalSec: 50, slowPortion: 0.38, laps: 65,  ease: "cubic-bezier(.05,.92,.08,1)" }, // reel terakhir: paling lama & paling "creep" di akhir
 ];
 function _shuffleCopy(arr){
   const a = arr.slice();

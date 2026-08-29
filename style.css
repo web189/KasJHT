@@ -266,6 +266,63 @@ a{color:inherit;}
   .topbar-actions{display:none;}
 }
 
+/* ============================================================
+   NAV DESKTOP — baris menu kedua, selalu terlihat (tanpa hamburger)
+   di layar >760px. Di layar <=760px disembunyikan total, digantikan
+   hamburger + mobile-menu-panel yang sudah ada (perilaku lama).
+============================================================ */
+.desktop-nav{display:none;}
+.hamburger-btn, .mobile-menu-panel{ }
+@media (min-width:761px){
+  .hamburger-btn{display:none !important;}
+  .mobile-menu-panel{display:none !important;}
+  .desktop-nav{
+    display:block;border-top:1px solid var(--border-soft);
+    background:color-mix(in srgb, var(--bg-elev-2) 55%, transparent);
+  }
+  .desktop-nav-inner{
+    max-width:1180px;margin:0 auto;padding:6px 20px;
+    display:flex;align-items:center;flex-wrap:wrap;gap:3px;
+  }
+}
+@media (min-width:1440px){ .desktop-nav-inner{max-width:1280px;} }
+@media (min-width:1600px){ .desktop-nav-inner{max-width:1420px;} }
+
+.dnav-link{
+  display:flex;align-items:center;gap:7px;white-space:nowrap;
+  border:none;background:transparent;cursor:pointer;text-decoration:none;
+  color:var(--ink-soft);font-family:var(--font-body);font-weight:600;font-size:13px;
+  padding:9px 12px;border-radius:9px;transition:background .16s var(--ease),color .16s var(--ease);
+}
+.dnav-link svg{width:15px;height:15px;flex-shrink:0;}
+.dnav-link:hover{background:var(--bg-elev-2);color:var(--ink);}
+.dnav-link.dnav-arisan:hover{color:#D6488E;}
+.dnav-badge{
+  background:var(--rust);color:#fff;font-size:10px;font-weight:700;
+  padding:1px 6px;border-radius:20px;line-height:1.5;
+}
+.dnav-trigger svg:last-child{width:11px;height:11px;opacity:.7;transition:transform .16s var(--ease);}
+.dnav-dropdown{position:relative;}
+.dnav-dropdown.open .dnav-trigger{background:var(--bg-elev-2);color:var(--ink);}
+.dnav-dropdown.open .dnav-trigger svg:last-child{transform:rotate(180deg);}
+.dnav-menu{
+  display:none;position:absolute;left:0;top:calc(100% + 6px);z-index:46;
+  background:color-mix(in srgb, var(--bg-elev) 97%, transparent);
+  backdrop-filter:blur(14px);
+  border:1px solid var(--border);border-radius:12px;
+  box-shadow:var(--shadow-lift);padding:6px;min-width:230px;
+  flex-direction:column;gap:1px;
+}
+.dnav-dropdown.open .dnav-menu{display:flex;animation:cardIn .16s var(--ease);}
+.dnav-menu-item{
+  display:flex;align-items:center;gap:10px;width:100%;text-align:left;
+  border:none;background:transparent;color:var(--ink);font-weight:600;font-size:13px;
+  padding:9px 10px;border-radius:8px;cursor:pointer;white-space:nowrap;
+}
+.dnav-menu-item:hover{background:var(--bg-elev-2);}
+.dnav-menu-item svg{width:15px;height:15px;flex-shrink:0;color:var(--ink-soft);}
+.dnav-emoji{font-size:14px;width:15px;text-align:center;flex-shrink:0;}
+
 .icon-btn{
   width:38px;height:38px;border-radius:10px;border:1px solid var(--border);
   background:var(--bg-elev);color:var(--ink);cursor:pointer;
