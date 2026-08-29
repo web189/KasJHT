@@ -9,7 +9,6 @@
   --font-body:'Plus Jakarta Sans',sans-serif;
 
   --amber:#F0A93A;
-  --amber-ink:#5C3D0A;
   --blue:#2C5A88;
   --rust:#B34632;
   --forest:#3D7A5D;
@@ -39,6 +38,7 @@
   --amber-soft:#FBEBCB;
   --forest-soft:#DCEEE3;
   --rust-soft:#F6E1DA;
+  --amber-ink:#5C3D0A;
 }
 :root[data-theme="dark"]{
   --bg:#12161A;
@@ -52,6 +52,15 @@
   --amber-soft:#3A2F16;
   --forest-soft:#1D3128;
   --rust-soft:#3A241E;
+  /* Aksen forest/rust/blue/amber-ink dasar (di :root) dikalibrasi untuk latar
+     TERANG. Di atas latar gelap, warna yang sama jadi kurang kontras (pernah
+     serendah ~1.3:1 untuk teks abu tua di atas chip gelap — nyaris tak
+     terbaca). Override di bawah ini bikin versinya lebih terang/cerah khusus
+     tema gelap, supaya kontras teks & ikon tetap sehat di kedua tema. */
+  --forest:#57A882;
+  --rust:#DD7457;
+  --blue:#5B9BD5;
+  --amber-ink:#F0A93A;
 }
 
 *,*::before,*::after{box-sizing:border-box;}
@@ -285,7 +294,7 @@ a{color:inherit;}
 }
 .sheet-tab svg{width:14px;height:14px;flex-shrink:0;opacity:.8;}
 .sheet-tab.active{background:var(--bg-elev);color:var(--ink);box-shadow:var(--shadow-soft);}
-.sheet-tab.active svg{opacity:1;color:var(--amber);}
+.sheet-tab.active svg{opacity:1;color:var(--amber-ink);}
 
 /* ============================================================
    Signature element: "folder tab" — die-cut index tab shape
@@ -505,7 +514,7 @@ a{color:inherit;}
 .ledger td{padding:11px 12px;border-bottom:1px solid var(--border-soft);vertical-align:middle;}
 
 /* ---------------- Peringkat setoran (leaderboard) ---------------- */
-.rank-list{display:flex;flex-direction:column;gap:9px;}
+.rank-list{display:flex;flex-direction:column;gap:10px;}
 .rank-row{
   position:relative;
   display:grid;
@@ -513,7 +522,12 @@ a{color:inherit;}
   align-items:center;
   column-gap:10px;
   background:var(--bg-elev-2);border:1px solid var(--border-soft);border-radius:12px;
-  padding:11px 13px;cursor:pointer;transition:transform .18s var(--ease),border-color .18s var(--ease),box-shadow .18s var(--ease);
+  padding:11px 13px 11px 17px;cursor:pointer;transition:transform .18s var(--ease),border-color .18s var(--ease),box-shadow .18s var(--ease);
+  overflow:hidden;
+}
+.rank-row::before{
+  content:"";position:absolute;left:6px;top:10px;bottom:10px;width:3px;border-radius:3px;
+  background:var(--m-color,var(--border));opacity:.75;
 }
 .rank-row:hover{border-color:var(--amber);transform:translateY(-1px);box-shadow:var(--shadow-soft);}
 .rank-row.active{background:var(--amber-soft);border-color:var(--amber);}
@@ -524,6 +538,12 @@ a{color:inherit;}
   background:linear-gradient(135deg, color-mix(in srgb, var(--amber) 13%, var(--bg-elev-2)), var(--bg-elev-2) 65%);
   box-shadow:0 10px 26px -16px color-mix(in srgb, var(--amber) 70%, transparent);
 }
+.rank-row.podium-1::after{
+  content:"";position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(115deg, transparent 40%, color-mix(in srgb, var(--amber) 22%, transparent) 50%, transparent 60%);
+  background-size:220% 100%;animation:rankShine 3.6s ease-in-out infinite;
+}
+@keyframes rankShine{0%{background-position:120% 0;}55%,100%{background-position:-40% 0;}}
 .rank-row.podium-2{
   border-color:color-mix(in srgb, #C7CDD1 55%, var(--border-soft));
   background:linear-gradient(135deg, color-mix(in srgb, #C7CDD1 10%, var(--bg-elev-2)), var(--bg-elev-2) 65%);
@@ -573,8 +593,13 @@ a{color:inherit;}
    Setor (hijau) − Keluar (merah) = Sisa Saldo (aksen, merah bila minus) */
 .rank-breakdown{
   grid-column:1 / -1;grid-row:2;
+  position:relative;
   display:flex;align-items:stretch;flex-wrap:wrap;gap:6px;
-  margin-top:9px;padding-top:10px;border-top:1px dashed var(--border-soft);
+  margin-top:9px;padding-top:11px;
+}
+.rank-breakdown::before{
+  content:"";position:absolute;top:0;left:-17px;right:-13px;height:1px;
+  background:linear-gradient(90deg, transparent, var(--border-soft) 12%, var(--border-soft) 88%, transparent);
 }
 .rank-row .rank-bar-track{grid-row:3;}
 .rank-breakdown .rb-op{
@@ -597,7 +622,7 @@ a{color:inherit;}
 .rb-chip.rb-out{background:var(--rust-soft);border-color:color-mix(in srgb, var(--rust) 35%, var(--border-soft));}
 .rb-chip.rb-out .rb-chip-val{color:var(--rust);}
 .rb-chip.rb-saldo{background:var(--amber-soft);border-color:color-mix(in srgb, var(--amber) 45%, var(--border-soft));}
-.rb-chip.rb-saldo .rb-chip-val{color:var(--amber);}
+.rb-chip.rb-saldo .rb-chip-val{color:var(--amber-ink);}
 .rb-chip.rb-saldo.is-neg{background:var(--rust-soft);border-color:color-mix(in srgb, var(--rust) 45%, var(--border-soft));}
 .rb-chip.rb-saldo.is-neg .rb-chip-val{color:var(--rust);}
 .rank-breakdown.compact{
@@ -691,12 +716,20 @@ table.excel td .tx-shift-chip{white-space:nowrap;}
 .saldo-col.final .saldo-fig{color:var(--ink);font-size:16px;}
 .saldo-op{font-size:16px;font-weight:700;color:var(--ink-faint);flex-shrink:0;}
 
-/* ---------------- Blur nominal uang (tampilan tamu, sampai di-reveal) ---------------- */
-.money-blur{
-  filter:blur(6px);user-select:none;transition:filter .35s var(--ease);
-  display:inline-block;
-}
-body.money-revealed .money-blur{filter:blur(0);}
+/* ---------------- Samarkan nominal uang (tampilan tamu, sampai di-reveal) ----------------
+   Dulu pakai filter:blur() — sekarang diganti "Rpxxxxx" (jumlah "x" mengikuti
+   jumlah digit aslinya) yang jauh lebih jelas menunjukkan ini nominal
+   tersembunyi (bukan cuma kabur), sambil tetap tidak membocorkan angkanya.
+   Elemen .money-blur berisi 2 varian teks (.money-real & .money-masked);
+   yang mana yang tampil ditentukan lewat class body.money-revealed. */
+.money-real{ display:inline; }
+.money-masked{ display:none; }
+.money-blur{ user-select:none; }
+.money-blur .money-real{ display:none; }
+.money-blur .money-masked{ display:inline; letter-spacing:.02em; opacity:.85; }
+body.money-revealed .money-blur{ user-select:auto; }
+body.money-revealed .money-blur .money-real{ display:inline; }
+body.money-revealed .money-blur .money-masked{ display:none; }
 .money-toggle-btn{
   display:flex;align-items:center;justify-content:center;gap:7px;width:100%;
   margin-top:10px;padding:9px 14px;border-radius:11px;cursor:pointer;
@@ -879,7 +912,7 @@ footer.site-footer{
   width:52px;height:52px;border-radius:14px;flex-shrink:0;
   display:flex;align-items:center;justify-content:center;
   background:color-mix(in srgb, var(--amber) 22%, var(--bg-elev));
-  color:var(--amber);border:1px solid color-mix(in srgb, var(--amber) 40%, var(--border));
+  color:var(--amber-ink);border:1px solid color-mix(in srgb, var(--amber) 40%, var(--border));
 }
 .asset-summary-icon svg{width:26px;height:26px;}
 .asset-summary-main .label{font-size:12px;color:var(--ink-faint);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;}
@@ -1062,9 +1095,13 @@ footer.site-footer{
 }
 @media (min-width:1440px){
   .container{max-width:1280px;}
+  .topbar-inner{max-width:1280px;} /* sinkron dengan .container — sebelumnya topbar-inner
+    terkunci di 1180px sementara konten di bawahnya melebar sampai 1280/1420px di layar
+    lebar, bikin header terlihat "menyempit"/tidak sejajar dengan konten di PC/monitor besar. */
 }
 @media (min-width:1600px){
   .admin-main{max-width:1420px;}
+  .topbar-inner{max-width:1420px;}
 }
 /* ---------- bar khusus admin di mobile (topbar + hamburger menu) ---------- */
 .admin-topbar-mobile{display:none;}
@@ -1307,6 +1344,20 @@ footer.site-footer{
   pointer-events:none;
 }
 .arisan-panel-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px;}
+.arisan-live-card{
+  margin:0 0 16px;padding:16px 14px 10px;border-radius:16px;
+  background:linear-gradient(160deg, color-mix(in srgb, #D6488E 14%, var(--bg-elev-2)), var(--bg-elev-2) 70%);
+  border:1px solid color-mix(in srgb, #D6488E 40%, var(--border-soft));
+  box-shadow:0 0 0 1px color-mix(in srgb, #D6488E 15%, transparent), 0 12px 28px -18px rgba(214,72,142,.6);
+}
+.arisan-live-badge{
+  display:inline-flex;align-items:center;gap:7px;margin-bottom:2px;
+  font-size:11.5px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:#D6488E;
+}
+.arisan-live-badge .dot{
+  width:8px;height:8px;border-radius:50%;background:#D6488E;
+  box-shadow:0 0 0 0 rgba(214,72,142,.6);animation:arisanLivePulse 1.4s ease-out infinite;
+}
 .arisan-batch-name{font-family:var(--font-display);font-weight:700;font-size:16px;margin-bottom:6px;}
 .arisan-status-badge{
   display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;
@@ -1480,6 +1531,14 @@ footer.site-footer{
 .pl-arrow{position:absolute;top:50%;width:0;height:0;transform:translateY(-50%);}
 .pl-arrow.left{left:-5px;border-top:5px solid transparent;border-bottom:5px solid transparent;border-left:6px solid #D6488E;}
 .pl-arrow.right{right:-5px;border-top:5px solid transparent;border-bottom:5px solid transparent;border-right:6px solid #D6488E;}
+.slot-progress-track{
+  height:4px;border-radius:4px;margin-top:10px;overflow:hidden;
+  background:rgba(255,255,255,.08);
+}
+.slot-progress-fill{
+  height:100%;width:0%;border-radius:4px;
+  background:linear-gradient(90deg, #D6488E, var(--amber,#F0A93A));
+}
 
 .draw-result{
   display:flex;flex-direction:column;align-items:center;gap:4px;margin:18px 0 4px;position:relative;
@@ -1504,6 +1563,7 @@ footer.site-footer{
 @keyframes winnerPop{0%{transform:scale(.4) rotate(-15deg);opacity:0;}70%{transform:scale(1.1) rotate(4deg);}100%{transform:scale(1) rotate(0);opacity:1;}}
 .draw-winner-label{font-size:12px;color:var(--ink-soft);margin-top:6px;}
 .draw-winner-name{font-family:var(--font-display);font-size:22px;font-weight:700;color:#D6488E;}
+.draw-confirm-question{font-size:12.5px;color:var(--ink-faint);margin-top:10px;}
 
 @media (max-width:480px){
   .cd-box{min-width:48px;padding:7px 4px;}

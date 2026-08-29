@@ -3,6 +3,22 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script>
+/* Terapkan tema TERSINKRON sebelum apapun dirender (anti-FOUC / anti-flash).
+   Kalau ini menunggu script.js di bawah body (yang antre di belakang SDK
+   Firebase yang berat), sempat ada jeda singkat di mana <html> belum
+   punya data-theme sama sekali -> semua var(--bg)/var(--ink) dianggap
+   tidak valid -> sebagian elemen tampil pudar/putih tanpa kontras,
+   persis gejala "tampilan PC belang" yang dilaporkan. */
+(function(){
+  try{
+    var t = localStorage.getItem('jht_theme') || 'dark';
+    document.documentElement.setAttribute('data-theme', t);
+  }catch(e){
+    document.documentElement.setAttribute('data-theme','dark');
+  }
+})();
+</script>
 <title>Kas JHT — Sistem Kas Digital Modern</title>
 <meta name="description" content="Kelola kas lebih mudah, transparan & terpercaya. Pantau pemasukan, pengeluaran, saldo, dan riwayat transaksi dalam satu sistem digital.">
 
@@ -31,9 +47,9 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Mono:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="./style.css">
+<link rel="stylesheet" href="./style.css?v=20260829b">
 </head>
-<body data-theme="dark">
+<body>
 
 <!-- ============ BOOT LOADER (splash 7 detik) ============ -->
 <div id="bootLoader" class="boot-loader">
@@ -114,7 +130,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
-<script src="./firebase-config.js"></script>
-<script src="./script.js"></script>
+<script src="./firebase-config.js?v=20260829b"></script>
+<script src="./script.js?v=20260829b"></script>
 </body>
 </html>

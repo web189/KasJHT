@@ -376,6 +376,17 @@ function rupiah(n){
   n = Number(n)||0;
   return "Rp" + n.toLocaleString("id-ID");
 }
+/** Versi tersamar dari rupiah(): setiap digit diganti "x" (pemisah ribuan &
+ *  tanda minus tetap tampil apa adanya), supaya panjang "xxxxx" mengikuti
+ *  jumlah digit nominal aslinya — bukan cuma diblur seragam. */
+function maskedRupiah(n){ return rupiah(n).replace(/[0-9]/g, "x"); }
+/** Render dua versi (asli & tersamar) sekaligus dalam span terpisah; CSS
+ *  (.money-blur) yang memutuskan mana yang terlihat berdasarkan status
+ *  reveal, tanpa perlu ubah logika class di tiap tempat pemanggilan. */
+function moneyDual(n, prefix){
+  prefix = prefix || "";
+  return `<span class="money-real">${prefix}${rupiah(n)}</span><span class="money-masked">${prefix}${maskedRupiah(n)}</span>`;
+}
 function fmtDate(iso){
   const d = new Date(iso+"T00:00:00");
   return d.toLocaleDateString("id-ID",{weekday:"long", day:"2-digit", month:"long", year:"numeric"});
@@ -595,6 +606,38 @@ function finishedArisanBatches(){
 function arisanApprovedMembers(batch){ return (batch.members||[]).filter(m=>m.status==="approved"); }
 function arisanPendingMembers(batch){ return (batch.members||[]).filter(m=>m.status==="pending"); }
 function arisanEligibleMembers(batch){ return arisanApprovedMembers(batch).filter(m=>!m.sudahMenang); }
+/** Cek tiap beberapa detik: kalau jadwal kocok sudah lewat & belum ada
+ *  kocokan yang sedang berjalan/menunggu konfirmasi, otomatis buka & mulai
+ *  mesin slot — TANPA perlu admin klik "Kocok Sekarang!" dulu. Ini hanya
+ *  bisa jalan kalau ada browser admin yang sedang terbuka (situs statis,
+ *  tidak ada server/cron di belakang layar) — begitu admin login & tab-nya
+ *  terbuka, pengecekan ini otomatis aktif di background. */
+function checkArisanAutoDraw(){
+  if(!DB_READY || !isAuthed()) return;
+  if(document.getElementById("slotMachine")) return; // modal kocokan sudah kebuka (manual/otomatis lain)
+  const batch = activeArisanBatch();
+  if(!batch || batch.status!=="berjalan") return;
+  if(batch.liveDraw && batch.liveDraw.active) return; // sudah ada kocokan berjalan / menunggu konfirmasi ya-tidak
+  const eligible = arisanEligibleMembers(batch);
+  if(!eligible.length) return;
+  const due = new Date(arisanNextDrawDate(batch)+"T00:00:00").getTime();
+  if(Date.now() < due) return; // belum waktunya
+  openArisanDrawModal(batch);
+  toast(`⏰ Waktunya kocok arisan "${batch.nama}"! Mesin slot otomatis mulai berputar.`);
+}
+setInterval(checkArisanAutoDraw, 8000);
+/** Kembalikan info siaran live kalau kocokan sedang berlangsung & masih dalam
+ *  rentang waktu wajar untuk ditonton (kasih toleransi ~20 detik ekstra
+ *  setelah reel harusnya berhenti, buat jaga-jaga admin belum sempat klik
+ *  Simpan/Batal). Kalau sudah lewat/basi, dianggap tidak ada siaran live. */
+function arisanLiveDrawInfo(batch){
+  const ld = batch.liveDraw;
+  if(!ld || !ld.active || !ld.startedAt) return null;
+  const elapsed = Date.now() - ld.startedAt;
+  const GRACE_MS = 45000;
+  if(elapsed > ld.durationMs + GRACE_MS) return null;
+  return { ...ld, elapsed: Math.max(0, elapsed) };
+}
 function arisanNextDrawDate(batch){ return addMonthsISO(batch.tglMulai, batch.currentRound); }
 function arisanQuotaTaken(batch){ return (batch.members||[]).filter(m=>m.status!=="rejected").length; }
 function arisanQuotaFull(batch){ return !!batch.kuota && arisanQuotaTaken(batch) >= batch.kuota; }
@@ -666,7 +709,7 @@ function rankBreakdownHtml(r, compact){
   const saldoChip = `
     <div class="rb-chip rb-saldo ${neg?'is-neg':'is-pos'}">
       <span class="rb-chip-label">Sisa Saldo</span>
-      <span class="rb-chip-val mono money-blur">${neg?'-':''}${rupiah(Math.abs(r.saldo))}</span>
+      <span class="rb-chip-val mono money-blur">${moneyDual(Math.abs(r.saldo), neg?'-':'')}</span>
     </div>`;
   if(compact){
     return `<div class="rank-breakdown compact">${saldoChip}</div>`;
@@ -675,12 +718,12 @@ function rankBreakdownHtml(r, compact){
     <div class="rank-breakdown">
       <div class="rb-chip rb-in">
         <span class="rb-chip-label">Setor</span>
-        <span class="rb-chip-val mono money-blur">${rupiah(r.total)}</span>
+        <span class="rb-chip-val mono money-blur">${moneyDual(r.total)}</span>
       </div>
       <span class="rb-op">&minus;</span>
       <div class="rb-chip rb-out">
         <span class="rb-chip-label">Keluar</span>
-        <span class="rb-chip-val mono money-blur">${rupiah(r.keluar)}</span>
+        <span class="rb-chip-val mono money-blur">${moneyDual(r.keluar)}</span>
       </div>
       <span class="rb-op">=</span>
       ${saldoChip}
@@ -994,17 +1037,17 @@ function renderGuest(){
       <div class="saldo-strip reveal">
         <div class="saldo-col in">
           <span class="saldo-label">Kas Masuk</span>
-          <span class="saldo-fig mono money-blur">${rupiah(t.masuk)}</span>
+          <span class="saldo-fig mono money-blur">${moneyDual(t.masuk)}</span>
         </div>
         <span class="saldo-op">−</span>
         <div class="saldo-col out">
           <span class="saldo-label">Kas Keluar</span>
-          <span class="saldo-fig mono money-blur">${rupiah(t.keluar)}</span>
+          <span class="saldo-fig mono money-blur">${moneyDual(t.keluar)}</span>
         </div>
         <span class="saldo-op">=</span>
         <div class="saldo-col final">
           <span class="saldo-label">Saldo Akhir</span>
-          <span class="saldo-fig mono money-blur">${rupiah(t.saldo)}</span>
+          <span class="saldo-fig mono money-blur">${moneyDual(t.saldo)}</span>
         </div>
       </div>
       <button class="money-toggle-btn" id="moneyToggleBtn">
@@ -1025,8 +1068,8 @@ function renderGuest(){
               ${avatarHtml(r.id)}
               <span class="rank-name">${nameOf(r.id)}${isOff ? '<span class="off-tag">nonaktif</span>' : ''}</span>
               <div class="rank-figures">
-                <span class="rank-amt money-blur">${rupiah(r.total)}</span>
-                <span class="rank-pct money-blur">${r.pct.toFixed(1)}% dari total</span>
+                <span class="rank-amt money-blur">${moneyDual(r.total)}</span>
+                <span class="rank-pct money-blur"><span class="money-real">${r.pct.toFixed(1)}% dari total</span><span class="money-masked">${r.pct.toFixed(1).replace(/[0-9]/g,'x')}% dari total</span></span>
               </div>
               ${rankBreakdownHtml(r,false)}
               <div class="rank-bar-track"><div class="rank-bar-fill"></div></div>
@@ -1127,7 +1170,7 @@ function excelTableHtml(list, withActions, maxHeightPx){
             <td>${fmtDateShort(t.tgl)}</td>
             <td class="col-name"><span class="avatar-mini" style="background:${avatarBg(colorOf(t.admin))}">${initials(nameOf(t.admin))}</span>${nameOf(t.admin)}</td>
             <td><span class="tx-shift-chip">${t.shift||"Non Shift"}</span></td>
-            <td class="col-amt"><span class="amt-pill ${isIn?'in':'out'} ${withActions?'':'money-blur'}">${isIn?'↑':'↓'} ${rupiah(amount)}</span></td>
+            <td class="col-amt"><span class="amt-pill ${isIn?'in':'out'} ${withActions?'':'money-blur'}">${isIn?'↑':'↓'} ${moneyDual(amount)}</span></td>
             <td class="col-ket">${escapeHtml(t.ket) || "—"}</td>
             ${withActions ? `<td class="col-no"><button class="icon-btn sm" data-edit="${t.id}" title="Ubah">${icon('edit')}</button><button class="icon-btn sm" style="color:var(--rust);" data-del="${t.id}" title="Hapus">${icon('trash')}</button></td>` : ""}
           </tr>`;
@@ -1295,6 +1338,7 @@ function arisanBatchHtml(batch){
   const quotaPct = batch.kuota ? Math.min(100, taken/batch.kuota*100) : 0;
   const nextDraw = arisanNextDrawDate(batch);
   const history = [...(batch.drawHistory||[])].sort((a,b)=>b.round-a.round);
+  const liveInfo = arisanLiveDrawInfo(batch);
 
   const regBlock = (batch.status==="pendaftaran" && !quotaFull) ? `
     <div class="arisan-reg-card">
@@ -1322,6 +1366,19 @@ function arisanBatchHtml(batch){
       </div>
       <div class="arisan-fee-chip"><span class="label">Iuran / bulan</span><span class="val mono">${rupiah(batch.biaya)}</span></div>
     </div>
+
+    ${liveInfo ? `
+    <div class="arisan-live-card" id="arLiveCard">
+      <div class="arisan-live-badge"><span class="dot"></span>LIVE — Kocokan Sedang Berlangsung</div>
+      <div class="wheel-status-label" id="arLiveStatus">🔴 LIVE — reel sedang berputar…</div>
+      ${slotMachineMarkup("arLive")}
+      <div class="draw-result" id="arLiveResult" style="display:none;">
+        <div class="draw-confetti" id="arLiveConfetti"></div>
+        <div class="draw-winner-trophy">${icon('trophy')}</div>
+        <div class="draw-winner-label">Selamat kepada</div>
+        <div class="draw-winner-name" id="arLiveWinnerName"></div>
+      </div>
+    </div>` : ""}
 
     ${batch.kuota ? `
     <div class="arisan-quota-wrap">
@@ -1433,6 +1490,58 @@ function bindArisanPage(){
     render();
   });
   startCountdownTicker("arCd");
+  bindArisanLiveWidget();
+}
+/** Kalau ada kocokan yang sedang live, jalankan animasi slot di halaman tamu,
+ *  tersinkron ke waktu & pemenang yang sama dengan yang admin lihat (lihat
+ *  arisanLiveDrawInfo & bindArisanDrawModal). Aman dipanggil berkali-kali —
+ *  kalau tidak ada elemen widget-nya (tidak sedang live), langsung berhenti. */
+function bindArisanLiveWidget(){
+  const card = document.getElementById("arLiveCard");
+  if(!card) return;
+  const batch = activeArisanBatch();
+  const liveInfo = batch ? arisanLiveDrawInfo(batch) : null;
+  if(!liveInfo) return;
+  const eligible = arisanEligibleMembers(batch);
+  if(!eligible.length) return;
+  const winner = eligible.find(m=>m.id===liveInfo.winnerId) || { id: liveInfo.winnerId, nama: liveInfo.winnerNama };
+  const status = document.getElementById("arLiveStatus");
+  const machine = document.getElementById("arLiveMachine");
+  if(liveInfo.elapsed >= liveInfo.durationMs){
+    // telat gabung — reel sudah harusnya berhenti, langsung tampilkan hasilnya
+    machine?.classList.add("is-jackpot");
+    if(status) status.textContent = `🎉 Pemenangnya adalah ${winner.nama}!`;
+    document.getElementById("arLiveResult").style.display = "flex";
+    document.getElementById("arLiveWinnerName").textContent = winner.nama;
+    const prog = document.getElementById("arLiveProgress");
+    if(prog){ prog.style.transition="none"; prog.style.width="100%"; }
+    SLOT_REEL_TIMING.forEach((cfg,i)=>{
+      const strip = document.getElementById("arLiveReel"+i);
+      if(!strip) return;
+      const { html, targetIndex } = _buildSlotReelHtml(eligible, winner, cfg.laps);
+      strip.innerHTML = html;
+      strip.style.transition = "none";
+      strip.style.transform = `translateY(${-(targetIndex-1)*SLOT_CELL}px)`;
+      strip.closest(".slot-reel-window")?.classList.add("is-settled");
+    });
+    return;
+  }
+  machine?.classList.add("is-spinning");
+  _startSlotProgress("arLive", liveInfo.elapsed);
+  runSlotMachineSpin("arLive", eligible, winner, liveInfo.elapsed,
+    ()=>{
+      machine?.classList.remove("is-spinning");
+      machine?.classList.add("is-jackpot");
+      if(status) status.textContent = `🎉 Pemenangnya adalah ${winner.nama}!`;
+      document.getElementById("arLiveResult").style.display = "flex";
+      document.getElementById("arLiveWinnerName").textContent = winner.nama;
+      spawnConfetti(document.getElementById("arLiveConfetti"));
+    },
+    (settled, total)=>{
+      if(!status || settled>=total) return;
+      status.textContent = settled===total-1 ? "🔴 LIVE — reel terakhir masih berputar… tahan napas!" : `🔴 LIVE — reel ${settled}/${total} berhenti…`;
+    }
+  );
 }
 
 /* ============================================================
@@ -1645,7 +1754,7 @@ function reqCardHtml(r, withActions){
     <div class="req-card">
       <div class="req-top">
         <span class="stamp ${meta.cls}">${meta.label}</span>
-        <span class="req-amt mono ${blur}">${rupiah(r.nominal)}</span>
+        <span class="req-amt mono ${blur}">${moneyDual(r.nominal)}</span>
       </div>
       <div class="req-ket">${escapeHtml(r.keterangan)}</div>
       <div class="req-meta-row">
@@ -1700,7 +1809,7 @@ function renderAsetPage(){
           <div class="asset-summary-icon">${icon('box')}</div>
           <div>
             <div class="label">Total Nilai Aset</div>
-            <div class="value mono money-blur">${rupiah(totalNilai)}</div>
+            <div class="value mono money-blur">${moneyDual(totalNilai)}</div>
           </div>
         </div>
         <div class="asset-summary-stats">
@@ -1721,7 +1830,7 @@ function renderAsetPage(){
             <div class="asset-card" style="--i:${i};">
               <div class="asset-card-top">
                 <span class="asset-type-badge ${isJasa?'jasa':'barang'}">${icon(isJasa?'report':'box')}<span>${isJasa ? 'Jasa' : 'Barang'}</span></span>
-                <span class="asset-amt mono money-blur">${rupiah(r.nominal)}</span>
+                <span class="asset-amt mono money-blur">${moneyDual(r.nominal)}</span>
               </div>
               <div class="asset-ket">${escapeHtml(r.keterangan)}</div>
               <div class="asset-meta-row">
@@ -2031,17 +2140,20 @@ function bindArisanBatchForm(){
 }
 
 /* ---- modal animasi pengocokan arisan: MESIN SLOT 3-REEL ----
-   Murni CSS transform + transition (tanpa canvas/library), tiap reel berisi
-   nama-nama anggota yang scroll vertikal lalu berhenti satu-satu — reel
-   terakhir dibuat paling lambat & paling "slow-motion" biar bikin tegang,
-   dan ketiga reel dijamin berhenti di nama yang sama (efek jackpot align). */
+   Murni CSS transform + transition (tanpa canvas/library). Tiap reel jalan
+   2 FASE: (1) putaran cepat linear yang lama (bikin tegang, kelihatan masih
+   acak), lalu (2) perlambatan dramatis di ujung yang presisi berhenti di
+   pemenang. Reel terakhir dapat porsi fase-lambat paling besar & paling
+   panjang. Total durasi ~30 detik. Engine ini dipakai BERSAMA oleh modal
+   admin maupun widget live di halaman tamu (lihat runSlotMachineSpin),
+   dengan dukungan "elapsedMs" supaya penonton yang baru buka halaman di
+   tengah kocokan tetap mendarat di detik & pemenang yang SAMA. */
 const SLOT_CELL = 72;   // px — HARUS sinkron dengan tinggi .slot-cell di CSS
-const SLOT_REELS = 3;
-const SLOT_LAPS = 9;    // jumlah putaran penuh daftar anggota sebelum berhenti di pemenang
-const SLOT_REEL_CFG = [
-  { duration: 2.6, ease: "cubic-bezier(.15,.8,.2,1)" },
-  { duration: 3.7, ease: "cubic-bezier(.09,.85,.13,1)" },
-  { duration: 5.2, ease: "cubic-bezier(.04,.93,.07,1)" }, // reel terakhir: creep slow-motion di ujung
+const SLOT_TOTAL_MS = 90000;
+const SLOT_REEL_TIMING = [
+  { totalSec: 35, slowPortion: 0.20, laps: 46, ease: "cubic-bezier(.12,.84,.18,1)" },
+  { totalSec: 60, slowPortion: 0.26, laps: 78, ease: "cubic-bezier(.08,.87,.13,1)" },
+  { totalSec: 90, slowPortion: 0.38, laps: 116, ease: "cubic-bezier(.05,.92,.08,1)" }, // reel terakhir: paling lama & paling "creep" di akhir
 ];
 function _shuffleCopy(arr){
   const a = arr.slice();
@@ -2051,91 +2163,197 @@ function _shuffleCopy(arr){
 function _slotCellHtml(m){
   return `<div class="slot-cell"><span class="slot-avatar" style="background:${avatarBg(arisanColorFor(m.nama))}">${initials(m.nama)}</span><span class="slot-name">${escapeHtml(arisanShortName(m.nama))}</span></div>`;
 }
-function _buildSlotReelHtml(eligible, winner){
+function _buildSlotReelHtml(eligible, winner, laps){
   let seq = [];
-  for(let lap=0; lap<SLOT_LAPS; lap++) seq.push(..._shuffleCopy(eligible));
+  for(let lap=0; lap<laps; lap++) seq.push(..._shuffleCopy(eligible));
   const targetIndex = seq.length; // index tempat pemenang akan berada
   seq.push(winner);
   seq.push(..._shuffleCopy(eligible).slice(0,2)); // 2 sel ekstra biar baris bawah payline tetap terisi
   return { html: seq.map(_slotCellHtml).join(""), targetIndex };
 }
-function arisanDrawModalHtml(batch, eligible){
-  const bulb = (n,cls)=>Array.from({length:n}).map((_,i)=>`<span class="slot-bulb ${cls||''}" style="--i:${i}"></span>`).join("");
-  const reelsHtml = Array.from({length:SLOT_REELS}).map((_,i)=>`
-    <div class="slot-reel-window"><div class="slot-reel-strip" id="slotReel${i}"></div></div>
+function slotMachineMarkup(idPrefix){
+  const bulb = (n)=>Array.from({length:n}).map((_,i)=>`<span class="slot-bulb" style="--i:${i}"></span>`).join("");
+  const reelsHtml = SLOT_REEL_TIMING.map((_,i)=>`
+    <div class="slot-reel-window"><div class="slot-reel-strip" id="${idPrefix}Reel${i}"></div></div>
   `).join("");
   return `
-    <div class="modal-head"><h3>🎰 Mengocok Pemenang — Ronde ${batch.currentRound+1}</h3><button class="icon-btn" id="modalClose" disabled style="opacity:.3;">&times;</button></div>
-    <div class="wheel-status-label" id="wheelStatus">Bersiap mengocok ${eligible.length} peserta…</div>
-    <div class="slot-machine" id="slotMachine">
+    <div class="slot-machine" id="${idPrefix}Machine">
       <div class="slot-inner">
         <div class="slot-marquee">${bulb(14)}</div>
         <div class="slot-reels-row">
           ${reelsHtml}
           <div class="slot-payline"><span class="pl-arrow left"></span><span class="pl-arrow right"></span></div>
         </div>
+        <div class="slot-progress-track"><div class="slot-progress-fill" id="${idPrefix}Progress"></div></div>
         <div class="slot-marquee bottom">${bulb(14)}</div>
       </div>
-    </div>
+    </div>`;
+}
+/** Bar tipis di bawah reel yang mengisi penuh selama total durasi kocokan,
+ *  sekadar penanda "masih berjalan, ini progresnya" biar 30 detik tidak
+ *  terasa diam/macet. Dekoratif saja, tidak memengaruhi hasil. */
+function _startSlotProgress(idPrefix, elapsedMs){
+  const fill = document.getElementById(idPrefix+"Progress");
+  if(!fill) return;
+  const remainMs = Math.max(0, SLOT_TOTAL_MS - elapsedMs);
+  const startPct = Math.min(100, (elapsedMs/SLOT_TOTAL_MS)*100);
+  fill.style.transition = "none";
+  fill.style.width = startPct+"%";
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    fill.style.transition = `width ${remainMs/1000}s linear`;
+    fill.style.width = "100%";
+  }));
+}
+/** Jalankan 1 reel sampai berhenti presisi di finalY, dengan dukungan
+ *  elapsedMs>0 untuk "menyusul" animasi yang sudah berjalan di client lain. */
+function _runReelSync(strip, finalY, cfg, elapsedMs, onDone){
+  const totalMs = cfg.totalSec*1000;
+  if(elapsedMs >= totalMs){
+    strip.style.transition = "none";
+    strip.style.transform = `translateY(${finalY}px)`;
+    onDone();
+    return;
+  }
+  const fastMs = totalMs*(1-cfg.slowPortion);
+  const slowMs = totalMs-fastMs;
+  const fastDist = finalY*(1-cfg.slowPortion*0.55);
+  const startSlowPhase = ()=>{
+    requestAnimationFrame(()=>{
+      strip.style.transition = `transform ${slowMs/1000}s ${cfg.ease}`;
+      strip.style.transform = `translateY(${finalY}px)`;
+    });
+    strip.addEventListener("transitionend", function done(e){
+      if(e.propertyName!=="transform") return;
+      strip.removeEventListener("transitionend", done);
+      onDone();
+    });
+  };
+  if(elapsedMs < fastMs){
+    const startY = elapsedMs>0 ? fastDist*(elapsedMs/fastMs) : 0;
+    strip.style.transition = "none";
+    strip.style.transform = `translateY(${startY}px)`;
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{
+      strip.style.transition = `transform ${(fastMs-elapsedMs)/1000}s linear`;
+      strip.style.transform = `translateY(${fastDist}px)`;
+    }));
+    strip.addEventListener("transitionend", function toSlow(e){
+      if(e.propertyName!=="transform") return;
+      strip.removeEventListener("transitionend", toSlow);
+      startSlowPhase();
+    });
+  } else {
+    const remainMs = totalMs-elapsedMs;
+    strip.style.transition = "none";
+    strip.style.transform = `translateY(${fastDist}px)`;
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{
+      strip.style.transition = `transform ${remainMs/1000}s ${cfg.ease}`;
+      strip.style.transform = `translateY(${finalY}px)`;
+    }));
+    strip.addEventListener("transitionend", function done(e){
+      if(e.propertyName!=="transform") return;
+      strip.removeEventListener("transitionend", done);
+      onDone();
+    });
+  }
+}
+/** Jalankan seluruh mesin slot (dipakai admin & widget live tamu).
+ *  elapsedMs=0 untuk mulai dari awal (admin memicu kocokan baru). */
+function runSlotMachineSpin(idPrefix, eligible, winner, elapsedMs, onAllSettled, onReelSettle){
+  let settledCount = 0;
+  SLOT_REEL_TIMING.forEach((cfg,i)=>{
+    const strip = document.getElementById(idPrefix+"Reel"+i);
+    if(!strip) return;
+    const { html, targetIndex } = _buildSlotReelHtml(eligible, winner, cfg.laps);
+    strip.innerHTML = html;
+    const finalY = -(targetIndex-1) * SLOT_CELL;
+    _runReelSync(strip, finalY, cfg, elapsedMs, ()=>{
+      strip.closest(".slot-reel-window")?.classList.add("is-settled");
+      settledCount++;
+      if(onReelSettle) onReelSettle(settledCount, SLOT_REEL_TIMING.length);
+      if(settledCount===SLOT_REEL_TIMING.length && onAllSettled) onAllSettled();
+    });
+  });
+}
+function arisanDrawModalHtml(batch, eligible){
+  return `
+    <div class="modal-head"><h3>🎰 Mengocok Pemenang — Ronde ${batch.currentRound+1}</h3><button class="icon-btn" id="modalClose" disabled style="opacity:.3;">&times;</button></div>
+    <div class="wheel-status-label" id="wheelStatus">🔴 LIVE — semua anggota di halaman Arisan ikut menonton kocokan ini…</div>
+    ${slotMachineMarkup("slot")}
     <div class="draw-result" id="drawResult" style="display:none;">
       <div class="draw-confetti" id="drawConfetti"></div>
       <div class="draw-winner-trophy">${icon('trophy')}</div>
       <div class="draw-winner-label">Selamat kepada</div>
       <div class="draw-winner-name" id="drawWinnerName"></div>
+      <div class="draw-confirm-question">Sah sebagai pemenang ronde ini?</div>
     </div>
     <div class="modal-actions" id="drawActions" style="visibility:hidden;">
-      <button class="btn" id="drawCancel">Batal</button>
-      <button class="btn btn-primary" id="drawConfirm">${icon('check')}<span>Simpan Hasil Kocokan</span></button>
+      <button class="btn" id="drawCancel">${icon('dice')}<span>Tidak Sah — Putar Ulang</span></button>
+      <button class="btn btn-primary" id="drawConfirm">${icon('check')}<span>Ya, Sah — Simpan</span></button>
     </div>
   `;
 }
+/** Buka modal kocokan admin & langsung mulai putar. Dipakai baik dari tombol
+ *  "Kocok Sekarang!" (manual) maupun pemicu otomatis saat hitung mundur habis. */
+function openArisanDrawModal(batch){
+  openModal(arisanDrawModalHtml(batch, arisanEligibleMembers(batch)));
+  bindArisanDrawModal(batch);
+}
 function bindArisanDrawModal(batch){
-  const eligible = arisanEligibleMembers(batch);
-  if(!eligible.length){ toast("Tidak ada anggota yang eligible untuk dikocok","err"); return; }
-  const winnerIdx = Math.floor(Math.random()*eligible.length);
-  const winner = eligible[winnerIdx];
   const status = document.getElementById("wheelStatus");
   const machine = document.getElementById("slotMachine");
-  machine.classList.add("is-spinning");
+  let winner = null;
 
-  let stoppedCount = 0;
-  for(let i=0; i<SLOT_REELS; i++){
-    const strip = document.getElementById("slotReel"+i);
-    const { html, targetIndex } = _buildSlotReelHtml(eligible, winner);
-    strip.innerHTML = html;
-    strip.style.transition = "none";
-    strip.style.transform = "translateY(0px)";
-    const targetY = -(targetIndex-1) * SLOT_CELL;
-    const cfg = SLOT_REEL_CFG[i] || SLOT_REEL_CFG[SLOT_REEL_CFG.length-1];
-    requestAnimationFrame(()=>{
-      requestAnimationFrame(()=>{
-        strip.style.transition = `transform ${cfg.duration}s ${cfg.ease}`;
-        strip.style.transform = `translateY(${targetY}px)`;
-      });
-    });
-    strip.addEventListener("transitionend", function onEnd(e){
-      if(e.propertyName!=="transform") return;
-      strip.removeEventListener("transitionend", onEnd);
-      strip.closest(".slot-reel-window").classList.add("is-settled");
-      stoppedCount++;
-      if(stoppedCount < SLOT_REELS){
-        if(status) status.textContent = i===SLOT_REELS-2 ? `Reel terakhir masih berputar… tahan napas!` : `Reel ${stoppedCount}/${SLOT_REELS} berhenti…`;
-      } else {
+  function startSpin(){
+    const eligible = arisanEligibleMembers(batch);
+    if(!eligible.length){ toast("Tidak ada anggota yang eligible untuk dikocok","err"); closeModal(); return; }
+    winner = eligible[Math.floor(Math.random()*eligible.length)];
+
+    // reset tampilan buat putaran baru (dipakai juga saat "Tidak Sah — Putar Ulang")
+    document.getElementById("drawResult").style.display = "none";
+    document.getElementById("drawActions").style.visibility = "hidden";
+    machine.classList.remove("is-jackpot");
+    machine.classList.add("is-spinning");
+    const closeBtn = document.getElementById("modalClose");
+    if(closeBtn){ closeBtn.disabled = true; closeBtn.style.opacity = ".3"; }
+    if(status) status.textContent = `🔴 LIVE — mengocok ${eligible.length} peserta…`;
+
+    // Siarkan ke Firestore SEBELUM animasi lokal jalan, supaya semua tamu yang
+    // sedang membuka halaman Arisan Tanteh Susi ikut melihat kocokan ini live,
+    // tersinkron ke pemenang & waktu yang sama persis (lihat bindArisanPage).
+    batch.liveDraw = {
+      active: true, winnerId: winner.id, winnerNama: winner.nama,
+      round: batch.currentRound+1, startedAt: Date.now(), durationMs: SLOT_TOTAL_MS,
+    };
+    saveArisanList();
+
+    _startSlotProgress("slot", 0);
+    runSlotMachineSpin("slot", eligible, winner, 0,
+      ()=>{
         machine.classList.remove("is-spinning");
         machine.classList.add("is-jackpot");
         if(status) status.textContent = `🎉 Pemenangnya adalah ${winner.nama}!`;
         document.getElementById("drawResult").style.display = "flex";
         document.getElementById("drawWinnerName").textContent = winner.nama;
         spawnConfetti(document.getElementById("drawConfetti"));
-        const actions = document.getElementById("drawActions");
-        actions.style.visibility = "visible";
-        const closeBtn = document.getElementById("modalClose");
-        if(closeBtn){ closeBtn.disabled = false; closeBtn.style.opacity = "1"; closeBtn.addEventListener("click", closeModal); }
+        document.getElementById("drawActions").style.visibility = "visible";
+        if(closeBtn){ closeBtn.disabled = false; closeBtn.style.opacity = "1"; }
+      },
+      (settled, total)=>{
+        if(!status || settled>=total) return;
+        status.textContent = settled===total-1 ? "🔴 LIVE — reel terakhir masih berputar… tahan napas!" : `🔴 LIVE — reel ${settled}/${total} berhenti…`;
       }
-    });
+    );
   }
 
-  document.getElementById("drawCancel").addEventListener("click", closeModal);
+  document.getElementById("modalClose").addEventListener("click", ()=>{
+    batch.liveDraw = { active:false };
+    saveArisanList();
+    closeModal();
+  });
+  document.getElementById("drawCancel").addEventListener("click", ()=>{
+    toast("Diulang — mengocok ulang pemenang baru");
+    startSpin();
+  });
   document.getElementById("drawConfirm").addEventListener("click", ()=>{
     const today = new Date().toISOString().slice(0,10);
     const mem = batch.members.find(x=>x.id===winner.id);
@@ -2143,14 +2361,17 @@ function bindArisanDrawModal(batch){
     mem.menangRound = batch.currentRound+1;
     mem.menangTgl = today;
     batch.drawHistory.push({ round: batch.currentRound+1, tgl: today, winnerId: winner.id, winnerNama: winner.nama });
-    batch.currentRound += 1;
+    batch.currentRound += 1; // otomatis menggeser jadwal kocokan berikutnya +1 bulan (lihat arisanNextDrawDate)
     const stillEligible = arisanEligibleMembers(batch);
     if(stillEligible.length===0) batch.status = "selesai";
+    batch.liveDraw = { active:false }; // tutup siaran live di halaman tamu
     saveArisanList();
-    toast(`🎉 ${winner.nama} menang ronde ${mem.menangRound}!`);
+    toast(`🎉 ${winner.nama} menang ronde ${mem.menangRound}! Tersimpan ke riwayat.`);
     closeModal();
     refreshAdminContent();
   });
+
+  startSpin();
 }
 function spawnConfetti(container){
   if(!container) return;
@@ -2589,8 +2810,7 @@ function bindAdminContentEvents(){
   document.getElementById("arisanDrawBtn")?.addEventListener("click", ()=>{
     const batch = activeArisanBatch();
     if(!batch) return;
-    openModal(arisanDrawModalHtml(batch, arisanEligibleMembers(batch)));
-    bindArisanDrawModal(batch);
+    openArisanDrawModal(batch);
   });
   document.getElementById("arisanDeleteBatchBtn")?.addEventListener("click", ()=>{
     const batch = activeArisanBatch();
