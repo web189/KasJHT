@@ -229,14 +229,15 @@ const SEED_REQUESTS = buildSeedRequestsFromAset(RAW_ASET);
 
 /* ---------------- SEED DATA: ARISAN TANTEH SUSI ----------------
    Contoh batch pendaftaran arisan bulanan. Kocokan pertama tgl 05 Oktober 2026,
-   iuran Rp150.000/orang, kuota 5 slot — persis skenario contoh dari admin.
+   iuran Rp150.000/orang, kuota bebas berapa saja (tanpa batas) — persis skenario
+   contoh dari admin. Pendaftaran hanya berhenti saat admin menutupnya manual.
 ------------------------------------------------------------------ */
 const SEED_ARISAN = [
   {
     id: "arisan_seed1",
     nama: "Arisan Tanteh Susi — Batch Oktober 2026",
     biaya: 150000,
-    kuota: 5,
+    kuota: 0,
     tglMulai: "2026-10-05",
     status: "pendaftaran",
     currentRound: 0,
@@ -277,6 +278,12 @@ async function bootFromFirebase(){
     );
     DB = seeded;
     if(!DB.arisan) DB.arisan = [];
+    // Kuota arisan sudah tidak dibatasi lagi — batch lama yang masih menyimpan
+    // angka kuota (mis. dari sebelum perubahan ini) otomatis dilepas jadi
+    // "bebas berapa saja". Pendaftaran hanya ditutup manual lewat tombol admin.
+    let _arisanQuotaMigrated = false;
+    DB.arisan.forEach(b=>{ if(b.kuota){ b.kuota = 0; _arisanQuotaMigrated = true; } });
+    if(_arisanQuotaMigrated) saveArisanList();
 
     // Firestore cuma di-seed SEKALI waktu koleksinya masih kosong (lihat
     // migrateSeedIfEmpty). Supaya anggota/transaksi/aset BARU yang ditambahkan
@@ -1477,7 +1484,10 @@ function arisanBatchHtml(batch){
     <div class="arisan-quota-wrap">
       <div class="arisan-quota-label"><span>Slot Anggota</span><span class="mono">${taken}/${batch.kuota}</span></div>
       <div class="arisan-quota-track"><div class="arisan-quota-fill" style="width:${quotaPct}%;"></div></div>
-    </div>` : ""}
+    </div>` : `
+    <div class="arisan-quota-wrap">
+      <div class="arisan-quota-label"><span>Slot Anggota</span><span class="mono">${taken} orang · Kuota bebas berapa saja</span></div>
+    </div>`}
 
     ${arisanCountdownHtml(nextDraw, "arCd", batch.status==="berjalan" ? "⏱️ Kocokan berikutnya:" : "🎯 Kocokan pertama dijadwalkan:")}
 
@@ -2158,7 +2168,7 @@ function secArisanBatchHtml(batch){
       </div>
       <div class="arisan-fee-chip"><span class="label">Iuran / bulan</span><span class="val mono">${rupiah(batch.biaya)}</span></div>
     </div>
-    <div class="hint" style="margin-bottom:10px;">Kuota: ${batch.kuota ? `${taken}/${batch.kuota}` : "Tanpa batas"} · Mulai kocok: ${fmtDateShort(batch.tglMulai)} · Ronde berjalan: ${batch.currentRound}</div>
+    <div class="hint" style="margin-bottom:10px;">Kuota: ${batch.kuota ? `${taken}/${batch.kuota} (dibatasi)` : `${taken} orang terdaftar · Kuota bebas berapa saja selama pendaftaran belum ditutup`} · Mulai kocok: ${fmtDateShort(batch.tglMulai)} · Ronde berjalan: ${batch.currentRound}</div>
 
     ${arisanCountdownHtml(nextDraw, "adCd", batch.status==="berjalan" ? "⏱️ Kocokan berikutnya:" : "🎯 Kocokan pertama dijadwalkan:")}
 
@@ -2189,6 +2199,7 @@ function secArisanBatchHtml(batch){
 
     <div class="admin-arisan-actions">
       ${batch.status==="pendaftaran" ? `<button class="btn btn-primary btn-sm" id="arisanStartBtn" ${approved.length===0?'disabled':''}>${icon('check')}<span>Tutup Pendaftaran &amp; Mulai</span></button>` : ""}
+      ${batch.status==="berjalan" && !arisanLiveDrawInfo(batch) ? `<button class="btn btn-sm" id="arisanReopenBtn">${icon('gift')}<span>Buka Kembali Pendaftaran</span></button>` : ""}
       ${batch.status==="berjalan" && !arisanLiveDrawInfo(batch) ? `<button class="btn btn-primary btn-sm" id="arisanDrawBtn" ${eligible.length===0?'disabled':''}>${icon('dice')}<span>Kocok Sekarang!</span></button>` : ""}
       <button class="btn btn-sm btn-danger" id="arisanDeleteBatchBtn">${icon('trash')}<span>Hapus Batch</span></button>
     </div>
@@ -2237,12 +2248,9 @@ function arisanBatchFormModal(){
   return `
     <div class="modal-head"><h3>🎁 Buka Pendaftaran Arisan</h3><button class="icon-btn" id="modalClose">&times;</button></div>
     <div class="field"><label>Nama Batch</label><input type="text" id="abNama" placeholder="mis. Arisan Tanteh Susi — Batch Oktober 2026" value="Arisan Tanteh Susi — Batch ${monthLabel(defaultDate.slice(0,7))}"></div>
-    <div class="form-row2">
-      <div class="field"><label>Iuran / bulan (Rp)</label><input type="number" id="abBiaya" value="150000"></div>
-      <div class="field"><label>Kuota Anggota <span style="font-weight:400;color:var(--ink-faint);">(0 = tanpa batas)</span></label><input type="number" id="abKuota" value="5"></div>
-    </div>
+    <div class="field"><label>Iuran / bulan (Rp)</label><input type="number" id="abBiaya" value="150000"></div>
     <div class="field"><label>Tanggal Kocokan Pertama</label><input type="date" id="abTgl" value="${defaultDate}"></div>
-    <p class="field-hint">Kocokan berikutnya otomatis dijadwalkan tiap tanggal yang sama setiap bulan.</p>
+    <p class="field-hint">🎟️ Kuota anggota bebas berapa saja — siapa pun boleh daftar selama status masih "Pendaftaran Dibuka". Pendaftaran hanya berhenti saat admin menekan tombol "Tutup Pendaftaran &amp; Mulai". Kocokan berikutnya otomatis dijadwalkan tiap tanggal yang sama setiap bulan.</p>
     <div class="modal-actions">
       <button class="btn" id="modalClose2">Batal</button>
       <button class="btn btn-primary" id="abSave">${icon('gift')}<span>Buka Pendaftaran</span></button>
@@ -2255,13 +2263,13 @@ function bindArisanBatchForm(){
   document.getElementById("abSave").addEventListener("click", ()=>{
     const nama = (document.getElementById("abNama").value||"").trim();
     const biaya = Number(document.getElementById("abBiaya").value)||0;
-    const kuota = Number(document.getElementById("abKuota").value)||0;
     const tgl = document.getElementById("abTgl").value;
     if(!nama){ toast("Nama batch wajib diisi","err"); return; }
     if(biaya<=0){ toast("Iuran harus lebih dari 0","err"); return; }
     if(!tgl){ toast("Tanggal kocokan pertama wajib diisi","err"); return; }
     DB.arisan.push({
-      id: uid("arisan"), nama, biaya, kuota: kuota>0?kuota:0, tglMulai: tgl,
+      // kuota selalu 0 (bebas/tanpa batas) — pendaftaran hanya ditutup manual oleh admin
+      id: uid("arisan"), nama, biaya, kuota: 0, tglMulai: tgl,
       status:"pendaftaran", currentRound:0, createdAt: new Date().toISOString().slice(0,10),
       members: [], drawHistory: [],
     });
@@ -2961,6 +2969,19 @@ function bindAdminContentEvents(){
       batch.status = "berjalan";
       saveArisanList();
       toast("Arisan dimulai! Countdown kocokan pertama aktif.");
+      refreshAdminContent();
+    }
+  });
+  document.getElementById("arisanReopenBtn")?.addEventListener("click", ()=>{
+    const batch = activeArisanBatch();
+    if(!batch) return;
+    const warn = batch.currentRound>0
+      ? " Kocokan sudah pernah berjalan — pendaftar baru tetap ikut mulai ronde berikutnya."
+      : "";
+    if(confirm("Buka kembali pendaftaran untuk batch ini?"+warn)){
+      batch.status = "pendaftaran";
+      saveArisanList();
+      toast("Pendaftaran dibuka kembali. Anggota baru bisa mendaftar lagi.");
       refreshAdminContent();
     }
   });
