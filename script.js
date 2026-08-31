@@ -569,6 +569,7 @@ function approveRequest(id){
       btb:0, bkb: amounts[i],
       ket: `Pengajuan disetujui: ${req.keterangan}${req.admins.length>1 ? ' (patungan)' : ''}`,
       kat: "pinjaman",
+      createdAt: Date.now()+i, // +i: kalau patungan disetujui ke beberapa admin sekaligus dalam 1 klik, tetap urut sesuai daftar admin-nya, bukan ketuker
     });
   });
   saveTx(DB.tx);
@@ -1174,7 +1175,15 @@ function getFilteredTxList(withActions){
   const typeFilter = withActions ? state.adminTxFilter : state.guestTxFilter;
   // Urutan kronologis (No 1 = transaksi paling lama, seperti buku kas asli) —
   // transaksi terbaru otomatis berada di baris paling bawah.
-  let list = [...DB.tx].sort((a,b)=> a.tgl.localeCompare(b.tgl) || a.id.localeCompare(b.id));
+  // PENTING: kalau tanggalnya SAMA, urutan tidak boleh dipatok ke `id` —
+  // id dibuat dari string acak (lihat uid()), bukan dari waktu, jadi dua
+  // transaksi di tanggal yang sama bisa ketuker urutannya walau yang satu
+  // jelas-jelas diinput belakangan. Makanya dipakai `createdAt` (jam-menit-
+  // detik-milidetik saat tombol Simpan ditekan) sebagai penentu urutan asli.
+  // Data lama sebelum perbaikan ini (belum punya createdAt) otomatis jatuh
+  // ke urutan paling awal di tanggal itu, baru disusul entri baru — supaya
+  // tidak ada yang "melompat" ke posisi acak.
+  let list = [...DB.tx].sort((a,b)=> a.tgl.localeCompare(b.tgl) || (a.createdAt||0)-(b.createdAt||0) || a.id.localeCompare(b.id));
   if(typeFilter==="masuk") list = list.filter(t=>t.btb>0);
   else if(typeFilter==="keluar") list = list.filter(t=>t.bkb>0);
   return filterList(list);
@@ -2198,8 +2207,9 @@ function secArisanBatchHtml(batch){
     </div>` : ""}
 
     <div class="admin-arisan-actions">
-      ${batch.status==="pendaftaran" ? `<button class="btn btn-primary btn-sm" id="arisanStartBtn" ${approved.length===0?'disabled':''}>${icon('check')}<span>Tutup Pendaftaran &amp; Mulai</span></button>` : ""}
+      ${batch.status==="pendaftaran" ? `<button class="btn btn-primary btn-sm" id="arisanStartBtn" ${eligible.length===0?'disabled':''}>${icon('check')}<span>Tutup Pendaftaran &amp; Mulai</span></button>` : ""}
       ${batch.status==="berjalan" && !arisanLiveDrawInfo(batch) ? `<button class="btn btn-sm" id="arisanReopenBtn">${icon('gift')}<span>Buka Kembali Pendaftaran</span></button>` : ""}
+      ${batch.status==="berjalan" && !arisanLiveDrawInfo(batch) && eligible.length>0 ? `<button class="btn btn-sm" id="arisanEditOrderBtn">${icon('edit')}<span>Atur Urutan Pemenang</span></button>` : ""}
       ${batch.status==="berjalan" && !arisanLiveDrawInfo(batch) ? `<button class="btn btn-primary btn-sm" id="arisanDrawBtn" ${eligible.length===0?'disabled':''}>${icon('dice')}<span>Kocok Sekarang!</span></button>` : ""}
       <button class="btn btn-sm btn-danger" id="arisanDeleteBatchBtn">${icon('trash')}<span>Hapus Batch</span></button>
     </div>
@@ -2277,6 +2287,79 @@ function bindArisanBatchForm(){
     toast("Pendaftaran arisan dibuka!");
     closeModal();
     refreshAdminContent();
+  });
+}
+
+/* ---- Modal "urutan pemenang" — dipakai admin buat NENTUIN dari awal siapa
+   dapat arisan bulan apa (dipanggil pas Tutup Pendaftaran & Mulai) dan buat
+   NGATUR ULANG urutan anggota yang belum menang di tengah jalan (tombol
+   "Atur Urutan Pemenang"). Sekali urutan ini disimpan ke batch.winnerOrder,
+   mesin slot di startArisanDraw() TIDAK acak lagi — dia cuma "berpura-pura"
+   mengocok lalu mendarat persis di urutan ini. Anggota yang sudah pernah
+   menang otomatis dicoret dari antrean (lihat adDrawConfirm), jadi array ini
+   selalu berisi SISA anggota yang belum menang, dari yang terdekat gilirannya
+   sampai yang paling akhir. */
+function arisanWinnerOrderModal(members, baseDateIso, opts){
+  opts = opts || {};
+  const isEdit = opts.mode === "edit";
+  const roundOffset = opts.roundOffset || 0;
+  const rows = members.map((_, i)=>{
+    const dateIso = addMonthsISO(baseDateIso, i);
+    return `
+    <div class="field arisan-order-row">
+      <label>${icon('calendar')} Ronde ${roundOffset + i + 1} — ${monthLabel(dateIso.slice(0,7))}</label>
+      <select class="arisan-order-select" data-idx="${i}">
+        <option value="">Pilih anggota…</option>
+        ${members.map(m=>`<option value="${m.id}">${escapeHtml(m.nama)}</option>`).join("")}
+      </select>
+    </div>`;
+  }).join("");
+  return `
+    <div class="modal-head"><h3>🎯 ${isEdit ? "Atur Ulang Urutan Pemenang" : "Tentukan Urutan Pemenang"}</h3><button class="icon-btn" id="modalClose">&times;</button></div>
+    <p class="field-hint">${isEdit
+      ? "Susun ulang giliran menang untuk anggota yang belum pernah dapat arisan. Mesin slot tetap tampil tiap kocokan supaya seru, tapi hasilnya akan selalu mengikuti urutan yang kamu atur di sini — bukan diundi acak."
+      : "Sebelum arisan dimulai, tentukan dulu siapa dapat arisan di bulan apa untuk semua anggota yang sudah di-ACC. Mesin slot nanti tetap tampil berputar tiap bulan biar seru, tapi hasilnya sudah pasti mengikuti urutan yang kamu atur di sini."}</p>
+    <div id="arisanOrderRows">${rows}</div>
+    <p class="field-hint" id="arisanOrderWarn" style="display:none;color:var(--rust);"></p>
+    <div class="modal-actions">
+      <button class="btn" id="modalClose2">Batal</button>
+      <button class="btn btn-primary" id="arisanOrderSave">${icon('check')}<span>${isEdit ? "Simpan Urutan" : "Mulai Arisan"}</span></button>
+    </div>
+  `;
+}
+function bindArisanWinnerOrderForm(members, onSave){
+  document.getElementById("modalClose").addEventListener("click", closeModal);
+  document.getElementById("modalClose2").addEventListener("click", closeModal);
+  const selects = Array.from(document.querySelectorAll(".arisan-order-select"));
+  // Kalau tinggal 1 orang, tidak ada lagi yang perlu dipilih — auto-isi biar
+  // admin tidak perlu klik dropdown yang isinya cuma 1 opsi.
+  if(members.length === 1 && selects[0]){ selects[0].value = members[0].id; selects[0].disabled = true; }
+  function refreshOptions(){
+    const chosen = selects.map(s=>s.value).filter(Boolean);
+    selects.forEach(s=>{
+      const current = s.value;
+      Array.from(s.options).forEach(opt=>{
+        if(!opt.value) return;
+        opt.disabled = chosen.includes(opt.value) && opt.value !== current;
+      });
+    });
+  }
+  selects.forEach(s=> s.addEventListener("change", refreshOptions));
+  refreshOptions();
+  document.getElementById("arisanOrderSave").addEventListener("click", ()=>{
+    const warnEl = document.getElementById("arisanOrderWarn");
+    const order = selects.map(s=>s.value);
+    if(order.some(v=>!v)){
+      warnEl.textContent = "Semua ronde wajib diisi — pilih satu anggota untuk tiap bulan.";
+      warnEl.style.display = "block";
+      return;
+    }
+    if(new Set(order).size !== members.length){
+      warnEl.textContent = "Tiap anggota cuma boleh menang sekali — pastikan tidak ada nama yang dobel.";
+      warnEl.style.display = "block";
+      return;
+    }
+    onSave(order);
   });
 }
 
@@ -2450,7 +2533,21 @@ function runSlotMachineSpin(idPrefix, eligible, winner, elapsedMs, onAllSettled,
 function startArisanDraw(batch){
   const eligible = arisanEligibleMembers(batch);
   if(!eligible.length){ toast("Tidak ada anggota yang eligible untuk dikocok","err"); return; }
-  const winner = eligible[Math.floor(Math.random()*eligible.length)];
+  // Pemenang TIDAK diundi acak — hasilnya sudah ditentukan admin lewat
+  // urutan pemenang (batch.winnerOrder) saat pendaftaran ditutup / diatur
+  // ulang lewat tombol "Atur Urutan Pemenang". Mesin slot di bawah cuma
+  // animasi formalitas, hasil akhirnya selalu ikut antrean ini (elemen
+  // paling depan = giliran menang berikutnya).
+  // Fallback aman: kalau urutan kosong/rusak/tidak sinkron dengan anggota
+  // yang eligible sekarang (mis. data lama sebelum fitur ini ada), baru
+  // jatuh ke pilihan acak supaya sistem tetap jalan & tidak error/macet.
+  let winner = null;
+  if(Array.isArray(batch.winnerOrder) && batch.winnerOrder.length){
+    winner = eligible.find(m=>m.id===batch.winnerOrder[0]) || null;
+  }
+  if(!winner){
+    winner = eligible[Math.floor(Math.random()*eligible.length)];
+  }
   batch.liveDraw = {
     active: true, winnerId: winner.id, winnerNama: winner.nama,
     round: batch.currentRound+1, startedAt: Date.now(), durationMs: SLOT_TOTAL_MS,
@@ -2514,7 +2611,7 @@ function bindArisanAdminLiveWidget(batch){
   }
 
   document.getElementById("adDrawCancel")?.addEventListener("click", ()=>{
-    toast("Diulang — mengocok ulang pemenang baru");
+    toast("Animasi diulang — pemenang tetap sesuai urutan yang sudah ditentukan");
     startArisanDraw(batch);
     refreshAdminContent();
   });
@@ -2526,6 +2623,9 @@ function bindArisanAdminLiveWidget(batch){
     mem.menangTgl = today;
     batch.drawHistory.push({ round: batch.currentRound+1, tgl: today, winnerId: winner.id, winnerNama: winner.nama });
     batch.currentRound += 1; // otomatis menggeser jadwal kocokan berikutnya +1 bulan (lihat arisanNextDrawDate)
+    // Coret pemenang ronde ini dari antrean urutan pemenang, biar draw
+    // berikutnya otomatis lanjut ke orang berikutnya dalam urutan.
+    if(Array.isArray(batch.winnerOrder)) batch.winnerOrder = batch.winnerOrder.filter(id=>id!==winner.id);
     const stillEligible = arisanEligibleMembers(batch);
     if(stillEligible.length===0) batch.status = "selesai";
     batch.liveDraw = { active:false }; // tutup siaran live di halaman tamu
@@ -2552,7 +2652,7 @@ function spawnConfetti(container){
 function secDashboard(){
   const t = totals(DB.tx);
   const activeCount = DB.members.filter(m=>m.status==="active").length;
-  const recent = [...DB.tx].sort((a,b)=>b.tgl.localeCompare(a.tgl)).slice(0,6);
+  const recent = [...DB.tx].sort((a,b)=>b.tgl.localeCompare(a.tgl) || (b.createdAt||0)-(a.createdAt||0)).slice(0,6);
   const ranking = depositRanking().slice(0,5);
 
   const months = [...new Set(DB.tx.map(x=>fmtMonthKey(x.tgl)))].sort().slice(-6);
@@ -2675,7 +2775,7 @@ function secHistori(){
       <div><h2>Histori Anggota Nonaktif</h2><div class="sub">Data tetap tersimpan walau anggota sudah off</div></div>
     </div>
     ${offMembers.length===0 ? `<div class="panel"><p style="color:var(--ink-soft);">Belum ada anggota yang dinonaktifkan.</p></div>` : offMembers.map(m=>{
-      const myTx = DB.tx.filter(t=>t.admin===m.id).sort((a,b)=>b.tgl.localeCompare(a.tgl));
+      const myTx = DB.tx.filter(t=>t.admin===m.id).sort((a,b)=>b.tgl.localeCompare(a.tgl) || (b.createdAt||0)-(a.createdAt||0));
       const tot = totals(myTx);
       return `
       <div class="panel" style="margin-bottom:16px;">
@@ -2964,19 +3064,44 @@ function bindAdminContentEvents(){
   document.getElementById("arisanStartBtn")?.addEventListener("click", ()=>{
     const batch = activeArisanBatch();
     if(!batch) return;
-    if(confirm("Tutup pendaftaran & mulai arisan? Anggota yang masih menunggu ACC akan otomatis ditolak.")){
+    // Anggota yang masih "pending" dianggap otomatis ditolak begitu
+    // pendaftaran ditutup, jadi urutan pemenang cuma perlu dibuat dari
+    // anggota yang sudah di-ACC & belum pernah menang (harusnya semua,
+    // karena batch baru mau dimulai — tapi tetap dijaga pakai filter
+    // sudahMenang untuk kasus batch yang sempat dibuka-tutup ulang).
+    const eligibleNow = arisanApprovedMembers(batch).filter(m=>!m.sudahMenang);
+    if(!eligibleNow.length){ toast("Belum ada anggota yang di-ACC","err"); return; }
+    if(!confirm("Tutup pendaftaran & mulai arisan? Anggota yang masih menunggu ACC akan otomatis ditolak. Selanjutnya kamu akan diminta menentukan siapa dapat arisan di bulan apa.")) return;
+    openModal(arisanWinnerOrderModal(eligibleNow, batch.tglMulai, { mode:"start" }));
+    bindArisanWinnerOrderForm(eligibleNow, (order)=>{
       batch.members.forEach(m=>{ if(m.status==="pending") m.status="rejected"; });
       batch.status = "berjalan";
+      batch.winnerOrder = order; // antrean pemenang: elemen paling depan = ronde berikutnya
       saveArisanList();
-      toast("Arisan dimulai! Countdown kocokan pertama aktif.");
+      closeModal();
+      toast("Arisan dimulai! Urutan pemenang tiap bulan sudah tersimpan.");
       refreshAdminContent();
-    }
+    });
+  });
+  document.getElementById("arisanEditOrderBtn")?.addEventListener("click", ()=>{
+    const batch = activeArisanBatch();
+    if(!batch) return;
+    const eligibleNow = arisanEligibleMembers(batch);
+    if(!eligibleNow.length) return;
+    openModal(arisanWinnerOrderModal(eligibleNow, arisanNextDrawDate(batch), { mode:"edit", roundOffset: batch.currentRound }));
+    bindArisanWinnerOrderForm(eligibleNow, (order)=>{
+      batch.winnerOrder = order;
+      saveArisanList();
+      closeModal();
+      toast("Urutan pemenang berhasil diperbarui.");
+      refreshAdminContent();
+    });
   });
   document.getElementById("arisanReopenBtn")?.addEventListener("click", ()=>{
     const batch = activeArisanBatch();
     if(!batch) return;
     const warn = batch.currentRound>0
-      ? " Kocokan sudah pernah berjalan — pendaftar baru tetap ikut mulai ronde berikutnya."
+      ? " Kocokan sudah pernah berjalan — pendaftar baru tetap ikut mulai ronde berikutnya, dan kamu akan diminta atur ulang urutan pemenang saat pendaftaran ditutup lagi."
       : "";
     if(confirm("Buka kembali pendaftaran untuk batch ini?"+warn)){
       batch.status = "pendaftaran";
@@ -3159,7 +3284,7 @@ function bindTxForm(existing){
       Object.assign(existing, {tgl,admin,shift,btb,bkb,ket,kat});
       toast("Transaksi diperbarui");
     } else {
-      DB.tx.push({ id: uid("tx"), tgl, admin, shift, btb, bkb, ket, kat });
+      DB.tx.push({ id: uid("tx"), tgl, admin, shift, btb, bkb, ket, kat, createdAt: Date.now() });
       toast("Transaksi ditambahkan");
     }
     saveTx(DB.tx);
