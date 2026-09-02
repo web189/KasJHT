@@ -1456,6 +1456,35 @@ footer.site-footer{
 .arisan-fee-chip .label{font-size:10.5px;color:var(--ink-faint);}
 .arisan-fee-chip .val{font-size:15px;font-weight:700;color:var(--amber-ink,#8a5a12);}
 [data-theme="dark"] .arisan-fee-chip .val{color:var(--amber);}
+.arisan-fee-edit-btn{
+  display:inline-flex;align-items:center;gap:4px;margin-top:2px;border:none;background:none;cursor:pointer;
+  font-size:11px;font-weight:700;color:var(--ink-faint);padding:2px 4px;border-radius:8px;transition:color .15s var(--ease), background .15s var(--ease);
+}
+.arisan-fee-edit-btn svg{width:12px;height:12px;}
+.arisan-fee-edit-btn:hover{color:#D6488E;background:color-mix(in srgb, #D6488E 12%, transparent);}
+
+/* ---- toggle "Pendaftaran Anggota" buka/tutup ---- */
+.arisan-control-card{
+  display:flex;margin:0 0 14px;padding:12px 14px;border-radius:14px;
+  background:var(--bg-elev-2);border:1px solid var(--border-soft);
+}
+.arisan-toggle-row{display:flex;align-items:center;justify-content:space-between;gap:14px;width:100%;}
+.arisan-toggle-text{min-width:0;}
+.arisan-toggle-title{display:flex;align-items:center;gap:7px;font-weight:700;font-size:13.5px;}
+.arisan-toggle-title svg{width:15px;height:15px;color:#D6488E;flex-shrink:0;}
+.arisan-toggle-sub{font-size:11.5px;color:var(--ink-faint);margin-top:2px;line-height:1.4;}
+.arisan-switch{
+  position:relative;flex-shrink:0;width:46px;height:26px;border-radius:20px;border:none;cursor:pointer;
+  background:var(--border);transition:background .2s var(--ease);padding:0;
+}
+.arisan-switch .arisan-switch-knob{
+  position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;
+  box-shadow:0 1px 3px rgba(0,0,0,.3);transition:transform .2s var(--ease);
+}
+.arisan-switch.is-on{background:#D6488E;}
+.arisan-switch.is-on .arisan-switch-knob{transform:translateX(20px);}
+.arisan-switch:disabled{opacity:.45;cursor:not-allowed;}
+.arisan-switch:focus-visible{outline:2px solid var(--amber);outline-offset:2px;}
 
 .arisan-quota-wrap{margin-bottom:16px;}
 .arisan-quota-label{display:flex;justify-content:space-between;font-size:12px;color:var(--ink-soft);margin-bottom:6px;}

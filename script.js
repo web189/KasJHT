@@ -2175,9 +2175,31 @@ function secArisanBatchHtml(batch){
         <div class="arisan-batch-name">${escapeHtml(batch.nama)}</div>
         <span class="arisan-status-badge ${meta.cls}">${meta.label}</span>
       </div>
-      <div class="arisan-fee-chip"><span class="label">Iuran / bulan</span><span class="val mono">${rupiah(batch.biaya)}</span></div>
+      <div class="arisan-fee-chip">
+        <span class="label">Iuran / bulan</span>
+        <span class="val mono">${rupiah(batch.biaya)}</span>
+        <button class="arisan-fee-edit-btn" id="arisanEditFeeBtn" title="Ubah nominal iuran">${icon('edit')}<span>Ubah</span></button>
+      </div>
     </div>
     <div class="hint" style="margin-bottom:10px;">Kuota: ${batch.kuota ? `${taken}/${batch.kuota} (dibatasi)` : `${taken} orang terdaftar · Kuota bebas berapa saja selama pendaftaran belum ditutup`} · Mulai kocok: ${fmtDateShort(batch.tglMulai)} · Ronde berjalan: ${batch.currentRound}</div>
+
+    <div class="arisan-control-card">
+      <div class="arisan-toggle-row">
+        <div class="arisan-toggle-text">
+          <div class="arisan-toggle-title">${icon('gift')}<span>Pendaftaran Anggota</span></div>
+          <div class="arisan-toggle-sub">${
+            batch.status==="pendaftaran"
+              ? "Terbuka — siapa saja boleh mendaftar sekarang."
+              : (arisanLiveDrawInfo(batch)
+                  ? "Ditutup — tidak bisa dibuka selama kocokan sedang live."
+                  : "Ditutup — arisan sedang berjalan, kocokan bulanan aktif.")
+          }</div>
+        </div>
+        <button class="arisan-switch ${batch.status==="pendaftaran"?"is-on":""}" id="arisanRegToggle" role="switch" aria-checked="${batch.status==="pendaftaran"}" ${arisanLiveDrawInfo(batch)?"disabled":""} title="${batch.status==="pendaftaran"?"Klik untuk menutup pendaftaran":"Klik untuk membuka pendaftaran"}">
+          <span class="arisan-switch-knob"></span>
+        </button>
+      </div>
+    </div>
 
     ${arisanCountdownHtml(nextDraw, "adCd", batch.status==="berjalan" ? "⏱️ Kocokan berikutnya:" : "🎯 Kocokan pertama dijadwalkan:")}
 
@@ -2207,12 +2229,11 @@ function secArisanBatchHtml(batch){
     </div>` : ""}
 
     <div class="admin-arisan-actions">
-      ${batch.status==="pendaftaran" ? `<button class="btn btn-primary btn-sm" id="arisanStartBtn" ${eligible.length===0?'disabled':''}>${icon('check')}<span>Tutup Pendaftaran &amp; Mulai</span></button>` : ""}
-      ${batch.status==="berjalan" && !arisanLiveDrawInfo(batch) ? `<button class="btn btn-sm" id="arisanReopenBtn">${icon('gift')}<span>Buka Kembali Pendaftaran</span></button>` : ""}
       ${batch.status==="berjalan" && !arisanLiveDrawInfo(batch) && eligible.length>0 ? `<button class="btn btn-sm" id="arisanEditOrderBtn">${icon('edit')}<span>Atur Urutan Pemenang</span></button>` : ""}
       ${batch.status==="berjalan" && !arisanLiveDrawInfo(batch) ? `<button class="btn btn-primary btn-sm" id="arisanDrawBtn" ${eligible.length===0?'disabled':''}>${icon('dice')}<span>Kocok Sekarang!</span></button>` : ""}
       <button class="btn btn-sm btn-danger" id="arisanDeleteBatchBtn">${icon('trash')}<span>Hapus Batch</span></button>
     </div>
+    ${batch.status==="pendaftaran" && eligible.length===0 ? `<p class="field-hint" style="margin:-4px 0 14px;">${icon('alert')} ACC minimal satu anggota dulu supaya tombol pendaftaran bisa ditutup.</p>` : ""}
 
     ${pending.length ? `
     <div class="arisan-mem-group-label">⏳ Menunggu Persetujuan (${pending.length})</div>
@@ -2286,6 +2307,36 @@ function bindArisanBatchForm(){
     saveArisanList();
     toast("Pendaftaran arisan dibuka!");
     closeModal();
+    refreshAdminContent();
+  });
+}
+
+/* ---- Modal ubah nominal iuran bulanan arisan. Hanya mengubah angka
+   tampilan/tagihan batch aktif (batch.biaya) — tidak menyentuh transaksi kas
+   yang sudah tercatat sebelumnya, jadi aman diubah kapan saja tanpa merusak
+   riwayat. ---- */
+function arisanEditFeeModal(batch){
+  return `
+    <div class="modal-head"><h3>${icon('edit')} Ubah Iuran / Bulan</h3><button class="icon-btn" id="modalClose">&times;</button></div>
+    <p class="field-hint">Nominal ini dipakai untuk tampilan &amp; tagihan mulai bulan berjalan. Contoh: dari Rp150.000 diubah jadi Rp200.000.</p>
+    <div class="field"><label>${icon('edit')} Iuran / bulan (Rp)</label><input type="number" id="abEditBiaya" min="1000" step="1000" value="${batch.biaya}"></div>
+    <div class="modal-actions">
+      <button class="btn" id="modalClose2">Batal</button>
+      <button class="btn btn-primary" id="abEditFeeSave">${icon('check')}<span>Simpan Perubahan</span></button>
+    </div>
+  `;
+}
+function bindArisanEditFeeForm(batch){
+  document.getElementById("modalClose").addEventListener("click", closeModal);
+  document.getElementById("modalClose2").addEventListener("click", closeModal);
+  document.getElementById("abEditFeeSave").addEventListener("click", ()=>{
+    const val = Number(document.getElementById("abEditBiaya").value)||0;
+    if(val<=0){ toast("Iuran harus lebih dari 0","err"); return; }
+    const old = batch.biaya;
+    batch.biaya = val;
+    saveArisanList();
+    closeModal();
+    toast(old===val ? "Iuran disimpan" : `Iuran diubah dari ${rupiah(old)} jadi ${rupiah(val)}`);
     refreshAdminContent();
   });
 }
@@ -3061,27 +3112,53 @@ function bindAdminContentEvents(){
   document.getElementById("arisanNewBatchBtn")?.addEventListener("click", ()=>{
     openModal(arisanBatchFormModal()); bindArisanBatchForm();
   });
-  document.getElementById("arisanStartBtn")?.addEventListener("click", ()=>{
+  // Toggle satu tombol untuk buka/tutup pendaftaran anggota. Menggantikan
+  // sepasang tombol "Tutup Pendaftaran & Mulai" / "Buka Kembali Pendaftaran"
+  // lama dengan satu switch yang jelas statusnya (on = pendaftaran dibuka).
+  document.getElementById("arisanRegToggle")?.addEventListener("click", ()=>{
     const batch = activeArisanBatch();
     if(!batch) return;
-    // Anggota yang masih "pending" dianggap otomatis ditolak begitu
-    // pendaftaran ditutup, jadi urutan pemenang cuma perlu dibuat dari
-    // anggota yang sudah di-ACC & belum pernah menang (harusnya semua,
-    // karena batch baru mau dimulai — tapi tetap dijaga pakai filter
-    // sudahMenang untuk kasus batch yang sempat dibuka-tutup ulang).
-    const eligibleNow = arisanApprovedMembers(batch).filter(m=>!m.sudahMenang);
-    if(!eligibleNow.length){ toast("Belum ada anggota yang di-ACC","err"); return; }
-    if(!confirm("Tutup pendaftaran & mulai arisan? Anggota yang masih menunggu ACC akan otomatis ditolak. Selanjutnya kamu akan diminta menentukan siapa dapat arisan di bulan apa.")) return;
-    openModal(arisanWinnerOrderModal(eligibleNow, batch.tglMulai, { mode:"start" }));
-    bindArisanWinnerOrderForm(eligibleNow, (order)=>{
-      batch.members.forEach(m=>{ if(m.status==="pending") m.status="rejected"; });
-      batch.status = "berjalan";
-      batch.winnerOrder = order; // antrean pemenang: elemen paling depan = ronde berikutnya
-      saveArisanList();
-      closeModal();
-      toast("Arisan dimulai! Urutan pemenang tiap bulan sudah tersimpan.");
-      refreshAdminContent();
-    });
+    if(arisanLiveDrawInfo(batch)){ toast("Tidak bisa mengubah status pendaftaran saat kocokan sedang live","err"); return; }
+
+    if(batch.status === "pendaftaran"){
+      // MATIKAN switch: menutup pendaftaran & memulai/melanjutkan arisan.
+      // Anggota yang masih "pending" dianggap otomatis ditolak begitu
+      // pendaftaran ditutup, jadi urutan pemenang cuma perlu dibuat dari
+      // anggota yang sudah di-ACC & belum pernah menang (harusnya semua,
+      // karena batch baru mau dimulai — tapi tetap dijaga pakai filter
+      // sudahMenang untuk kasus batch yang sempat dibuka-tutup ulang).
+      const eligibleNow = arisanApprovedMembers(batch).filter(m=>!m.sudahMenang);
+      if(!eligibleNow.length){ toast("Belum ada anggota yang di-ACC","err"); return; }
+      if(!confirm("Tutup pendaftaran & mulai arisan? Anggota yang masih menunggu ACC akan otomatis ditolak. Selanjutnya kamu akan diminta menentukan siapa dapat arisan di bulan apa.")) return;
+      openModal(arisanWinnerOrderModal(eligibleNow, batch.tglMulai, { mode:"start" }));
+      bindArisanWinnerOrderForm(eligibleNow, (order)=>{
+        batch.members.forEach(m=>{ if(m.status==="pending") m.status="rejected"; });
+        batch.status = "berjalan";
+        batch.winnerOrder = order; // antrean pemenang: elemen paling depan = ronde berikutnya
+        saveArisanList();
+        closeModal();
+        toast("Arisan dimulai! Urutan pemenang tiap bulan sudah tersimpan.");
+        refreshAdminContent();
+      });
+    } else {
+      // NYALAKAN switch: buka kembali pendaftaran untuk anggota baru.
+      const warn = batch.currentRound>0
+        ? " Kocokan sudah pernah berjalan — pendaftar baru tetap ikut mulai ronde berikutnya, dan kamu akan diminta atur ulang urutan pemenang saat pendaftaran ditutup lagi."
+        : "";
+      if(confirm("Buka kembali pendaftaran untuk batch ini?"+warn)){
+        batch.status = "pendaftaran";
+        saveArisanList();
+        toast("Pendaftaran dibuka kembali. Anggota baru bisa mendaftar lagi.");
+        refreshAdminContent();
+      }
+    }
+  });
+  // Ubah nominal iuran bulanan arisan (mis. Rp150.000 -> Rp200.000).
+  document.getElementById("arisanEditFeeBtn")?.addEventListener("click", ()=>{
+    const batch = activeArisanBatch();
+    if(!batch) return;
+    openModal(arisanEditFeeModal(batch));
+    bindArisanEditFeeForm(batch);
   });
   document.getElementById("arisanEditOrderBtn")?.addEventListener("click", ()=>{
     const batch = activeArisanBatch();
@@ -3096,19 +3173,6 @@ function bindAdminContentEvents(){
       toast("Urutan pemenang berhasil diperbarui.");
       refreshAdminContent();
     });
-  });
-  document.getElementById("arisanReopenBtn")?.addEventListener("click", ()=>{
-    const batch = activeArisanBatch();
-    if(!batch) return;
-    const warn = batch.currentRound>0
-      ? " Kocokan sudah pernah berjalan — pendaftar baru tetap ikut mulai ronde berikutnya, dan kamu akan diminta atur ulang urutan pemenang saat pendaftaran ditutup lagi."
-      : "";
-    if(confirm("Buka kembali pendaftaran untuk batch ini?"+warn)){
-      batch.status = "pendaftaran";
-      saveArisanList();
-      toast("Pendaftaran dibuka kembali. Anggota baru bisa mendaftar lagi.");
-      refreshAdminContent();
-    }
   });
   document.getElementById("arisanDrawBtn")?.addEventListener("click", ()=>{
     const batch = activeArisanBatch();
