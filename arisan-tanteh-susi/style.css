@@ -1,0 +1,505 @@
+/* ============================================================
+   Arisan Tanteh Susi — stylesheet MANDIRI
+   Evolusi desain 2026: Premium Dark GLASS UI, palet dianalisis
+   dari referensi landing-page (gradasi biru → violet → magenta,
+   gaya "night sky / synthwave"). Struktur, class, dan seluruh
+   variabel yang dipakai app.js / admin.js TIDAK diganti nama —
+   hanya nilai warnanya yang diperbarui. Vanilla CSS, tanpa framework.
+
+   ANALISA PALET REFERENSI (disampel langsung dari piksel gambar):
+   - Biru navbar/hero atas   : #0000AE, #030673   → jadi peran "emerald" (primary/selesai)
+   - Biru-violet transisi    : #2700B4, #0D00B0, #5B00C1
+   - Ungu tombol "JOIN NOW"  : #8C1FD4            → jadi peran "gold" (CTA/premium)
+   - Magenta glow air/danau  : #C203E6, #B30ABB, #E619C4 → jadi peran "rose" (live/urgent)
+   - Teks putih kebiruan     : ~#F5F6FF
+============================================================ */
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+
+:root{
+  /* -------- background (biru navy dalam, seperti langit malam referensi) -------- */
+  --bg:#0A103D;
+  --bg-deep:#05082A;
+  --bg-elev:#111A5C;
+  --bg-elev-2:#182670;
+
+  /* -------- card -------- */
+  --card:#1A2478;
+  --card-2:#212C8C;
+  --card-highlight:#2B37A6;
+
+  /* -------- "emerald" role → kini biru-indigo elektrik (dari navbar/hero referensi) -------- */
+  --emerald:#4B3AFF;
+  --emerald-bright:#7C6BFF;
+  --emerald-soft:rgba(75,58,255,.14);
+  --emerald-glow:rgba(75,58,255,.24);
+
+  /* -------- "gold" role → kini violet/ungu premium (dari tombol CTA referensi) -------- */
+  --gold:#9B2FE0;
+  --gold-light:#C77DFF;
+  --gold-deep:#6A1CA8;
+  --gold-soft:rgba(155,47,224,.14);
+
+  /* -------- "rose" role → kini magenta-pink (dari glow air/danau referensi) -------- */
+  --rose:#E619C4;
+  --rose-light:#FF6FE0;
+  --rose-soft:rgba(230,25,196,.14);
+
+  /* -------- text -------- */
+  --text:#F5F6FF;
+  --text-soft:#C9CDEE;
+  --text-muted:#9298C9;
+  --text-faint:#6A70A8;
+
+  /* -------- aliases (dipakai lewat inline style di app.js / admin.js — JANGAN dihapus/diganti nama) -------- */
+  --ink-faint:var(--text-faint);
+  --border:rgba(255,255,255,.08);
+
+  /* -------- border lain -------- */
+  --border-emerald:rgba(75,58,255,.24);
+  --border-gold:rgba(155,47,224,.30);
+  --border-strong:rgba(255,255,255,.16);
+
+  --danger:#FF5C7A;
+
+  /* teks gelap di atas elemen terang (tombol gold/violet, badge, dsb) */
+  --ink-on-accent:#1B0740;
+
+  --shadow-lg:0 26px 64px -22px rgba(2,4,20,.72);
+  --shadow-md:0 16px 38px -16px rgba(2,4,20,.62);
+  --shadow-sm:0 8px 20px -10px rgba(2,4,20,.55);
+  --ease:cubic-bezier(.22,1,.36,1);
+  --radius-lg:22px;
+  --radius-md:16px;
+  --radius-sm:12px;
+}
+
+body{
+  margin:0;
+  background:
+    radial-gradient(900px 500px at 5% -10%, rgba(75,58,255,.20), transparent 60%),
+    radial-gradient(800px 500px at 100% 5%, rgba(155,47,224,.16), transparent 60%),
+    radial-gradient(900px 600px at 50% 105%, rgba(230,25,196,.14), transparent 60%),
+    var(--bg-deep);
+  background-attachment:fixed;
+  color:var(--text); font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  font-size:15px; line-height:1.55; -webkit-font-smoothing:antialiased; min-height:100vh;
+}
+h1,h2,h3,.font-display{ font-family:"Fraunces",Georgia,serif; letter-spacing:-.01em; }
+a{ color:inherit; }
+button{ font:inherit; }
+.svg-sprite{ position:absolute; width:0; height:0; overflow:hidden; }
+.mono{ font-variant-numeric:tabular-nums; }
+.visually-hidden{ position:absolute!important; width:1px;height:1px; overflow:hidden; clip:rect(0 0 0 0); }
+
+/* focus-visible — aksesibilitas, jangan sampai hilang demi estetika */
+a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible,
+.chip-btn:focus-visible, .icon-btn:focus-visible, .switch:focus-visible{
+  outline:2px solid var(--emerald-bright); outline-offset:2px; border-radius:8px;
+}
+
+/* ---------------- layout shell ---------------- */
+.wrap{ max-width:720px; margin:0 auto; padding:0 18px 64px; }
+.wrap.wide{ max-width:1180px; }
+
+.topbar{
+  display:flex; align-items:center; justify-content:space-between; gap:12px;
+  padding:14px 18px; max-width:720px; margin:0 auto;
+  position:sticky; top:0; z-index:60;
+  background:linear-gradient(180deg, rgba(5,8,42,.86), rgba(5,8,42,.55) 80%, transparent);
+  backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
+}
+.topbar.wide{ max-width:1180px; }
+.brand{ display:flex; align-items:center; gap:11px; text-decoration:none; min-width:0; }
+.brand-mark{
+  width:38px; height:38px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center;
+  background:radial-gradient(circle at 32% 26%, var(--gold-light), var(--gold) 55%, var(--gold-deep) 100%);
+  color:var(--ink-on-accent); box-shadow:0 0 0 1px rgba(155,47,224,.25), 0 4px 14px -4px rgba(155,47,224,.55);
+}
+.brand-mark svg{ width:19px; height:19px; }
+.brand-text b{ display:block; font-family:"Fraunces",serif; font-size:16px; font-weight:700; letter-spacing:-.01em; }
+.brand-text span{ display:block; font-size:11.5px; color:var(--text-faint); margin-top:1px; }
+.top-actions{ display:flex; align-items:center; gap:8px; flex-shrink:0; }
+
+/* ---------------- buttons ---------------- */
+.btn{
+  display:inline-flex; align-items:center; gap:7px; padding:11px 16px; min-height:44px; border-radius:var(--radius-sm);
+  border:1px solid var(--border); background:var(--bg-elev-2); color:var(--text); cursor:pointer; font-weight:600;
+  font-size:13.5px; transition:transform .15s var(--ease), border-color .15s var(--ease), filter .15s var(--ease), background .15s var(--ease);
+  text-decoration:none; -webkit-tap-highlight-color:transparent;
+}
+.btn:hover{ border-color:var(--border-strong); transform:translateY(-1px); }
+.btn:active{ transform:translateY(0); filter:brightness(.96); }
+.btn svg{ width:15px; height:15px; flex-shrink:0; }
+.btn-gold{
+  background:linear-gradient(155deg, var(--gold-light), var(--gold) 55%, var(--gold-deep) 100%);
+  color:var(--ink-on-accent); border:none; box-shadow:var(--shadow-sm), inset 0 1px 0 rgba(255,255,255,.4);
+}
+.btn-gold:hover{ filter:brightness(1.06); }
+.btn-ghost{ background:transparent; border-color:transparent; }
+.btn-ghost:hover{ background:var(--bg-elev-2); border-color:var(--border); }
+.btn-sm{ padding:8px 13px; min-height:38px; font-size:12.5px; }
+.btn-danger{ color:var(--rose-light); }
+.btn-danger:hover{ border-color:rgba(230,25,196,.4); }
+.btn[disabled]{ opacity:.4; cursor:not-allowed; transform:none; }
+.icon-btn{
+  width:40px; height:40px; min-height:0; border-radius:50%; display:inline-flex; align-items:center; justify-content:center;
+  background:var(--bg-elev-2); border:1px solid var(--border); color:var(--text-soft); cursor:pointer;
+  transition:.15s var(--ease); flex-shrink:0;
+}
+.icon-btn:hover{ color:var(--text); border-color:var(--border-strong); transform:translateY(-1px); }
+
+/* ---------------- hero ---------------- */
+.hero{ padding:28px 0 26px; text-align:center; }
+.hero-eyebrow{
+  display:inline-flex; align-items:center; gap:7px; font-size:12px; font-weight:600; color:var(--gold-light);
+  background:var(--gold-soft); border:1px solid var(--border-gold); padding:7px 14px; border-radius:20px; margin-bottom:18px;
+}
+.hero h1{
+  font-size:clamp(30px,7.2vw,46px); font-weight:700; margin:0 0 14px; line-height:1.08; letter-spacing:-.015em;
+}
+.hero h1 .ln2{
+  display:block; background:linear-gradient(100deg, var(--gold-light), var(--gold) 60%);
+  -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; color:var(--gold);
+}
+.hero p{ color:var(--text-soft); max-width:48ch; margin:0 auto; font-size:14.5px; }
+
+/* ---------------- ticket card (motif utama) ---------------- */
+.ticket{
+  position:relative; isolation:isolate;
+  background:linear-gradient(165deg, var(--card-2) 0%, var(--card) 55%, var(--bg-elev) 130%);
+  border-radius:var(--radius-lg); border:1px solid var(--border);
+  box-shadow:var(--shadow-lg); padding:26px 24px 26px; margin-top:22px; overflow:visible;
+}
+.ticket::before{
+  /* highlight tipis di bagian atas, gaya glass */
+  content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none; z-index:0;
+  background:linear-gradient(180deg, rgba(255,255,255,.06), transparent 40%);
+}
+.ticket::after{
+  content:""; position:absolute; inset:-1px; border-radius:inherit; padding:1px; pointer-events:none; z-index:0;
+  background:linear-gradient(120deg, var(--border-gold), var(--rose-soft) 42%, rgba(155,47,224,.06) 68%, var(--border-gold));
+  background-size:240% 240%; animation:shimmerBorder 10s ease-in-out infinite;
+  -webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite:xor; mask-composite:exclude;
+}
+@keyframes shimmerBorder{ 0%,100%{ background-position:0% 50%; } 50%{ background-position:100% 50%; } }
+.ticket > *{ position:relative; z-index:1; }
+
+.ticket-head{ display:flex; align-items:flex-start; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+.ticket-name{ font-family:"Fraunces",serif; font-weight:700; font-size:20px; letter-spacing:-.01em; }
+.ticket-status{
+  display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:700; padding:6px 12px; border-radius:20px;
+  text-transform:uppercase; letter-spacing:.05em; white-space:nowrap;
+}
+.ticket-status.pendaftaran{ background:var(--gold-soft); color:var(--gold-light); border:1px solid var(--border-gold); }
+.ticket-status.berjalan{ background:var(--rose-soft); color:var(--rose-light); border:1px solid rgba(230,25,196,.2); }
+.ticket-status.berjalan::before{ content:""; width:6px; height:6px; border-radius:50%; background:var(--rose); box-shadow:0 0 0 0 rgba(230,25,196,.6); animation:livePulse 1.6s ease-out infinite; }
+.ticket-status.selesai{ background:var(--emerald-soft); color:var(--emerald-bright); border:1px solid var(--border-emerald); }
+@keyframes livePulse{ 0%{box-shadow:0 0 0 0 rgba(230,25,196,.55);} 70%{box-shadow:0 0 0 7px rgba(230,25,196,0);} 100%{box-shadow:0 0 0 0 rgba(230,25,196,0);} }
+
+.ticket-fee{ margin-top:16px; display:flex; align-items:baseline; gap:9px; flex-wrap:wrap; }
+.ticket-fee .label{ font-size:12px; color:var(--text-faint); }
+.ticket-fee .val{
+  font-family:"Fraunces",serif; font-size:clamp(24px,5vw,28px); font-weight:700;
+  background:linear-gradient(100deg, var(--gold-light), var(--gold) 65%);
+  -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; color:var(--gold);
+}
+.ticket-quota{ margin-top:7px; font-size:12.5px; color:var(--text-soft); }
+
+/* garis sobek tiket — satu aksen bentuk yang jadi ciri khas kartu ini */
+.perf{
+  position:relative; height:0; margin:22px -24px; border-top:1.5px dashed var(--border-strong);
+}
+.perf::before, .perf::after{
+  content:""; position:absolute; top:50%; width:20px; height:20px; border-radius:50%;
+  background:var(--bg-deep); transform:translateY(-50%); box-shadow:inset 0 0 0 1px var(--border);
+}
+.perf::before{ left:-10px; }
+.perf::after{ right:-10px; }
+
+/* ---------------- countdown ---------------- */
+.countdown-cap{ font-size:12.5px; color:var(--text-soft); margin-bottom:11px; text-align:center; }
+.countdown-cap b{ color:var(--text); font-weight:700; }
+.countdown{ display:flex; justify-content:center; gap:8px; }
+.cd-box{
+  flex:1; max-width:82px; background:linear-gradient(165deg, var(--card-highlight), var(--bg-elev)); border:1px solid var(--border);
+  border-radius:var(--radius-sm); padding:10px 4px 9px; text-align:center;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.05), var(--shadow-sm);
+}
+.cd-num{ font-family:"Fraunces",serif; font-size:clamp(19px,5.5vw,24px); font-weight:700; color:var(--gold-light); }
+.cd-lbl{ font-size:9.5px; color:var(--text-faint); text-transform:uppercase; letter-spacing:.07em; margin-top:3px; }
+
+/* ---------------- kontrol form (global — supaya select di luar .field pun ikut gelap) ---------------- */
+input[type="text"], input[type="password"], input[type="number"], input[type="date"], input[type="tel"], select, textarea{
+  width:100%; padding:12px 13px; min-height:44px; border-radius:var(--radius-sm); border:1px solid var(--border); background:var(--bg-elev);
+  color:var(--text); font-size:14px; outline:none; transition:.15s var(--ease); font-family:inherit;
+  -webkit-appearance:none; appearance:none;
+}
+select{
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%236A70A8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><path d='M6 9l6 6 6-6'/></svg>");
+  background-repeat:no-repeat; background-position:right 12px center; padding-right:34px; cursor:pointer;
+}
+select option{ background:var(--bg-elev); color:var(--text); }
+input:focus, select:focus, textarea:focus{ border-color:var(--emerald); box-shadow:0 0 0 3px var(--emerald-soft); }
+input::placeholder{ color:var(--text-faint); }
+
+/* ---------------- registration form ---------------- */
+.field{ margin-bottom:14px; }
+.field label{ display:block; font-size:12.5px; font-weight:600; color:var(--text-soft); margin-bottom:6px; }
+.field-hint{ font-size:11.5px; color:var(--text-faint); margin-top:5px; }
+.full-note{
+  display:flex; gap:9px; align-items:flex-start; background:rgba(255,107,107,.1); border:1px solid rgba(255,107,107,.28);
+  color:var(--danger); padding:12px 13px; border-radius:var(--radius-sm); font-size:13px;
+}
+.full-note svg{ flex-shrink:0; margin-top:1px; }
+
+/* ---------------- coin medallions (anggota) ---------------- */
+.group-label{
+  font-size:11px; font-weight:700; color:var(--gold-light); text-transform:uppercase; letter-spacing:.07em;
+  margin:22px 0 12px; display:flex; align-items:center; gap:8px;
+}
+.group-label::after{ content:""; flex:1; height:1px; background:var(--border); }
+.coin-grid{ display:flex; flex-wrap:wrap; gap:13px; }
+.coin{ display:flex; flex-direction:column; align-items:center; gap:6px; width:64px; }
+.coin-avatar{
+  width:52px; height:52px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+  font-weight:800; font-size:15px; color:#fff; box-shadow:0 3px 10px rgba(0,0,0,.4);
+  border:2.5px solid var(--gold);
+}
+.coin.is-pending .coin-avatar{ border-style:dashed; border-color:var(--text-faint); opacity:.85; }
+.coin.is-winner .coin-avatar{ border-color:var(--rose); box-shadow:0 0 0 3px var(--rose-soft), 0 3px 10px rgba(0,0,0,.4); }
+.coin-name{ font-size:11px; text-align:center; color:var(--text-soft); max-width:64px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.coin-tag{ font-size:9px; color:var(--text-faint); }
+.coin.is-winner .coin-tag{ color:var(--rose-light); font-weight:700; }
+
+/* ---------------- riwayat timeline ---------------- */
+.timeline{ position:relative; padding-left:22px; }
+.timeline::before{ content:""; position:absolute; left:6px; top:4px; bottom:4px; width:1.5px; background:var(--border-strong); }
+.tl-item{ position:relative; padding-bottom:16px; }
+.tl-item:last-child{ padding-bottom:0; }
+.tl-dot{ position:absolute; left:-22px; top:2px; width:13px; height:13px; border-radius:50%; background:var(--gold); box-shadow:0 0 0 3px var(--bg-elev-2); }
+.tl-round{ font-size:11px; font-weight:700; color:var(--gold-light); text-transform:uppercase; letter-spacing:.04em; }
+.tl-winner{ font-family:"Fraunces",serif; font-weight:700; font-size:15px; margin-top:2px; }
+.tl-date{ font-size:12px; color:var(--text-faint); margin-top:1px; }
+
+/* ---------------- panel umum ---------------- */
+.panel{
+  background:linear-gradient(165deg, var(--card-2), var(--card) 60%); border:1px solid var(--border);
+  border-radius:var(--radius-lg); padding:22px 22px; margin-top:18px; box-shadow:var(--shadow-md);
+}
+.panel-head{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:15px; flex-wrap:wrap; }
+.panel-head h2, .panel-head h3{ margin:0; font-size:16.5px; }
+.empty-row{ text-align:center; padding:36px 12px; color:var(--text-faint); }
+.empty-row svg{ width:30px; height:30px; opacity:.5; }
+
+/* ---------------- live draw / slot (dimensi TIDAK diubah — sinkron dgn draw-engine.js) ---------------- */
+.live-badge{
+  display:inline-flex; align-items:center; gap:7px; font-size:11.5px; font-weight:700; color:var(--rose-light);
+  background:var(--rose-soft); border:1px solid rgba(230,25,196,.3); padding:6px 12px; border-radius:20px; margin-bottom:14px;
+}
+.live-badge .dot{ width:7px; height:7px; border-radius:50%; background:var(--rose); box-shadow:0 0 0 0 rgba(230,25,196,.6); animation:livePulse 1.4s ease-out infinite; }
+.wheel-status{ text-align:center; font-size:12.5px; font-weight:700; color:var(--text-soft); margin:0 0 14px; min-height:16px; }
+.slot-machine{
+  position:relative; border-radius:22px; padding:3px; margin:2px auto 8px; max-width:340px;
+  background:linear-gradient(135deg, var(--gold-light), var(--gold) 30%, var(--gold-deep) 55%, var(--gold-light) 78%, var(--gold));
+  box-shadow:var(--shadow-lg), 0 0 26px -8px rgba(155,47,224,.55); transition:box-shadow .3s;
+}
+.slot-machine.is-spinning{ animation:slotHum 1.5s ease-in-out infinite; }
+@keyframes slotHum{ 0%,100%{ box-shadow:var(--shadow-lg), 0 0 26px -8px rgba(155,47,224,.55);} 50%{ box-shadow:var(--shadow-lg), 0 0 34px -2px rgba(155,47,224,.8);} }
+.slot-machine.is-jackpot{ animation:slotFlash 1s ease; }
+@keyframes slotFlash{ 0%{box-shadow:var(--shadow-lg),0 0 26px -8px rgba(155,47,224,.55);} 30%{box-shadow:var(--shadow-lg),0 0 52px 6px rgba(155,47,224,.95);} 100%{box-shadow:var(--shadow-lg),0 0 26px -8px rgba(155,47,224,.55);} }
+.slot-inner{ position:relative; overflow:hidden; border-radius:19px; padding:12px 8px 14px; background:radial-gradient(120% 140% at 50% -10%, #100C30 0%, #0A0824 60%, #030210 100%); }
+.slot-reels{ position:relative; display:flex; justify-content:center; gap:6px; }
+.slot-window{
+  position:relative; width:clamp(58px,19vw,80px); height:200px; overflow:hidden; border-radius:10px;
+  background:linear-gradient(180deg, #030210, #0A0824);
+  box-shadow:inset 0 0 0 2px rgba(155,47,224,.35), inset 0 14px 16px -8px rgba(0,0,0,.85), inset 0 -14px 16px -8px rgba(0,0,0,.85);
+  transition:box-shadow .2s;
+}
+.slot-window.is-settled{ animation:settleGlow .55s ease; }
+@keyframes settleGlow{ 0%{box-shadow:inset 0 0 0 2px rgba(155,47,224,.35), inset 0 14px 16px -8px rgba(0,0,0,.85), inset 0 -14px 16px -8px rgba(0,0,0,.85);} 45%{box-shadow:inset 0 0 0 2px var(--rose), 0 0 18px 2px rgba(230,25,196,.6);} 100%{box-shadow:inset 0 0 0 2px rgba(155,47,224,.35), inset 0 14px 16px -8px rgba(0,0,0,.85), inset 0 -14px 16px -8px rgba(0,0,0,.85);} }
+.slot-strip{ position:absolute; left:0; top:0; width:100%; }
+.slot-window.is-idle{ height:90px; }
+.slot-strip.is-idle{ position:static; display:flex; align-items:center; justify-content:center; height:100%; }
+.slot-cell{ height:66px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; padding:0 5px; }
+.slot-avatar{ width:28px; height:28px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:10.5px; font-weight:800; color:#fff; box-shadow:0 2px 4px rgba(0,0,0,.45); }
+.slot-name{ font-size:9px; font-weight:700; color:var(--gold-light); max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; text-shadow:0 1px 2px rgba(0,0,0,.6); }
+.slot-payline{ position:absolute; left:-4px; right:-4px; top:100px; height:2px; z-index:3; pointer-events:none; background:linear-gradient(90deg, transparent, var(--rose) 12%, var(--rose) 88%, transparent); box-shadow:0 0 10px 1px rgba(230,25,196,.7); }
+.slot-progress{ height:4px; border-radius:4px; margin-top:12px; overflow:hidden; background:rgba(255,255,255,.08); }
+.slot-progress-fill{ height:100%; width:0%; border-radius:4px; background:linear-gradient(90deg, var(--rose), var(--gold-light)); transition:width .1s linear; }
+.draw-result{ display:flex; flex-direction:column; align-items:center; gap:4px; margin:18px 0 4px; }
+
+.draw-trophy{ width:50px; height:50px; border-radius:16px; display:flex; align-items:center; justify-content:center; background:linear-gradient(155deg, var(--gold-light), var(--gold)); color:var(--ink-on-accent); box-shadow:var(--shadow-sm); }
+.draw-trophy svg{ width:25px; height:25px; }
+.draw-label{ font-size:12px; color:var(--text-soft); margin-top:4px; }
+.draw-name{ font-family:"Fraunces",serif; font-size:22px; font-weight:700; color:var(--rose-light); }
+
+/* ---------------- mesin kedua: papan pengocok huruf (split-flap board) ---------------- */
+.letter-machine{ margin:16px auto 4px; max-width:400px; }
+.letter-machine-cap{ text-align:center; font-size:11px; font-weight:700; color:var(--text-faint); text-transform:uppercase; letter-spacing:.07em; margin-bottom:9px; }
+.letter-board{
+  display:flex; flex-direction:column; gap:5px; padding:12px 10px; border-radius:14px;
+  background:radial-gradient(120% 160% at 50% -20%, #100C30 0%, #0A0824 60%, #030210 100%);
+  box-shadow:inset 0 0 0 1.5px rgba(155,47,224,.3), 0 0 0 3px var(--bg-elev), var(--shadow-sm);
+}
+.letter-row{ display:flex; justify-content:center; gap:3px; }
+.letter-key{
+  flex:1; max-width:26px; aspect-ratio:1; display:flex; align-items:center; justify-content:center;
+  border-radius:5px; background:#0A0824; color:rgba(155,47,224,.28); font-size:10.5px; font-weight:700;
+  font-family:"Fraunces",serif; box-shadow:inset 0 0 0 1px rgba(155,47,224,.14); transition:.15s;
+}
+.letter-key.is-scanning{ background:#2A1050; color:var(--gold-light); box-shadow:inset 0 0 0 1px var(--gold), 0 0 8px 1px rgba(155,47,224,.55); transform:translateY(-1px); }
+.letter-key.is-hit{ background:linear-gradient(155deg, var(--gold-light), var(--gold)); color:var(--ink-on-accent); box-shadow:0 0 12px 2px rgba(155,47,224,.7); }
+.result-strip{ display:flex; justify-content:center; flex-wrap:wrap; gap:5px; margin-top:12px; perspective:400px; }
+.result-flap{
+  width:30px; height:38px; border-radius:6px; position:relative; background:#0A0824;
+  box-shadow:inset 0 0 0 1px rgba(155,47,224,.22), 0 3px 6px rgba(0,0,0,.4);
+  display:flex; align-items:center; justify-content:center; overflow:hidden;
+}
+.result-flap.is-space{ background:transparent; box-shadow:none; width:14px; }
+.result-flap .flap-char{
+  font-family:"Fraunces",serif; font-weight:700; font-size:17px; color:var(--gold-light);
+  text-shadow:0 0 8px rgba(155,47,224,.4);
+}
+.result-flap.is-settled{ animation:flapSettle .4s ease; }
+@keyframes flapSettle{ 0%{ transform:rotateX(60deg); opacity:.4; } 100%{ transform:rotateX(0); opacity:1; } }
+.result-flap::after{ content:""; position:absolute; left:0; right:0; top:50%; height:1px; background:rgba(0,0,0,.55); }
+
+/* ---------------- toast ---------------- */
+.toast-stack{ position:fixed; top:16px; right:16px; z-index:999; display:flex; flex-direction:column; gap:8px; max-width:calc(100vw - 32px); }
+.toast{
+  background:var(--card-2); border:1px solid var(--border-strong); color:var(--text); padding:12px 16px; border-radius:var(--radius-sm);
+  font-size:13.5px; box-shadow:var(--shadow-lg); max-width:280px;
+}
+.toast.err{ border-color:rgba(255,107,107,.5); color:#ffe1de; }
+
+/* ---------------- modal ---------------- */
+.modal-overlay{
+  position:fixed; inset:0; background:rgba(3,5,22,.7); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px);
+  display:none; align-items:flex-end; justify-content:center; z-index:500;
+}
+.modal-overlay.open{ display:flex; }
+.modal-box{
+  background:linear-gradient(165deg, var(--card-2), var(--card)); border:1px solid var(--border);
+  border-top-left-radius:24px; border-top-right-radius:24px; width:100%; max-width:480px; max-height:88vh; overflow-y:auto;
+  padding:24px 20px 28px; box-shadow:var(--shadow-lg); animation:sheetUp .28s var(--ease);
+}
+@keyframes sheetUp{ from{ transform:translateY(24px); opacity:0;} to{ transform:translateY(0); opacity:1;} }
+@media (min-width:640px){
+  .modal-overlay{ align-items:center; }
+  .modal-box{ border-radius:var(--radius-lg); }
+}
+.modal-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+.modal-head h3{ margin:0; font-size:17px; }
+
+/* ---------------- login ---------------- */
+.login-shell{ max-width:380px; margin:9vh auto 0; padding:0 18px; }
+.login-card{
+  background:linear-gradient(165deg, var(--card-2), var(--card)); border:1px solid var(--border);
+  border-radius:var(--radius-lg); padding:30px 24px; box-shadow:var(--shadow-lg); text-align:center;
+}
+.login-card .brand-mark{ margin:0 auto 14px; width:54px; height:54px; }
+.login-card .brand-mark svg{ width:27px; height:27px; }
+.login-card h2{ margin:0 0 4px; font-size:19px; }
+.login-card p{ color:var(--text-faint); font-size:13px; margin:0 0 20px; }
+.login-card .field{ text-align:left; }
+
+/* ---------------- admin list rows ---------------- */
+.mem-row{
+  display:flex; align-items:center; gap:11px; padding:12px 13px; border:1px solid var(--border); border-radius:var(--radius-sm);
+  margin-bottom:8px; background:linear-gradient(180deg, var(--bg-elev-2), var(--bg-elev)); box-shadow:var(--shadow-sm);
+  transition:.15s var(--ease);
+}
+.mem-row:hover{ border-color:var(--border-strong); transform:translateY(-1px); }
+.mem-row .coin-avatar{ width:38px; height:38px; font-size:12.5px; border-width:2px; flex-shrink:0; }
+.mem-row .mm-name{ flex:1; min-width:0; font-weight:700; font-size:13.5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.mem-row .mm-sub{ font-size:11.5px; color:var(--text-faint); margin-top:1px; }
+@media (min-width:760px){
+  .mem-grid{ display:grid; grid-template-columns:1fr 1fr; gap:8px 12px; }
+  .mem-grid .mem-row{ margin-bottom:0; }
+}
+@media (min-width:1280px){
+  .mem-grid{ grid-template-columns:1fr 1fr 1fr; }
+}
+.mem-actions{ display:flex; gap:6px; flex-shrink:0; }
+.chip-btn{
+  width:36px; height:36px; border-radius:9px; display:flex; align-items:center; justify-content:center;
+  border:1px solid var(--border); background:var(--bg-elev-2); color:var(--text-soft); cursor:pointer; transition:.15s var(--ease);
+}
+.chip-btn:hover{ color:var(--text); transform:translateY(-1px); }
+.chip-btn.ok:hover{ color:var(--emerald-bright); border-color:var(--emerald); }
+.chip-btn.no:hover{ color:var(--rose-light); border-color:var(--rose); }
+.badge-count{ display:inline-flex; align-items:center; justify-content:center; min-width:18px; height:18px; padding:0 5px; border-radius:20px; background:var(--rose); color:#fff; font-size:10.5px; font-weight:700; }
+
+.toggle-row{ display:flex; align-items:center; justify-content:space-between; gap:14px; }
+.toggle-text b{ display:block; font-size:13.5px; }
+.toggle-text span{ display:block; font-size:11.5px; color:var(--text-faint); margin-top:2px; }
+.switch{ position:relative; width:44px; height:25px; border-radius:20px; background:var(--bg-elev-2); border:1px solid var(--border); cursor:pointer; flex-shrink:0; }
+.switch .knob{ position:absolute; top:2px; left:2px; width:19px; height:19px; border-radius:50%; background:var(--text-soft); transition:.2s var(--ease); }
+.switch.is-on{ background:var(--emerald); border-color:var(--emerald); }
+.switch.is-on .knob{ transform:translateX(19px); background:#fff; }
+.switch:disabled{ opacity:.45; cursor:not-allowed; }
+
+.order-row{ display:flex; align-items:center; gap:10px; margin-bottom:8px; }
+.order-row select{ flex:1; background-color:var(--bg-elev); }
+.order-row select:focus{ box-shadow:0 0 0 3px var(--gold-soft); }
+.order-idx{
+  width:24px; height:24px; flex-shrink:0; display:flex; align-items:center; justify-content:center;
+  border-radius:50%; background:var(--bg-elev-2); border:1px solid var(--border);
+  font-weight:700; color:var(--gold-light); font-size:11.5px;
+}
+
+.actions-row{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px; }
+
+footer.site-footer{ text-align:center; padding:32px 18px; color:var(--text-faint); font-size:12px; }
+footer.site-footer a{ color:var(--gold-light); text-decoration:none; }
+
+/* ================================================================
+   DESKTOP / RESPONSIVE ENHANCEMENTS
+   #content punya persis 1–2 anak (ticket + riwayat, atau panel-head +
+   panel batch + panel riwayat) — dipakai flex-wrap supaya bisa jadi
+   2-kolom di layar lebar TANPA memaksa dan tanpa menyentuh JS.
+================================================================ */
+@media (min-width:1040px){
+  .wrap{ max-width:760px; }
+  .hero{ padding:40px 0 34px; }
+  #content{ display:flex; flex-wrap:wrap; align-items:flex-start; gap:22px; }
+  #content > .ticket{ flex:1 1 620px; margin-top:0; }
+  #content > .panel{ flex:1 1 300px; margin-top:0; align-self:flex-start; }
+}
+@media (min-width:1320px){
+  .wrap.wide{ max-width:1240px; }
+}
+/* admin dashboard: panel batch + panel riwayat berdampingan di layar lebar */
+@media (min-width:1180px){
+  #content.wrap.wide{ display:flex; flex-wrap:wrap; gap:22px; align-items:flex-start; }
+  #content.wrap.wide > .panel-head{ flex:1 1 100%; margin-bottom:2px; }
+  #content.wrap.wide > .panel{ flex:1 1 460px; margin-top:0; }
+}
+
+/* ---------------- responsive breakpoints kecil ---------------- */
+@media (max-width:420px){
+  .cd-box{ min-width:0; padding:8px 3px; }
+  .cd-num{ font-size:17px; }
+  .coin{ width:56px; }
+  .coin-avatar{ width:46px; height:46px; }
+  .letter-key{ max-width:20px; font-size:9px; }
+  .result-flap{ width:24px; height:32px; }
+  .result-flap .flap-char{ font-size:14px; }
+  .topbar{ padding:12px 14px; }
+  .brand-text span{ font-size:10.5px; }
+}
+@media (max-width:360px){
+  .brand-text span{ display:none; }
+}
+
+/* ---------------- gerak & aksesibilitas ---------------- */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration:.01ms !important;
+    animation-iteration-count:1 !important;
+    transition-duration:.01ms !important;
+    scroll-behavior:auto !important;
+  }
+}
