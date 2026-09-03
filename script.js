@@ -227,41 +227,14 @@ function buildSeedRequestsFromAset(rawAset){
 }
 const SEED_REQUESTS = buildSeedRequestsFromAset(RAW_ASET);
 
-/* ---------------- SEED DATA: ARISAN TANTEH SUSI ----------------
-   Contoh batch pendaftaran arisan bulanan. Kocokan pertama tgl 05 Oktober 2026,
-   iuran Rp150.000/orang, kuota bebas berapa saja (tanpa batas) — persis skenario
-   contoh dari admin. Pendaftaran hanya berhenti saat admin menutupnya manual.
------------------------------------------------------------------- */
-const SEED_ARISAN = [
-  {
-    id: "arisan_seed1",
-    nama: "Arisan Tanteh Susi — Batch Oktober 2026",
-    biaya: 150000,
-    kuota: 0,
-    tglMulai: "2026-10-05",
-    status: "pendaftaran",
-    currentRound: 0,
-    createdAt: "2026-08-20",
-    members: [
-      { id:"am1", nama:"Riki", hp:"", status:"approved", daftarAt:"2026-08-20", sudahMenang:false, menangRound:null, menangTgl:null },
-      { id:"am2", nama:"Budiansyah", hp:"", status:"approved", daftarAt:"2026-08-21", sudahMenang:false, menangRound:null, menangTgl:null },
-      { id:"am3", nama:"Daud", hp:"", status:"approved", daftarAt:"2026-08-24", sudahMenang:false, menangRound:null, menangTgl:null },
-      { id:"am4", nama:"Rian", hp:"", status:"pending", daftarAt:"2026-08-27", sudahMenang:false, menangRound:null, menangTgl:null },
-    ],
-    drawHistory: [],
-  },
-];
-
-
 /** Simpan ke Firestore. DB lokal sudah dimutasi duluan oleh pemanggil (pola lama
  *  dipertahankan), fungsi ini cuma mendorong array terbaru ke server. */
 function saveMembers(m){ FJHT.saveMembers(m).catch(err=>toast("Gagal menyimpan anggota: "+err.message)); }
 function saveTx(t){ FJHT.saveTx(t).catch(err=>toast("Gagal menyimpan transaksi: "+err.message)); }
 function saveRequests(r){ FJHT.saveRequests(r).catch(err=>toast("Gagal menyimpan pengajuan: "+err.message)); }
-function saveArisan(a){ FJHT.saveArisan(a).catch(err=>toast("Gagal menyimpan data arisan: "+err.message)); }
 function isAuthed(){ return FJHT.isAdmin(); }
 
-let DB = { members: [], tx: [], requests: [], arisan: [] };
+let DB = { members: [], tx: [], requests: [] };
 let DB_READY = false;
 
 /** Boot: tunggu status login Firebase Auth siap, ambil data dari Firestore
@@ -273,17 +246,9 @@ async function bootFromFirebase(){
     const seeded = await FJHT.migrateSeedIfEmpty(
       SEED_MEMBERS,
       buildSeedTransactions(),
-      SEED_REQUESTS.map(r=>({...r})),
-      SEED_ARISAN.map(a=>({...a, members:a.members.map(x=>({...x})), drawHistory:a.drawHistory.map(x=>({...x}))}))
+      SEED_REQUESTS.map(r=>({...r}))
     );
     DB = seeded;
-    if(!DB.arisan) DB.arisan = [];
-    // Kuota arisan sudah tidak dibatasi lagi — batch lama yang masih menyimpan
-    // angka kuota (mis. dari sebelum perubahan ini) otomatis dilepas jadi
-    // "bebas berapa saja". Pendaftaran hanya ditutup manual lewat tombol admin.
-    let _arisanQuotaMigrated = false;
-    DB.arisan.forEach(b=>{ if(b.kuota){ b.kuota = 0; _arisanQuotaMigrated = true; } });
-    if(_arisanQuotaMigrated) saveArisanList();
 
     // Firestore cuma di-seed SEKALI waktu koleksinya masih kosong (lihat
     // migrateSeedIfEmpty). Supaya anggota/transaksi/aset BARU yang ditambahkan
@@ -374,8 +339,6 @@ const state = {
   moneyRevealed: false,   // samarkan (blur) semua nominal uang di tampilan tamu sampai user klik "Tampilkan Semua Nominal"
   // draft form "Pengajuan Pembelian" — dipertahankan lintas re-render
   pengajuan: { mode:"solo", soloAdmin:"", patunganSet:null, ket:"", nominal:"", pemohon:"", editingReqId:null },
-  // draft form pendaftaran arisan (tampilan tamu)
-  arisanReg: { nama:"", hp:"" },
 };
 
 /* ---------------- UTIL ---------------- */
@@ -589,107 +552,6 @@ function rejectRequest(id){
   toast("Pengajuan ditolak");
 }
 
-/* ============================================================
-   ARISAN TANTEH SUSI — logika inti
-   Model 1 dokumen "kas/arisan" -> { list: [ batch, ... ] }, tiap batch:
-   { id, nama, biaya, kuota, tglMulai, status('pendaftaran'|'berjalan'|'selesai'),
-     currentRound, createdAt, members:[{id,nama,hp,status,daftarAt,sudahMenang,
-     menangRound,menangTgl}], drawHistory:[{round,tgl,winnerId,winnerNama}] }
-============================================================ */
-function addMonthsISO(iso, n){
-  const [y,m,d] = iso.split("-").map(Number);
-  const dt = new Date(y, (m-1)+n, d);
-  return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,"0")}-${String(dt.getDate()).padStart(2,"0")}`;
-}
-/** Batch "aktif" = batch terbaru yang belum selesai (pendaftaran atau berjalan). */
-function activeArisanBatch(){
-  const list = DB.arisan||[];
-  const open = list.filter(a=>a.status!=="selesai");
-  if(!open.length) return null;
-  return [...open].sort((a,b)=> b.createdAt.localeCompare(a.createdAt))[0];
-}
-function finishedArisanBatches(){
-  return (DB.arisan||[]).filter(a=>a.status==="selesai").sort((a,b)=> b.createdAt.localeCompare(a.createdAt));
-}
-function arisanApprovedMembers(batch){ return (batch.members||[]).filter(m=>m.status==="approved"); }
-function arisanPendingMembers(batch){ return (batch.members||[]).filter(m=>m.status==="pending"); }
-function arisanEligibleMembers(batch){ return arisanApprovedMembers(batch).filter(m=>!m.sudahMenang); }
-/** Cek tiap beberapa detik: kalau jadwal kocok sudah lewat & belum ada
- *  kocokan yang sedang berjalan/menunggu konfirmasi, otomatis buka & mulai
- *  mesin slot — TANPA perlu admin klik "Kocok Sekarang!" dulu. Ini hanya
- *  bisa jalan kalau ada browser admin yang sedang terbuka (situs statis,
- *  tidak ada server/cron di belakang layar) — begitu admin login & tab-nya
- *  terbuka, pengecekan ini otomatis aktif di background. */
-function checkArisanAutoDraw(){
-  if(!DB_READY || !isAuthed()) return;
-  const batch = activeArisanBatch();
-  if(!batch || batch.status!=="berjalan") return;
-  if(batch.liveDraw && batch.liveDraw.active) return; // sudah ada kocokan berjalan / menunggu konfirmasi ya-tidak
-  const eligible = arisanEligibleMembers(batch);
-  if(!eligible.length) return;
-  const due = new Date(arisanNextDrawDate(batch)+"T00:00:00").getTime();
-  if(Date.now() < due) return; // belum waktunya
-  startArisanDraw(batch);
-  // Bawa admin ke halaman "Kelola Arisan" biar langsung lihat mesin slot
-  // yang tertanam di bawah hitung mundur mulai berputar.
-  state.adminSection = "arisan";
-  if(location.hash.replace(/^#/,"")==="/admin"){ refreshAdminContent(); syncNavActive?.(); }
-  else goto("/admin");
-  toast(`⏰ Waktunya kocok arisan "${batch.nama}"! Mesin slot otomatis mulai berputar.`);
-}
-setInterval(checkArisanAutoDraw, 8000);
-/** Kembalikan info siaran live kalau kocokan sedang berlangsung & masih dalam
- *  rentang waktu wajar untuk ditonton (kasih toleransi ~20 detik ekstra
- *  setelah reel harusnya berhenti, buat jaga-jaga admin belum sempat klik
- *  Simpan/Batal). Kalau sudah lewat/basi, dianggap tidak ada siaran live. */
-function arisanLiveDrawInfo(batch){
-  const ld = batch.liveDraw;
-  if(!ld || !ld.active || !ld.startedAt) return null;
-  const elapsed = Date.now() - ld.startedAt;
-  const GRACE_MS = 45000;
-  if(elapsed > ld.durationMs + GRACE_MS) return null;
-  return { ...ld, elapsed: Math.max(0, elapsed) };
-}
-function arisanNextDrawDate(batch){ return addMonthsISO(batch.tglMulai, batch.currentRound); }
-function arisanQuotaTaken(batch){ return (batch.members||[]).filter(m=>m.status!=="rejected").length; }
-function arisanQuotaFull(batch){ return !!batch.kuota && arisanQuotaTaken(batch) >= batch.kuota; }
-function computeCountdown(targetIso){
-  const target = new Date(targetIso+"T00:00:00").getTime();
-  const diff = Math.max(0, target - Date.now());
-  return {
-    d: Math.floor(diff/86400000),
-    h: Math.floor((diff%86400000)/3600000),
-    m: Math.floor((diff%3600000)/60000),
-    s: Math.floor((diff%60000)/1000),
-    done: diff<=0,
-  };
-}
-function saveArisanList(){ saveArisan(DB.arisan); }
-/** Anggota arisan tidak selalu terdaftar sebagai anggota kas (DB.members), jadi
- *  warnanya perlu dibangkitkan sendiri dari nama (hash sederhana -> palet warna)
- *  supaya tiap orang konsisten dapat 1 warna yang sama di avatar & roda kocok. */
-function _hashStr(s){ let h=0; for(let i=0;i<s.length;i++){ h=(h*31+s.charCodeAt(i))>>>0; } return h; }
-function arisanColorFor(nama){ return COLOR_CHOICES[_hashStr(String(nama||"?")) % COLOR_CHOICES.length]; }
-function arisanAvatarHtml(nama, size){
-  const cls = size==="sm" ? "avatar sm" : "avatar";
-  return `<span class="${cls}" style="background:${avatarBg(arisanColorFor(nama))}">${initials(nama)}</span>`;
-}
-/** Nama pendek untuk label di roda (biar tidak numpuk): ambil kata pertama, potong kalau kepanjangan. */
-function arisanShortName(nama){
-  const first = String(nama||"?").trim().split(/\s+/)[0] || "?";
-  return first.length>10 ? first.slice(0,9)+"…" : first;
-}
-function arisanPendingCount(){
-  const b = activeArisanBatch();
-  return b ? arisanPendingMembers(b).length : 0;
-}
-function arisanMenuBadge(){
-  const b = activeArisanBatch();
-  if(!b) return "";
-  if(b.status==="pendaftaran") return `<span class="mm-badge mm-badge-pink">Buka</span>`;
-  if(b.status==="berjalan") return `<span class="mm-badge mm-badge-pink">Live</span>`;
-  return "";
-}
 
 /* ---------------- PERINGKAT SETORAN (KAS MASUK) PER ANGGOTA ---------------- */
 function depositRanking(){
@@ -881,9 +743,6 @@ function render(){
   } else if(state.route === "/aset"){
     root.innerHTML = renderAsetPage();
     bindSimplePage();
-  } else if(state.route === "/arisan"){
-    root.innerHTML = renderArisanPage();
-    bindArisanPage();
   } else {
     root.innerHTML = renderGuest();
     bindGuest();
@@ -922,7 +781,7 @@ function topbar(){
         <button class="dnav-link" id="dnPengajuan">${icon('plus-circle')}<span>Ajukan Pembelian</span></button>
         <button class="dnav-link" id="dnRiwayat">${icon('inbox')}<span>Riwayat Pengajuan</span>${pendingCount>0?`<span class="dnav-badge">${pendingCount}</span>`:""}</button>
         <button class="dnav-link" id="dnAset">${icon('box')}<span>Aset</span></button>
-        <button class="dnav-link dnav-arisan" id="dnArisan">${icon('gift')}<span>Arisan Tanteh Susi</span>${arisanMenuBadge()}</button>
+        <a class="dnav-link dnav-arisan" id="dnArisan" href="arisan-tanteh-susi/index.html" target="_blank" rel="noopener">${icon('gift')}<span>Arisan Tanteh Susi</span>${icon('external')}</a>
         <div class="dnav-dropdown" id="dnDownloadWrap">
           <button class="dnav-link dnav-trigger" id="dnDownloadToggle">${icon('download')}<span>Unduh Data</span>${icon('down')}</button>
           <div class="dnav-menu" id="dnDownloadMenu">
@@ -961,7 +820,7 @@ function topbar(){
       <button class="mm-item" id="mmAset" data-tone="action"><span class="mm-ico-wrap">${icon('box')}</span><span>Aset Barang/Jasa Milik Pribadi Admin</span></button>
       <div class="mm-sep"></div>
       <div class="mm-label" style="--tone:#D6488E;">Arisan</div>
-      <button class="mm-item mm-arisan-item" id="mmArisan" data-tone="arisan"><span class="mm-ico-wrap">${icon('gift')}</span><span>Arisan Tanteh Susi</span>${arisanMenuBadge()}</button>
+      <a class="mm-item mm-arisan-item" id="mmArisan" data-tone="arisan" href="arisan-tanteh-susi/index.html" target="_blank" rel="noopener"><span class="mm-ico-wrap">${icon('gift')}</span><span>Arisan Tanteh Susi</span>${icon('external')}</a>
       <div class="mm-sep"></div>
       <div class="mm-label" style="--tone:var(--amber);">Unduh Data</div>
       <button class="mm-item" id="mmExportExcel" data-tone="download"><span class="mm-ico-wrap">${icon('file-excel')}</span><span>Unduh Excel</span></button>
@@ -1308,7 +1167,7 @@ function bindTopbarCommon(){
   document.getElementById("mmPengajuan")?.addEventListener("click", ()=>{ closeMobileMenu(); goto("/pengajuan"); });
   document.getElementById("mmRiwayat")?.addEventListener("click", ()=>{ closeMobileMenu(); goto("/riwayat"); });
   document.getElementById("mmAset")?.addEventListener("click", ()=>{ closeMobileMenu(); goto("/aset"); });
-  document.getElementById("mmArisan")?.addEventListener("click", ()=>{ closeMobileMenu(); goto("/arisan"); });
+  document.getElementById("mmArisan")?.addEventListener("click", ()=> closeMobileMenu());
   document.getElementById("mmGameToggle")?.addEventListener("click", (e)=>{
     e.stopPropagation();
     const sub = document.getElementById("mmGameSubmenu");
@@ -1329,7 +1188,6 @@ function bindTopbarCommon(){
   document.getElementById("dnPengajuan")?.addEventListener("click", ()=> goto("/pengajuan"));
   document.getElementById("dnRiwayat")?.addEventListener("click", ()=> goto("/riwayat"));
   document.getElementById("dnAset")?.addEventListener("click", ()=> goto("/aset"));
-  document.getElementById("dnArisan")?.addEventListener("click", ()=> goto("/arisan"));
   document.getElementById("dnExportExcel")?.addEventListener("click", ()=>{ exportExcel(getFilteredTxList(false)); closeDesktopDropdowns(); });
   document.getElementById("dnExportPdf")?.addEventListener("click", ()=>{ exportPdf(getFilteredTxList(false)); closeDesktopDropdowns(); });
   document.getElementById("dnJadwal")?.addEventListener("click", ()=>{ closeDesktopDropdowns(); window.open("https://web189.github.io/Jadwal-Admin/","_blank","noopener"); });
@@ -1416,259 +1274,6 @@ function scrollExcelTablesToLatest(){
   requestAnimationFrame(()=>{
     document.querySelectorAll(".excel-wrap").forEach(el=>{ el.scrollTop = el.scrollHeight; });
   });
-}
-
-/* ============================================================
-   HALAMAN: ARISAN TANTEH SUSI (publik — lihat & daftar)
-============================================================ */
-function arisanStatusMeta(status){
-  if(status==="berjalan") return {label:"Sedang Berjalan", cls:"berjalan"};
-  if(status==="selesai") return {label:"Selesai", cls:"selesai"};
-  return {label:"Pendaftaran Dibuka", cls:"pendaftaran"};
-}
-function arisanCountdownHtml(targetIso, idPrefix, caption){
-  const c = computeCountdown(targetIso);
-  return `
-  <div class="arisan-countdown">
-    <div class="arisan-countdown-caption">${caption} <b class="mono">${fmtDate(targetIso)}</b></div>
-    <div class="cd-grid" id="${idPrefix}Grid" data-target="${targetIso}">
-      <div class="cd-box"><span class="cd-num mono" id="${idPrefix}Day">${String(c.d).padStart(2,"0")}</span><span class="cd-label">Hari</span></div>
-      <span class="cd-colon">:</span>
-      <div class="cd-box"><span class="cd-num mono" id="${idPrefix}Hour">${String(c.h).padStart(2,"0")}</span><span class="cd-label">Jam</span></div>
-      <span class="cd-colon">:</span>
-      <div class="cd-box"><span class="cd-num mono" id="${idPrefix}Min">${String(c.m).padStart(2,"0")}</span><span class="cd-label">Menit</span></div>
-      <span class="cd-colon">:</span>
-      <div class="cd-box"><span class="cd-num mono" id="${idPrefix}Sec">${String(c.s).padStart(2,"0")}</span><span class="cd-label">Detik</span></div>
-    </div>
-  </div>`;
-}
-function arisanMemberRowHtml(m, mode){
-  if(mode==="pending"){
-    return `<div class="arisan-mem-row is-pending">${arisanAvatarHtml(m.nama,"sm")}<span class="am-name">${escapeHtml(m.nama)}</span><span class="am-badge am-badge-pending">${icon('history')}<span>Menunggu ACC</span></span></div>`;
-  }
-  if(m.sudahMenang){
-    return `<div class="arisan-mem-row is-winner"><span class="am-trophy">${icon('trophy')}</span><span class="am-name">${escapeHtml(m.nama)}</span><span class="am-badge am-badge-winner">Menang ronde ${m.menangRound}</span></div>`;
-  }
-  return `<div class="arisan-mem-row is-eligible">${arisanAvatarHtml(m.nama,"sm")}<span class="am-name">${escapeHtml(m.nama)}</span><span class="am-badge am-badge-eligible">${icon('check')}<span>Aktif</span></span></div>`;
-}
-function arisanBatchHtml(batch){
-  const meta = arisanStatusMeta(batch.status);
-  const approved = arisanApprovedMembers(batch);
-  const pending = arisanPendingMembers(batch);
-  const taken = arisanQuotaTaken(batch);
-  const quotaFull = arisanQuotaFull(batch);
-  const quotaPct = batch.kuota ? Math.min(100, taken/batch.kuota*100) : 0;
-  const nextDraw = arisanNextDrawDate(batch);
-  const history = [...(batch.drawHistory||[])].sort((a,b)=>b.round-a.round);
-  const liveInfo = arisanLiveDrawInfo(batch);
-
-  const regBlock = (batch.status==="pendaftaran" && !quotaFull) ? `
-    <div class="arisan-reg-card">
-      <div class="pg-card-head">
-        <span class="pg-card-head-icon">${icon('gift')}</span>
-        <div>
-          <div class="pg-card-head-title">Daftar Arisan Ini</div>
-          <div class="pg-card-head-sub">Iuran ${rupiah(batch.biaya)}/bulan — kirim data diri, tunggu di-ACC admin.</div>
-        </div>
-      </div>
-      <div class="field"><label>${icon('edit')} Nama Lengkap</label><input type="text" id="arNama" placeholder="Nama kamu" value="${escapeHtml(state.arisanReg.nama)}"></div>
-      <div class="field"><label>${icon('edit')} No. WhatsApp <span style="font-weight:400;color:var(--ink-faint);">(opsional)</span></label><input type="text" id="arHp" placeholder="0812xxxxxxx" value="${escapeHtml(state.arisanReg.hp)}"></div>
-      <div class="modal-actions pg-actions">
-        <button class="btn btn-primary" id="arSubmit">${icon('gift')}<span>Daftar Sekarang</span></button>
-      </div>
-    </div>
-  ` : (batch.status==="pendaftaran" ? `<div class="arisan-full-note">${icon('alert')}<span>Kuota pendaftaran sudah penuh (${taken}/${batch.kuota}). Nantikan batch arisan berikutnya!</span></div>` : "");
-
-  return `
-  <div class="panel arisan-panel reveal" style="margin-top:16px;">
-    <div class="arisan-panel-head">
-      <div>
-        <div class="arisan-batch-name">${escapeHtml(batch.nama)}</div>
-        <span class="arisan-status-badge ${meta.cls}">${meta.label}</span>
-      </div>
-      <div class="arisan-fee-chip"><span class="label">Iuran / bulan</span><span class="val mono">${rupiah(batch.biaya)}</span></div>
-    </div>
-
-    ${batch.kuota ? `
-    <div class="arisan-quota-wrap">
-      <div class="arisan-quota-label"><span>Slot Anggota</span><span class="mono">${taken}/${batch.kuota}</span></div>
-      <div class="arisan-quota-track"><div class="arisan-quota-fill" style="width:${quotaPct}%;"></div></div>
-    </div>` : `
-    <div class="arisan-quota-wrap">
-      <div class="arisan-quota-label"><span>Slot Anggota</span><span class="mono">${taken} orang · Kuota bebas berapa saja</span></div>
-    </div>`}
-
-    ${arisanCountdownHtml(nextDraw, "arCd", batch.status==="berjalan" ? "⏱️ Kocokan berikutnya:" : "🎯 Kocokan pertama dijadwalkan:")}
-
-    ${!liveInfo && batch.status==="berjalan" ? arisanIdleSlotHtml(arisanEligibleMembers(batch)) : ""}
-
-    ${liveInfo ? `
-    <div class="arisan-live-card" id="arLiveCard">
-      <div class="arisan-live-badge"><span class="dot"></span>LIVE — Kocokan Sedang Berlangsung</div>
-      <div class="wheel-status-label" id="arLiveStatus">🔴 LIVE — reel sedang berputar…</div>
-      ${slotMachineMarkup("arLive")}
-      <div class="draw-result" id="arLiveResult" style="display:none;">
-        <div class="draw-confetti" id="arLiveConfetti"></div>
-        <div class="draw-winner-trophy">${icon('trophy')}</div>
-        <div class="draw-winner-label">Selamat kepada</div>
-        <div class="draw-winner-name" id="arLiveWinnerName"></div>
-      </div>
-    </div>` : ""}
-
-    ${regBlock}
-
-    <div class="arisan-members-block">
-      ${approved.length ? `
-      <div class="arisan-mem-group-label">Anggota Aktif (${approved.length})</div>
-      <div class="arisan-mem-list">${approved.map(m=>arisanMemberRowHtml(m,"approved")).join("")}</div>` : ""}
-      ${pending.length ? `
-      <div class="arisan-mem-group-label">Menunggu Persetujuan Admin (${pending.length})</div>
-      <div class="arisan-mem-list">${pending.map(m=>arisanMemberRowHtml(m,"pending")).join("")}</div>` : ""}
-      ${!approved.length && !pending.length ? `<div class="empty-row">Belum ada yang mendaftar. Jadilah yang pertama!</div>` : ""}
-    </div>
-
-    ${history.length ? `
-    <div class="arisan-mem-group-label">🏆 Riwayat Kocokan</div>
-    <div class="arisan-history-list">
-      ${history.map(h=>`
-        <div class="arisan-history-item">
-          <span class="ahi-round">Ronde ${h.round}</span>
-          <span class="ahi-winner">${arisanAvatarHtml(h.winnerNama,"sm")}${escapeHtml(h.winnerNama)}</span>
-          <span class="ahi-date mono">${fmtDateShort(h.tgl)}</span>
-        </div>
-      `).join("")}
-    </div>` : ""}
-
-    ${isAuthed() ? `<div style="margin-top:14px;"><button class="btn btn-sm" id="arGoAdminManage">${icon('shield')}<span>Kelola Arisan di Dashboard Admin</span></button></div>` : ""}
-  </div>`;
-}
-function arisanEmptyHtml(){
-  return `
-  <div class="panel arisan-panel reveal" style="margin-top:16px;">
-    <div class="empty-row" style="padding:36px 12px;">${icon('gift')}<div style="margin-top:8px;">Belum ada arisan yang dibuka saat ini. Nantikan pengumuman dari admin ya!</div></div>
-    ${isAuthed() ? `<div style="text-align:center;margin-top:6px;"><button class="btn btn-primary btn-sm" id="arGoAdminManage">${icon('plus-circle')}<span>Buka Pendaftaran Arisan</span></button></div>` : ""}
-  </div>`;
-}
-function arisanHistoryHtml(list){
-  return `
-  <div class="panel" style="margin-top:16px;">
-    <div class="panel-head"><h3>📜 Riwayat Batch Arisan Selesai</h3></div>
-    <div class="arisan-mem-list">
-      ${list.map(b=>`
-        <div class="arisan-mem-row is-eligible">
-          <span class="am-name">${escapeHtml(b.nama)}</span>
-          <span class="am-badge am-badge-eligible">${b.drawHistory.length} ronde · ${rupiah(b.biaya)}/orang</span>
-        </div>
-      `).join("")}
-    </div>
-  </div>`;
-}
-
-function renderArisanPage(){
-  const batch = activeArisanBatch();
-  const history = finishedArisanBatches();
-  return `
-  ${topbar()}
-  <div class="container">
-    <div class="hero">
-      <button class="back-link" id="backHome2">&larr; Kembali ke beranda</button>
-      <div class="hero-eyebrow">🎁 Kocok Tiap Tanggal 05 · Transparan &amp; Seru</div>
-      <h1>Arisan Tanteh Susi</h1>
-      <p class="hero-sub">Ikut arisan bulanan, iuran ringan, dikocok terbuka di depan semua anggota. Daftar, tunggu di-ACC admin, lalu nantikan giliranmu menang!</p>
-      ${batch ? arisanBatchHtml(batch) : arisanEmptyHtml()}
-      ${history.length ? arisanHistoryHtml(history) : ""}
-    </div>
-  </div>
-  <footer class="site-footer">JHT KAS Adm PRG — mode uji, data tersimpan di penyimpanan lokal perangkat ini.</footer>
-  `;
-}
-
-const _arisanCountdownTimers = {};
-function startCountdownTicker(idPrefix){
-  if(_arisanCountdownTimers[idPrefix]) clearInterval(_arisanCountdownTimers[idPrefix]);
-  _arisanCountdownTimers[idPrefix] = setInterval(()=>{
-    const grid = document.getElementById(idPrefix+"Grid");
-    if(!grid){ clearInterval(_arisanCountdownTimers[idPrefix]); delete _arisanCountdownTimers[idPrefix]; return; }
-    const c = computeCountdown(grid.dataset.target);
-    document.getElementById(idPrefix+"Day").textContent = String(c.d).padStart(2,"0");
-    document.getElementById(idPrefix+"Hour").textContent = String(c.h).padStart(2,"0");
-    document.getElementById(idPrefix+"Min").textContent = String(c.m).padStart(2,"0");
-    document.getElementById(idPrefix+"Sec").textContent = String(c.s).padStart(2,"0");
-  }, 1000);
-}
-
-function bindArisanPage(){
-  bindTopbarCommon();
-  document.getElementById("backHome2")?.addEventListener("click", ()=> goto("/"));
-  document.getElementById("arGoAdminManage")?.addEventListener("click", ()=>{ state.adminSection="arisan"; goto("/admin"); });
-  document.getElementById("arNama")?.addEventListener("input", e=> state.arisanReg.nama = e.target.value);
-  document.getElementById("arHp")?.addEventListener("input", e=> state.arisanReg.hp = e.target.value);
-  document.getElementById("arSubmit")?.addEventListener("click", ()=>{
-    const batch = activeArisanBatch();
-    if(!batch || batch.status!=="pendaftaran"){ toast("Pendaftaran sudah ditutup","err"); return; }
-    if(arisanQuotaFull(batch)){ toast("Kuota sudah penuh","err"); return; }
-    const nama = (document.getElementById("arNama").value||"").trim();
-    const hp = (document.getElementById("arHp").value||"").trim();
-    if(!nama){ toast("Nama wajib diisi","err"); return; }
-    batch.members.push({ id: uid("am"), nama, hp, status:"pending", daftarAt: new Date().toISOString().slice(0,10), sudahMenang:false, menangRound:null, menangTgl:null });
-    saveArisanList();
-    state.arisanReg = { nama:"", hp:"" };
-    toast("Pendaftaran terkirim, menunggu ACC admin");
-    render();
-  });
-  startCountdownTicker("arCd");
-  bindArisanLiveWidget();
-}
-/** Kalau ada kocokan yang sedang live, jalankan animasi slot di halaman tamu,
- *  tersinkron ke waktu & pemenang yang sama dengan yang admin lihat (lihat
- *  arisanLiveDrawInfo & bindArisanAdminLiveWidget). Aman dipanggil berkali-kali —
- *  kalau tidak ada elemen widget-nya (tidak sedang live), langsung berhenti. */
-function bindArisanLiveWidget(){
-  const card = document.getElementById("arLiveCard");
-  if(!card) return;
-  const batch = activeArisanBatch();
-  const liveInfo = batch ? arisanLiveDrawInfo(batch) : null;
-  if(!liveInfo) return;
-  const eligible = arisanEligibleMembers(batch);
-  if(!eligible.length) return;
-  const winner = eligible.find(m=>m.id===liveInfo.winnerId) || { id: liveInfo.winnerId, nama: liveInfo.winnerNama };
-  const status = document.getElementById("arLiveStatus");
-  const machine = document.getElementById("arLiveMachine");
-  if(liveInfo.elapsed >= liveInfo.durationMs){
-    // telat gabung — reel sudah harusnya berhenti, langsung tampilkan hasilnya
-    machine?.classList.add("is-jackpot");
-    if(status) status.textContent = `🎉 Pemenangnya adalah ${winner.nama}!`;
-    document.getElementById("arLiveResult").style.display = "flex";
-    document.getElementById("arLiveWinnerName").textContent = winner.nama;
-    const prog = document.getElementById("arLiveProgress");
-    if(prog){ prog.style.transition="none"; prog.style.width="100%"; }
-    SLOT_REEL_TIMING.forEach((cfg,i)=>{
-      const strip = document.getElementById("arLiveReel"+i);
-      if(!strip) return;
-      const { html, targetIndex } = _buildSlotReelHtml(eligible, winner, cfg.laps);
-      strip.innerHTML = html;
-      strip.style.transition = "none";
-      strip.style.transform = `translateY(${-(targetIndex-1)*SLOT_CELL}px)`;
-      strip.closest(".slot-reel-window")?.classList.add("is-settled");
-    });
-    return;
-  }
-  machine?.classList.add("is-spinning");
-  _startSlotProgress("arLive", liveInfo.elapsed);
-  runSlotMachineSpin("arLive", eligible, winner, liveInfo.elapsed,
-    ()=>{
-      machine?.classList.remove("is-spinning");
-      machine?.classList.add("is-jackpot");
-      if(status) status.textContent = `🎉 Pemenangnya adalah ${winner.nama}!`;
-      document.getElementById("arLiveResult").style.display = "flex";
-      document.getElementById("arLiveWinnerName").textContent = winner.nama;
-      spawnConfetti(document.getElementById("arLiveConfetti"));
-    },
-    (settled, total)=>{
-      if(!status || settled>=total) return;
-      status.textContent = settled===total-1 ? "🔴 LIVE — reel terakhir masih berputar… tahan napas!" : `🔴 LIVE — reel ${settled}/${total} berhenti…`;
-    }
-  );
 }
 
 /* ============================================================
@@ -2041,7 +1646,6 @@ const ADMIN_NAV = [
   { id:"transaksi", label:"Transaksi", icon:"book" },
   { id:"pengajuan", label:"Pengajuan", icon:"inbox" },
   { id:"anggota", label:"Anggota", icon:"users" },
-  { id:"arisan", label:"Arisan", icon:"gift" },
   { id:"histori", label:"Histori", icon:"history" },
   { id:"laporan", label:"Laporan", icon:"report" },
 ];
@@ -2058,7 +1662,7 @@ function renderAdmin(){
       <div class="mm-panel-head"><span class="mm-panel-head-icon">${icon('menu')}</span><span>Menu Navigasi</span></div>
       <div class="mm-label" style="--tone:var(--blue);">Navigasi</div>
       ${ADMIN_NAV.map(n=>`
-        <button class="mm-item ${state.adminSection===n.id?'active':''}" data-sec="${n.id}" data-tone="info"><span class="mm-ico-wrap">${icon(n.icon)}</span><span>${n.label}</span>${n.id==='pengajuan'&&pendingCount>0?`<span class="mm-badge">${pendingCount}</span>`:''}${n.id==='arisan'&&arisanPendingCount()>0?`<span class="mm-badge">${arisanPendingCount()}</span>`:''}</button>
+        <button class="mm-item ${state.adminSection===n.id?'active':''}" data-sec="${n.id}" data-tone="info"><span class="mm-ico-wrap">${icon(n.icon)}</span><span>${n.label}</span>${n.id==='pengajuan'&&pendingCount>0?`<span class="mm-badge">${pendingCount}</span>`:''}</button>
       `).join("")}
       <div class="mm-sep"></div>
       <div class="mm-label" style="--tone:var(--amber);">Unduh Data</div>
@@ -2078,7 +1682,7 @@ function renderAdmin(){
       </div>
       ${ADMIN_NAV.map(n=>`
         <button class="nav-item ${state.adminSection===n.id?'active':''}" data-sec="${n.id}">
-          ${icon(n.icon)}<span>${n.label}</span>${n.id==='pengajuan'&&pendingCount>0?`<span class="mm-badge">${pendingCount}</span>`:''}${n.id==='arisan'&&arisanPendingCount()>0?`<span class="mm-badge">${arisanPendingCount()}</span>`:''}
+          ${icon(n.icon)}<span>${n.label}</span>${n.id==='pengajuan'&&pendingCount>0?`<span class="mm-badge">${pendingCount}</span>`:''}
         </button>
       `).join("")}
       <div class="nav-sep"></div>
@@ -2101,7 +1705,6 @@ function adminContentHtml(){
     case "transaksi": return secTransaksi();
     case "pengajuan": return secPengajuan();
     case "anggota": return secAnggota();
-    case "arisan": return secArisan();
     case "histori": return secHistori();
     case "laporan": return secLaporan();
     default: return secDashboard();
@@ -2129,575 +1732,6 @@ function secPengajuan(){
       </div>
     </div>
   `;
-}
-
-/* ============================================================
-   ADMIN — KELOLA ARISAN TANTEH SUSI
-============================================================ */
-function secArisan(){
-  const batch = activeArisanBatch();
-  const finished = finishedArisanBatches();
-  return `
-    <div class="admin-topline">
-      <div><h2>🎁 Arisan Tanteh Susi</h2><div class="sub">Buka pendaftaran, ACC anggota, dan kocok pemenang tiap bulan</div></div>
-      ${!batch ? `<button class="btn btn-primary" id="arisanNewBatchBtn">${icon('plus-circle')}<span>Buka Pendaftaran Baru</span></button>` : ""}
-    </div>
-
-    ${batch ? secArisanBatchHtml(batch) : `<div class="panel"><div class="empty-row" style="padding:30px;">Belum ada batch arisan yang dibuka.</div></div>`}
-
-    ${finished.length ? `
-    <div class="panel" style="margin-top:16px;">
-      <div class="panel-head"><h3>📜 Riwayat Batch Selesai</h3></div>
-      <div class="arisan-mem-list">
-        ${finished.map(b=>`
-          <div class="arisan-mem-row is-eligible">
-            <span class="am-name">${escapeHtml(b.nama)}</span>
-            <span class="am-badge am-badge-eligible">${b.drawHistory.length} ronde selesai · ${rupiah(b.biaya)}/orang</span>
-            <button class="icon-btn sm" style="color:var(--rust);" data-del-arisan-batch="${b.id}" title="Hapus riwayat">${icon('trash')}</button>
-          </div>
-        `).join("")}
-      </div>
-    </div>` : ""}
-  `;
-}
-function secArisanBatchHtml(batch){
-  const meta = arisanStatusMeta(batch.status);
-  const approved = arisanApprovedMembers(batch);
-  const pending = arisanPendingMembers(batch);
-  const eligible = arisanEligibleMembers(batch);
-  const taken = arisanQuotaTaken(batch);
-  const nextDraw = arisanNextDrawDate(batch);
-  const history = [...(batch.drawHistory||[])].sort((a,b)=>b.round-a.round);
-  return `
-  <div class="panel arisan-panel" style="margin-bottom:16px;">
-    <div class="arisan-panel-head">
-      <div>
-        <div class="arisan-batch-name">${escapeHtml(batch.nama)}</div>
-        <span class="arisan-status-badge ${meta.cls}">${meta.label}</span>
-      </div>
-      <div class="arisan-fee-chip">
-        <span class="label">Iuran / bulan</span>
-        <span class="val mono">${rupiah(batch.biaya)}</span>
-        <button class="arisan-fee-edit-btn" id="arisanEditFeeBtn" title="Ubah nominal iuran">${icon('edit')}<span>Ubah</span></button>
-      </div>
-    </div>
-    <div class="hint" style="margin-bottom:10px;">Kuota: ${batch.kuota ? `${taken}/${batch.kuota} (dibatasi)` : `${taken} orang terdaftar · Kuota bebas berapa saja selama pendaftaran belum ditutup`} · Mulai kocok: ${fmtDateShort(batch.tglMulai)} · Ronde berjalan: ${batch.currentRound}</div>
-
-    <div class="arisan-control-card">
-      <div class="arisan-toggle-row">
-        <div class="arisan-toggle-text">
-          <div class="arisan-toggle-title">${icon('gift')}<span>Pendaftaran Anggota</span></div>
-          <div class="arisan-toggle-sub">${
-            batch.status==="pendaftaran"
-              ? "Terbuka — siapa saja boleh mendaftar sekarang."
-              : (arisanLiveDrawInfo(batch)
-                  ? "Ditutup — tidak bisa dibuka selama kocokan sedang live."
-                  : "Ditutup — arisan sedang berjalan, kocokan bulanan aktif.")
-          }</div>
-        </div>
-        <button class="arisan-switch ${batch.status==="pendaftaran"?"is-on":""}" id="arisanRegToggle" role="switch" aria-checked="${batch.status==="pendaftaran"}" ${arisanLiveDrawInfo(batch)?"disabled":""} title="${batch.status==="pendaftaran"?"Klik untuk menutup pendaftaran":"Klik untuk membuka pendaftaran"}">
-          <span class="arisan-switch-knob"></span>
-        </button>
-      </div>
-    </div>
-
-    ${arisanCountdownHtml(nextDraw, "adCd", batch.status==="berjalan" ? "⏱️ Kocokan berikutnya:" : "🎯 Kocokan pertama dijadwalkan:")}
-
-    <!-- Mesin slot ditempel LANGSUNG di bawah hitung mundur (bukan pop-up
-         modal terpisah lagi). Saat belum waktunya kocok, tampilkan pratinjau
-         statis (idle) di posisi yang sama supaya tidak ada "lubang" kosong;
-         begitu live, digantikan versi yang benar-benar berputar — lihat
-         bindArisanAdminLiveWidget. -->
-    ${!arisanLiveDrawInfo(batch) && batch.status==="berjalan" ? arisanIdleSlotHtml(eligible) : ""}
-
-    ${arisanLiveDrawInfo(batch) ? `
-    <div class="arisan-live-card" id="adDrawCard">
-      <div class="arisan-live-badge"><span class="dot"></span>LIVE — Kocokan Sedang Berlangsung</div>
-      <div class="wheel-status-label" id="adWheelStatus">🔴 LIVE — reel sedang berputar…</div>
-      ${slotMachineMarkup("adDraw")}
-      <div class="draw-result" id="adDrawResult" style="display:none;">
-        <div class="draw-confetti" id="adDrawConfetti"></div>
-        <div class="draw-winner-trophy">${icon('trophy')}</div>
-        <div class="draw-winner-label">Selamat kepada</div>
-        <div class="draw-winner-name" id="adDrawWinnerName"></div>
-        <div class="draw-confirm-question">Sah sebagai pemenang ronde ini?</div>
-      </div>
-      <div class="modal-actions" id="adDrawActions" style="visibility:hidden;">
-        <button class="btn" id="adDrawCancel">${icon('dice')}<span>Tidak Sah — Putar Ulang</span></button>
-        <button class="btn btn-primary" id="adDrawConfirm">${icon('check')}<span>Ya, Sah — Simpan</span></button>
-      </div>
-    </div>` : ""}
-
-    <div class="admin-arisan-actions">
-      ${batch.status==="berjalan" && !arisanLiveDrawInfo(batch) && eligible.length>0 ? `<button class="btn btn-sm" id="arisanEditOrderBtn">${icon('edit')}<span>Atur Urutan Pemenang</span></button>` : ""}
-      ${batch.status==="berjalan" && !arisanLiveDrawInfo(batch) ? `<button class="btn btn-primary btn-sm" id="arisanDrawBtn" ${eligible.length===0?'disabled':''}>${icon('dice')}<span>Kocok Sekarang!</span></button>` : ""}
-      <button class="btn btn-sm btn-danger" id="arisanDeleteBatchBtn">${icon('trash')}<span>Hapus Batch</span></button>
-    </div>
-    ${batch.status==="pendaftaran" && eligible.length===0 ? `<p class="field-hint" style="margin:-4px 0 14px;">${icon('alert')} ACC minimal satu anggota dulu supaya tombol pendaftaran bisa ditutup.</p>` : ""}
-
-    ${pending.length ? `
-    <div class="arisan-mem-group-label">⏳ Menunggu Persetujuan (${pending.length})</div>
-    <div class="arisan-mem-list">
-      ${pending.map(m=>`
-        <div class="arisan-mem-row is-pending">
-          ${arisanAvatarHtml(m.nama,"sm")}<span class="am-name">${escapeHtml(m.nama)}${m.hp?` · ${escapeHtml(m.hp)}`:''}</span>
-          <div class="req-actions" style="margin-left:auto;">
-            <button class="btn btn-sm" style="color:var(--forest);border-color:var(--forest);" data-arisan-acc="${batch.id}|${m.id}">${icon('check')}<span>ACC</span></button>
-            <button class="btn btn-sm btn-danger" data-arisan-tolak="${batch.id}|${m.id}">${icon('close')}<span>Tolak</span></button>
-          </div>
-        </div>
-      `).join("")}
-    </div>` : ""}
-
-    <div class="arisan-mem-group-label">👥 Anggota Aktif (${approved.length})</div>
-    <div class="arisan-mem-list">
-      ${approved.length ? approved.map(m=>`
-        <div class="arisan-mem-row ${m.sudahMenang?'is-winner':'is-eligible'}">
-          ${m.sudahMenang ? `<span class="am-trophy">${icon('trophy')}</span>` : arisanAvatarHtml(m.nama,"sm")}
-          <span class="am-name">${escapeHtml(m.nama)}</span>
-          <span class="am-badge ${m.sudahMenang?'am-badge-winner':'am-badge-eligible'}">${m.sudahMenang ? `Menang ronde ${m.menangRound}` : 'Aktif'}</span>
-          ${batch.status==="pendaftaran" ? `<button class="icon-btn sm" style="color:var(--rust);margin-left:auto;" data-arisan-remove="${batch.id}|${m.id}" title="Keluarkan">${icon('trash')}</button>` : ""}
-        </div>
-      `).join("") : `<div class="empty-row">Belum ada anggota disetujui.</div>`}
-    </div>
-
-    ${history.length ? `
-    <div class="arisan-mem-group-label">🏆 Riwayat Kocokan</div>
-    <div class="arisan-history-list">
-      ${history.map(h=>`
-        <div class="arisan-history-item">
-          <span class="ahi-round">Ronde ${h.round}</span>
-          <span class="ahi-winner">${arisanAvatarHtml(h.winnerNama,"sm")}${escapeHtml(h.winnerNama)}</span>
-          <span class="ahi-date mono">${fmtDateShort(h.tgl)}</span>
-        </div>
-      `).join("")}
-    </div>` : ""}
-  </div>`;
-}
-function arisanBatchFormModal(){
-  const defaultDate = (()=>{ const d=new Date(); d.setMonth(d.getMonth()+1); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-05`; })();
-  return `
-    <div class="modal-head"><h3>🎁 Buka Pendaftaran Arisan</h3><button class="icon-btn" id="modalClose">&times;</button></div>
-    <div class="field"><label>Nama Batch</label><input type="text" id="abNama" placeholder="mis. Arisan Tanteh Susi — Batch Oktober 2026" value="Arisan Tanteh Susi — Batch ${monthLabel(defaultDate.slice(0,7))}"></div>
-    <div class="field"><label>Iuran / bulan (Rp)</label><input type="number" id="abBiaya" value="150000"></div>
-    <div class="field"><label>Tanggal Kocokan Pertama</label><input type="date" id="abTgl" value="${defaultDate}"></div>
-    <p class="field-hint">🎟️ Kuota anggota bebas berapa saja — siapa pun boleh daftar selama status masih "Pendaftaran Dibuka". Pendaftaran hanya berhenti saat admin menekan tombol "Tutup Pendaftaran &amp; Mulai". Kocokan berikutnya otomatis dijadwalkan tiap tanggal yang sama setiap bulan.</p>
-    <div class="modal-actions">
-      <button class="btn" id="modalClose2">Batal</button>
-      <button class="btn btn-primary" id="abSave">${icon('gift')}<span>Buka Pendaftaran</span></button>
-    </div>
-  `;
-}
-function bindArisanBatchForm(){
-  document.getElementById("modalClose").addEventListener("click", closeModal);
-  document.getElementById("modalClose2").addEventListener("click", closeModal);
-  document.getElementById("abSave").addEventListener("click", ()=>{
-    const nama = (document.getElementById("abNama").value||"").trim();
-    const biaya = Number(document.getElementById("abBiaya").value)||0;
-    const tgl = document.getElementById("abTgl").value;
-    if(!nama){ toast("Nama batch wajib diisi","err"); return; }
-    if(biaya<=0){ toast("Iuran harus lebih dari 0","err"); return; }
-    if(!tgl){ toast("Tanggal kocokan pertama wajib diisi","err"); return; }
-    DB.arisan.push({
-      // kuota selalu 0 (bebas/tanpa batas) — pendaftaran hanya ditutup manual oleh admin
-      id: uid("arisan"), nama, biaya, kuota: 0, tglMulai: tgl,
-      status:"pendaftaran", currentRound:0, createdAt: new Date().toISOString().slice(0,10),
-      members: [], drawHistory: [],
-    });
-    saveArisanList();
-    toast("Pendaftaran arisan dibuka!");
-    closeModal();
-    refreshAdminContent();
-  });
-}
-
-/* ---- Modal ubah nominal iuran bulanan arisan. Hanya mengubah angka
-   tampilan/tagihan batch aktif (batch.biaya) — tidak menyentuh transaksi kas
-   yang sudah tercatat sebelumnya, jadi aman diubah kapan saja tanpa merusak
-   riwayat. ---- */
-function arisanEditFeeModal(batch){
-  return `
-    <div class="modal-head"><h3>${icon('edit')} Ubah Iuran / Bulan</h3><button class="icon-btn" id="modalClose">&times;</button></div>
-    <p class="field-hint">Nominal ini dipakai untuk tampilan &amp; tagihan mulai bulan berjalan. Contoh: dari Rp150.000 diubah jadi Rp200.000.</p>
-    <div class="field"><label>${icon('edit')} Iuran / bulan (Rp)</label><input type="number" id="abEditBiaya" min="1000" step="1000" value="${batch.biaya}"></div>
-    <div class="modal-actions">
-      <button class="btn" id="modalClose2">Batal</button>
-      <button class="btn btn-primary" id="abEditFeeSave">${icon('check')}<span>Simpan Perubahan</span></button>
-    </div>
-  `;
-}
-function bindArisanEditFeeForm(batch){
-  document.getElementById("modalClose").addEventListener("click", closeModal);
-  document.getElementById("modalClose2").addEventListener("click", closeModal);
-  document.getElementById("abEditFeeSave").addEventListener("click", ()=>{
-    const val = Number(document.getElementById("abEditBiaya").value)||0;
-    if(val<=0){ toast("Iuran harus lebih dari 0","err"); return; }
-    const old = batch.biaya;
-    batch.biaya = val;
-    saveArisanList();
-    closeModal();
-    toast(old===val ? "Iuran disimpan" : `Iuran diubah dari ${rupiah(old)} jadi ${rupiah(val)}`);
-    refreshAdminContent();
-  });
-}
-
-/* ---- Modal "urutan pemenang" — dipakai admin buat NENTUIN dari awal siapa
-   dapat arisan bulan apa (dipanggil pas Tutup Pendaftaran & Mulai) dan buat
-   NGATUR ULANG urutan anggota yang belum menang di tengah jalan (tombol
-   "Atur Urutan Pemenang"). Sekali urutan ini disimpan ke batch.winnerOrder,
-   mesin slot di startArisanDraw() TIDAK acak lagi — dia cuma "berpura-pura"
-   mengocok lalu mendarat persis di urutan ini. Anggota yang sudah pernah
-   menang otomatis dicoret dari antrean (lihat adDrawConfirm), jadi array ini
-   selalu berisi SISA anggota yang belum menang, dari yang terdekat gilirannya
-   sampai yang paling akhir. */
-function arisanWinnerOrderModal(members, baseDateIso, opts){
-  opts = opts || {};
-  const isEdit = opts.mode === "edit";
-  const roundOffset = opts.roundOffset || 0;
-  const rows = members.map((_, i)=>{
-    const dateIso = addMonthsISO(baseDateIso, i);
-    return `
-    <div class="field arisan-order-row">
-      <label>${icon('calendar')} Ronde ${roundOffset + i + 1} — ${monthLabel(dateIso.slice(0,7))}</label>
-      <select class="arisan-order-select" data-idx="${i}">
-        <option value="">Pilih anggota…</option>
-        ${members.map(m=>`<option value="${m.id}">${escapeHtml(m.nama)}</option>`).join("")}
-      </select>
-    </div>`;
-  }).join("");
-  return `
-    <div class="modal-head"><h3>🎯 ${isEdit ? "Atur Ulang Urutan Pemenang" : "Tentukan Urutan Pemenang"}</h3><button class="icon-btn" id="modalClose">&times;</button></div>
-    <p class="field-hint">${isEdit
-      ? "Susun ulang giliran menang untuk anggota yang belum pernah dapat arisan. Mesin slot tetap tampil tiap kocokan supaya seru, tapi hasilnya akan selalu mengikuti urutan yang kamu atur di sini — bukan diundi acak."
-      : "Sebelum arisan dimulai, tentukan dulu siapa dapat arisan di bulan apa untuk semua anggota yang sudah di-ACC. Mesin slot nanti tetap tampil berputar tiap bulan biar seru, tapi hasilnya sudah pasti mengikuti urutan yang kamu atur di sini."}</p>
-    <div id="arisanOrderRows">${rows}</div>
-    <p class="field-hint" id="arisanOrderWarn" style="display:none;color:var(--rust);"></p>
-    <div class="modal-actions">
-      <button class="btn" id="modalClose2">Batal</button>
-      <button class="btn btn-primary" id="arisanOrderSave">${icon('check')}<span>${isEdit ? "Simpan Urutan" : "Mulai Arisan"}</span></button>
-    </div>
-  `;
-}
-function bindArisanWinnerOrderForm(members, onSave){
-  document.getElementById("modalClose").addEventListener("click", closeModal);
-  document.getElementById("modalClose2").addEventListener("click", closeModal);
-  const selects = Array.from(document.querySelectorAll(".arisan-order-select"));
-  // Kalau tinggal 1 orang, tidak ada lagi yang perlu dipilih — auto-isi biar
-  // admin tidak perlu klik dropdown yang isinya cuma 1 opsi.
-  if(members.length === 1 && selects[0]){ selects[0].value = members[0].id; selects[0].disabled = true; }
-  function refreshOptions(){
-    const chosen = selects.map(s=>s.value).filter(Boolean);
-    selects.forEach(s=>{
-      const current = s.value;
-      Array.from(s.options).forEach(opt=>{
-        if(!opt.value) return;
-        opt.disabled = chosen.includes(opt.value) && opt.value !== current;
-      });
-    });
-  }
-  selects.forEach(s=> s.addEventListener("change", refreshOptions));
-  refreshOptions();
-  document.getElementById("arisanOrderSave").addEventListener("click", ()=>{
-    const warnEl = document.getElementById("arisanOrderWarn");
-    const order = selects.map(s=>s.value);
-    if(order.some(v=>!v)){
-      warnEl.textContent = "Semua ronde wajib diisi — pilih satu anggota untuk tiap bulan.";
-      warnEl.style.display = "block";
-      return;
-    }
-    if(new Set(order).size !== members.length){
-      warnEl.textContent = "Tiap anggota cuma boleh menang sekali — pastikan tidak ada nama yang dobel.";
-      warnEl.style.display = "block";
-      return;
-    }
-    onSave(order);
-  });
-}
-
-/* ---- modal animasi pengocokan arisan: MESIN SLOT 3-REEL ----
-   Murni CSS transform + transition (tanpa canvas/library). Tiap reel jalan
-   2 FASE: (1) putaran cepat linear yang lama (bikin tegang, kelihatan masih
-   acak), lalu (2) perlambatan dramatis di ujung yang presisi berhenti di
-   pemenang. Reel terakhir dapat porsi fase-lambat paling besar & paling
-   panjang. Total durasi 50 detik. Engine ini dipakai BERSAMA oleh modal
-   admin maupun widget live di halaman tamu (lihat runSlotMachineSpin),
-   dengan dukungan "elapsedMs" supaya penonton yang baru buka halaman di
-   tengah kocokan tetap mendarat di detik & pemenang yang SAMA. */
-const SLOT_CELL = 72;   // px — HARUS sinkron dengan tinggi .slot-cell di CSS
-const SLOT_TOTAL_MS = 50000;
-const SLOT_REEL_TIMING = [
-  { totalSec: 19, slowPortion: 0.20, laps: 25,  ease: "cubic-bezier(.12,.84,.18,1)" },
-  { totalSec: 33, slowPortion: 0.26, laps: 43,  ease: "cubic-bezier(.08,.87,.13,1)" },
-  { totalSec: 50, slowPortion: 0.38, laps: 65,  ease: "cubic-bezier(.05,.92,.08,1)" }, // reel terakhir: paling lama & paling "creep" di akhir
-];
-function _shuffleCopy(arr){
-  const a = arr.slice();
-  for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); const t=a[i]; a[i]=a[j]; a[j]=t; }
-  return a;
-}
-function _slotCellHtml(m){
-  return `<div class="slot-cell"><span class="slot-avatar" style="background:${avatarBg(arisanColorFor(m.nama))}">${initials(m.nama)}</span><span class="slot-name">${escapeHtml(arisanShortName(m.nama))}</span></div>`;
-}
-function _buildSlotReelHtml(eligible, winner, laps){
-  let seq = [];
-  for(let lap=0; lap<laps; lap++) seq.push(..._shuffleCopy(eligible));
-  const targetIndex = seq.length; // index tempat pemenang akan berada
-  seq.push(winner);
-  seq.push(..._shuffleCopy(eligible).slice(0,2)); // 2 sel ekstra biar baris bawah payline tetap terisi
-  return { html: seq.map(_slotCellHtml).join(""), targetIndex };
-}
-function slotMachineMarkup(idPrefix){
-  const bulb = (n)=>Array.from({length:n}).map((_,i)=>`<span class="slot-bulb" style="--i:${i}"></span>`).join("");
-  const reelsHtml = SLOT_REEL_TIMING.map((_,i)=>`
-    <div class="slot-reel-window"><div class="slot-reel-strip" id="${idPrefix}Reel${i}"></div></div>
-  `).join("");
-  return `
-    <div class="slot-machine" id="${idPrefix}Machine">
-      <div class="slot-inner">
-        <div class="slot-marquee">${bulb(14)}</div>
-        <div class="slot-reels-row">
-          ${reelsHtml}
-          <div class="slot-payline"><span class="pl-arrow left"></span><span class="pl-arrow right"></span></div>
-        </div>
-        <div class="slot-progress-track"><div class="slot-progress-fill" id="${idPrefix}Progress"></div></div>
-        <div class="slot-marquee bottom">${bulb(14)}</div>
-      </div>
-    </div>`;
-}
-/** Pratinjau mesin slot yang STATIS (tidak berputar, tidak ada JS interval) —
- *  ditampilkan tepat di bawah hitung mundur SELAMA belum waktunya kocok,
- *  supaya area "Arisan Tanteh Susi" selalu punya mesin slotnya kelihatan,
- *  bukan cuma muncul mendadak pas live. Dekoratif & ringan: cuma HTML+CSS,
- *  kedip lampu bulb tetap ada (CSS animation ringan), tapi reel-nya diam. */
-function arisanIdleSlotHtml(eligible){
-  const bulb = (n)=>Array.from({length:n}).map((_,i)=>`<span class="slot-bulb" style="--i:${i}"></span>`).join("");
-  const pick = (i)=> eligible && eligible.length ? eligible[i % eligible.length] : null;
-  const cellHtml = (m)=> m
-    ? `<div class="slot-cell"><span class="slot-avatar" style="background:${avatarBg(arisanColorFor(m.nama))}">${initials(m.nama)}</span></div>`
-    : `<div class="slot-cell"><span class="slot-avatar" style="background:var(--bg-elev);color:var(--ink-faint);">?</span></div>`;
-  const reels = [0,1,2].map(i=>`<div class="slot-reel-window is-idle"><div class="slot-reel-strip is-idle">${cellHtml(pick(i))}</div></div>`).join("");
-  return `
-  <div class="arisan-live-card arisan-idle-card">
-    <div class="wheel-status-label">🎰 Mesin kocok siap — menanti jadwal kocokan berikutnya</div>
-    <div class="slot-machine">
-      <div class="slot-inner">
-        <div class="slot-marquee">${bulb(14)}</div>
-        <div class="slot-reels-row">
-          ${reels}
-          <div class="slot-payline"><span class="pl-arrow left"></span><span class="pl-arrow right"></span></div>
-        </div>
-        <div class="slot-marquee bottom">${bulb(14)}</div>
-      </div>
-    </div>
-  </div>`;
-}
-/** Bar tipis di bawah reel yang mengisi penuh selama total durasi kocokan,
- *  sekadar penanda "masih berjalan, ini progresnya" biar 30 detik tidak
- *  terasa diam/macet. Dekoratif saja, tidak memengaruhi hasil. */
-function _startSlotProgress(idPrefix, elapsedMs){
-  const fill = document.getElementById(idPrefix+"Progress");
-  if(!fill) return;
-  const remainMs = Math.max(0, SLOT_TOTAL_MS - elapsedMs);
-  const startPct = Math.min(100, (elapsedMs/SLOT_TOTAL_MS)*100);
-  fill.style.transition = "none";
-  fill.style.width = startPct+"%";
-  requestAnimationFrame(()=>requestAnimationFrame(()=>{
-    fill.style.transition = `width ${remainMs/1000}s linear`;
-    fill.style.width = "100%";
-  }));
-}
-/** Jalankan 1 reel sampai berhenti presisi di finalY, dengan dukungan
- *  elapsedMs>0 untuk "menyusul" animasi yang sudah berjalan di client lain. */
-function _runReelSync(strip, finalY, cfg, elapsedMs, onDone){
-  const totalMs = cfg.totalSec*1000;
-  if(elapsedMs >= totalMs){
-    strip.style.transition = "none";
-    strip.style.transform = `translateY(${finalY}px)`;
-    onDone();
-    return;
-  }
-  const fastMs = totalMs*(1-cfg.slowPortion);
-  const slowMs = totalMs-fastMs;
-  const fastDist = finalY*(1-cfg.slowPortion*0.55);
-  const startSlowPhase = ()=>{
-    requestAnimationFrame(()=>{
-      strip.style.transition = `transform ${slowMs/1000}s ${cfg.ease}`;
-      strip.style.transform = `translateY(${finalY}px)`;
-    });
-    strip.addEventListener("transitionend", function done(e){
-      if(e.propertyName!=="transform") return;
-      strip.removeEventListener("transitionend", done);
-      onDone();
-    });
-  };
-  if(elapsedMs < fastMs){
-    const startY = elapsedMs>0 ? fastDist*(elapsedMs/fastMs) : 0;
-    strip.style.transition = "none";
-    strip.style.transform = `translateY(${startY}px)`;
-    requestAnimationFrame(()=>requestAnimationFrame(()=>{
-      strip.style.transition = `transform ${(fastMs-elapsedMs)/1000}s linear`;
-      strip.style.transform = `translateY(${fastDist}px)`;
-    }));
-    strip.addEventListener("transitionend", function toSlow(e){
-      if(e.propertyName!=="transform") return;
-      strip.removeEventListener("transitionend", toSlow);
-      startSlowPhase();
-    });
-  } else {
-    const remainMs = totalMs-elapsedMs;
-    strip.style.transition = "none";
-    strip.style.transform = `translateY(${fastDist}px)`;
-    requestAnimationFrame(()=>requestAnimationFrame(()=>{
-      strip.style.transition = `transform ${remainMs/1000}s ${cfg.ease}`;
-      strip.style.transform = `translateY(${finalY}px)`;
-    }));
-    strip.addEventListener("transitionend", function done(e){
-      if(e.propertyName!=="transform") return;
-      strip.removeEventListener("transitionend", done);
-      onDone();
-    });
-  }
-}
-/** Jalankan seluruh mesin slot (dipakai admin & widget live tamu).
- *  elapsedMs=0 untuk mulai dari awal (admin memicu kocokan baru). */
-function runSlotMachineSpin(idPrefix, eligible, winner, elapsedMs, onAllSettled, onReelSettle){
-  let settledCount = 0;
-  SLOT_REEL_TIMING.forEach((cfg,i)=>{
-    const strip = document.getElementById(idPrefix+"Reel"+i);
-    if(!strip) return;
-    const { html, targetIndex } = _buildSlotReelHtml(eligible, winner, cfg.laps);
-    strip.innerHTML = html;
-    const finalY = -(targetIndex-1) * SLOT_CELL;
-    _runReelSync(strip, finalY, cfg, elapsedMs, ()=>{
-      strip.closest(".slot-reel-window")?.classList.add("is-settled");
-      settledCount++;
-      if(onReelSettle) onReelSettle(settledCount, SLOT_REEL_TIMING.length);
-      if(settledCount===SLOT_REEL_TIMING.length && onAllSettled) onAllSettled();
-    });
-  });
-}
-/** Mulai kocokan baru: pilih pemenang & siarkan ke Firestore SEBELUM animasi
- *  lokal jalan, supaya semua tamu yang sedang membuka halaman Arisan Tanteh
- *  Susi ikut melihat kocokan ini live, tersinkron ke pemenang & waktu yang
- *  sama persis (lihat bindArisanPage). Dipakai baik dari tombol
- *  "Kocok Sekarang!" (manual) maupun pemicu otomatis saat hitung mundur habis. */
-function startArisanDraw(batch){
-  const eligible = arisanEligibleMembers(batch);
-  if(!eligible.length){ toast("Tidak ada anggota yang eligible untuk dikocok","err"); return; }
-  // Pemenang TIDAK diundi acak — hasilnya sudah ditentukan admin lewat
-  // urutan pemenang (batch.winnerOrder) saat pendaftaran ditutup / diatur
-  // ulang lewat tombol "Atur Urutan Pemenang". Mesin slot di bawah cuma
-  // animasi formalitas, hasil akhirnya selalu ikut antrean ini (elemen
-  // paling depan = giliran menang berikutnya).
-  // Fallback aman: kalau urutan kosong/rusak/tidak sinkron dengan anggota
-  // yang eligible sekarang (mis. data lama sebelum fitur ini ada), baru
-  // jatuh ke pilihan acak supaya sistem tetap jalan & tidak error/macet.
-  let winner = null;
-  if(Array.isArray(batch.winnerOrder) && batch.winnerOrder.length){
-    winner = eligible.find(m=>m.id===batch.winnerOrder[0]) || null;
-  }
-  if(!winner){
-    winner = eligible[Math.floor(Math.random()*eligible.length)];
-  }
-  batch.liveDraw = {
-    active: true, winnerId: winner.id, winnerNama: winner.nama,
-    round: batch.currentRound+1, startedAt: Date.now(), durationMs: SLOT_TOTAL_MS,
-  };
-  saveArisanList();
-}
-/** Ikat mesin slot yang tertanam LANGSUNG di bawah kartu hitung mundur pada
- *  dashboard admin (lihat secArisanBatchHtml) ke kocokan yang sedang live,
- *  memakai engine sinkron waktu yang sama dengan widget tamu
- *  (bindArisanLiveWidget) — jadi kalau admin reload atau berpindah menu lalu
- *  kembali, reel otomatis "menyusul" ke posisi & sisa waktu yang benar,
- *  bukan mengulang dari 0. */
-function bindArisanAdminLiveWidget(batch){
-  const card = document.getElementById("adDrawCard");
-  if(!card) return;
-  const liveInfo = arisanLiveDrawInfo(batch);
-  if(!liveInfo) return;
-  const eligible = arisanEligibleMembers(batch);
-  const winner = eligible.find(m=>m.id===liveInfo.winnerId) || { id: liveInfo.winnerId, nama: liveInfo.winnerNama };
-  const status = document.getElementById("adWheelStatus");
-  const machine = document.getElementById("adDrawMachine");
-  const resultEl = document.getElementById("adDrawResult");
-  const actionsEl = document.getElementById("adDrawActions");
-
-  function showResult(){
-    machine?.classList.remove("is-spinning");
-    machine?.classList.add("is-jackpot");
-    if(status) status.textContent = `🎉 Pemenangnya adalah ${winner.nama}!`;
-    resultEl.style.display = "flex";
-    document.getElementById("adDrawWinnerName").textContent = winner.nama;
-    spawnConfetti(document.getElementById("adDrawConfetti"));
-    actionsEl.style.visibility = "visible";
-  }
-
-  if(liveInfo.elapsed >= liveInfo.durationMs){
-    // Reel harusnya sudah berhenti (mis. admin sempat pindah tab) — langsung
-    // render posisi akhir yang benar, tanpa animasi, lalu tampilkan hasil.
-    SLOT_REEL_TIMING.forEach((cfg,i)=>{
-      const strip = document.getElementById("adDrawReel"+i);
-      if(!strip) return;
-      const { html, targetIndex } = _buildSlotReelHtml(eligible, winner, cfg.laps);
-      strip.innerHTML = html;
-      strip.style.transition = "none";
-      strip.style.transform = `translateY(${-(targetIndex-1)*SLOT_CELL}px)`;
-      strip.closest(".slot-reel-window")?.classList.add("is-settled");
-    });
-    const prog = document.getElementById("adDrawProgress");
-    if(prog){ prog.style.transition = "none"; prog.style.width = "100%"; }
-    showResult();
-  } else {
-    machine?.classList.add("is-spinning");
-    if(status) status.textContent = `🔴 LIVE — mengocok ${eligible.length} peserta…`;
-    _startSlotProgress("adDraw", liveInfo.elapsed);
-    runSlotMachineSpin("adDraw", eligible, winner, liveInfo.elapsed,
-      showResult,
-      (settled, total)=>{
-        if(!status || settled>=total) return;
-        status.textContent = settled===total-1 ? "🔴 LIVE — reel terakhir masih berputar… tahan napas!" : `🔴 LIVE — reel ${settled}/${total} berhenti…`;
-      }
-    );
-  }
-
-  document.getElementById("adDrawCancel")?.addEventListener("click", ()=>{
-    toast("Animasi diulang — pemenang tetap sesuai urutan yang sudah ditentukan");
-    startArisanDraw(batch);
-    refreshAdminContent();
-  });
-  document.getElementById("adDrawConfirm")?.addEventListener("click", ()=>{
-    const today = new Date().toISOString().slice(0,10);
-    const mem = batch.members.find(x=>x.id===winner.id);
-    mem.sudahMenang = true;
-    mem.menangRound = batch.currentRound+1;
-    mem.menangTgl = today;
-    batch.drawHistory.push({ round: batch.currentRound+1, tgl: today, winnerId: winner.id, winnerNama: winner.nama });
-    batch.currentRound += 1; // otomatis menggeser jadwal kocokan berikutnya +1 bulan (lihat arisanNextDrawDate)
-    // Coret pemenang ronde ini dari antrean urutan pemenang, biar draw
-    // berikutnya otomatis lanjut ke orang berikutnya dalam urutan.
-    if(Array.isArray(batch.winnerOrder)) batch.winnerOrder = batch.winnerOrder.filter(id=>id!==winner.id);
-    const stillEligible = arisanEligibleMembers(batch);
-    if(stillEligible.length===0) batch.status = "selesai";
-    batch.liveDraw = { active:false }; // tutup siaran live di halaman tamu
-    saveArisanList();
-    toast(`🎉 ${winner.nama} menang ronde ${mem.menangRound}! Tersimpan ke riwayat.`);
-    refreshAdminContent();
-  });
-}
-function spawnConfetti(container){
-  if(!container) return;
-  const colors = ["#F0A93A","#3D7A5D","#B34632","#2C5A88","#D6488E"];
-  let html = "";
-  for(let i=0;i<36;i++){
-    const left = Math.random()*100;
-    const delay = (Math.random()*0.4).toFixed(2);
-    const dur = (1.4+Math.random()*0.9).toFixed(2);
-    const color = colors[i%colors.length];
-    const rot = Math.floor(Math.random()*360);
-    html += `<span class="confetti-piece" style="left:${left}%;background:${color};animation-delay:${delay}s;animation-duration:${dur}s;--rot:${rot}deg;"></span>`;
-  }
-  container.innerHTML = html;
 }
 
 function secDashboard(){
@@ -3038,11 +2072,6 @@ function bindReqForm(existing){
 function refreshAdminContent(){
   document.getElementById("adminContent").innerHTML = adminContentHtml();
   bindAdminContentEvents();
-  if(state.adminSection==="arisan"){
-    startCountdownTicker("adCd");
-    const batch = activeArisanBatch();
-    if(batch) bindArisanAdminLiveWidget(batch);
-  }
 }
 
 function bindAdmin(){
@@ -3105,137 +2134,6 @@ function bindAdminContentEvents(){
     b.addEventListener("click", ()=>{
       rejectRequest(b.dataset.tolak);
       refreshAdminContent();
-    });
-  });
-
-  // arisan tanteh susi
-  document.getElementById("arisanNewBatchBtn")?.addEventListener("click", ()=>{
-    openModal(arisanBatchFormModal()); bindArisanBatchForm();
-  });
-  // Toggle satu tombol untuk buka/tutup pendaftaran anggota. Menggantikan
-  // sepasang tombol "Tutup Pendaftaran & Mulai" / "Buka Kembali Pendaftaran"
-  // lama dengan satu switch yang jelas statusnya (on = pendaftaran dibuka).
-  document.getElementById("arisanRegToggle")?.addEventListener("click", ()=>{
-    const batch = activeArisanBatch();
-    if(!batch) return;
-    if(arisanLiveDrawInfo(batch)){ toast("Tidak bisa mengubah status pendaftaran saat kocokan sedang live","err"); return; }
-
-    if(batch.status === "pendaftaran"){
-      // MATIKAN switch: menutup pendaftaran & memulai/melanjutkan arisan.
-      // Anggota yang masih "pending" dianggap otomatis ditolak begitu
-      // pendaftaran ditutup, jadi urutan pemenang cuma perlu dibuat dari
-      // anggota yang sudah di-ACC & belum pernah menang (harusnya semua,
-      // karena batch baru mau dimulai — tapi tetap dijaga pakai filter
-      // sudahMenang untuk kasus batch yang sempat dibuka-tutup ulang).
-      const eligibleNow = arisanApprovedMembers(batch).filter(m=>!m.sudahMenang);
-      if(!eligibleNow.length){ toast("Belum ada anggota yang di-ACC","err"); return; }
-      if(!confirm("Tutup pendaftaran & mulai arisan? Anggota yang masih menunggu ACC akan otomatis ditolak. Selanjutnya kamu akan diminta menentukan siapa dapat arisan di bulan apa.")) return;
-      openModal(arisanWinnerOrderModal(eligibleNow, batch.tglMulai, { mode:"start" }));
-      bindArisanWinnerOrderForm(eligibleNow, (order)=>{
-        batch.members.forEach(m=>{ if(m.status==="pending") m.status="rejected"; });
-        batch.status = "berjalan";
-        batch.winnerOrder = order; // antrean pemenang: elemen paling depan = ronde berikutnya
-        saveArisanList();
-        closeModal();
-        toast("Arisan dimulai! Urutan pemenang tiap bulan sudah tersimpan.");
-        refreshAdminContent();
-      });
-    } else {
-      // NYALAKAN switch: buka kembali pendaftaran untuk anggota baru.
-      const warn = batch.currentRound>0
-        ? " Kocokan sudah pernah berjalan — pendaftar baru tetap ikut mulai ronde berikutnya, dan kamu akan diminta atur ulang urutan pemenang saat pendaftaran ditutup lagi."
-        : "";
-      if(confirm("Buka kembali pendaftaran untuk batch ini?"+warn)){
-        batch.status = "pendaftaran";
-        saveArisanList();
-        toast("Pendaftaran dibuka kembali. Anggota baru bisa mendaftar lagi.");
-        refreshAdminContent();
-      }
-    }
-  });
-  // Ubah nominal iuran bulanan arisan (mis. Rp150.000 -> Rp200.000).
-  document.getElementById("arisanEditFeeBtn")?.addEventListener("click", ()=>{
-    const batch = activeArisanBatch();
-    if(!batch) return;
-    openModal(arisanEditFeeModal(batch));
-    bindArisanEditFeeForm(batch);
-  });
-  document.getElementById("arisanEditOrderBtn")?.addEventListener("click", ()=>{
-    const batch = activeArisanBatch();
-    if(!batch) return;
-    const eligibleNow = arisanEligibleMembers(batch);
-    if(!eligibleNow.length) return;
-    openModal(arisanWinnerOrderModal(eligibleNow, arisanNextDrawDate(batch), { mode:"edit", roundOffset: batch.currentRound }));
-    bindArisanWinnerOrderForm(eligibleNow, (order)=>{
-      batch.winnerOrder = order;
-      saveArisanList();
-      closeModal();
-      toast("Urutan pemenang berhasil diperbarui.");
-      refreshAdminContent();
-    });
-  });
-  document.getElementById("arisanDrawBtn")?.addEventListener("click", ()=>{
-    const batch = activeArisanBatch();
-    if(!batch) return;
-    startArisanDraw(batch);
-    refreshAdminContent();
-  });
-  document.getElementById("arisanDeleteBatchBtn")?.addEventListener("click", ()=>{
-    const batch = activeArisanBatch();
-    if(!batch) return;
-    if(confirm(`Hapus batch "${batch.nama}"? Semua data pendaftar & riwayat kocokan batch ini ikut terhapus.`)){
-      DB.arisan = DB.arisan.filter(a=>a.id!==batch.id);
-      saveArisanList();
-      toast("Batch arisan dihapus");
-      refreshAdminContent();
-    }
-  });
-  document.querySelectorAll("[data-arisan-acc]").forEach(b=>{
-    b.addEventListener("click", ()=>{
-      const [batchId, memberId] = b.dataset.arisanAcc.split("|");
-      const batch = DB.arisan.find(a=>a.id===batchId);
-      const mem = batch?.members.find(m=>m.id===memberId);
-      if(!mem) return;
-      mem.status = "approved";
-      saveArisanList();
-      toast(`${mem.nama} disetujui ikut arisan`);
-      refreshAdminContent();
-    });
-  });
-  document.querySelectorAll("[data-arisan-tolak]").forEach(b=>{
-    b.addEventListener("click", ()=>{
-      const [batchId, memberId] = b.dataset.arisanTolak.split("|");
-      const batch = DB.arisan.find(a=>a.id===batchId);
-      const mem = batch?.members.find(m=>m.id===memberId);
-      if(!mem) return;
-      mem.status = "rejected";
-      saveArisanList();
-      toast(`Pendaftaran ${mem.nama} ditolak`);
-      refreshAdminContent();
-    });
-  });
-  document.querySelectorAll("[data-arisan-remove]").forEach(b=>{
-    b.addEventListener("click", ()=>{
-      const [batchId, memberId] = b.dataset.arisanRemove.split("|");
-      const batch = DB.arisan.find(a=>a.id===batchId);
-      if(!batch) return;
-      const mem = batch.members.find(m=>m.id===memberId);
-      if(mem && confirm(`Keluarkan ${mem.nama} dari arisan ini?`)){
-        batch.members = batch.members.filter(m=>m.id!==memberId);
-        saveArisanList();
-        toast(`${mem.nama} dikeluarkan dari arisan`);
-        refreshAdminContent();
-      }
-    });
-  });
-  document.querySelectorAll("[data-del-arisan-batch]").forEach(b=>{
-    b.addEventListener("click", ()=>{
-      if(confirm("Hapus riwayat batch arisan ini secara permanen?")){
-        DB.arisan = DB.arisan.filter(a=>a.id!==b.dataset.delArisanBatch);
-        saveArisanList();
-        toast("Riwayat batch dihapus");
-        refreshAdminContent();
-      }
     });
   });
 

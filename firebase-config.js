@@ -39,7 +39,11 @@ _db.enablePersistence({ synchronizeTabs: true }).catch(()=>{ /* aman diabaikan, 
 const DOC_MEMBERS  = _db.collection("kas").doc("members");
 const DOC_TX        = _db.collection("kas").doc("transaksi");
 const DOC_REQUESTS  = _db.collection("kas").doc("requests");
-const DOC_ARISAN    = _db.collection("kas").doc("arisan");
+// Catatan: data Arisan Tanteh Susi sekarang punya situs & dashboard admin
+// SENDIRI (folder /arisan-tanteh-susi), dengan file Firebase config sendiri
+// juga (tetap 1 proyek Firebase yang sama, koleksi kas/arisan) — supaya
+// situs JHT KAS ini tidak perlu lagi memuat kode & langganan real-time
+// untuk arisan sama sekali (lebih ringan).
 
 function _adminEmail(username){
   // Username "admin" pada form login dipetakan ke email Firebase Auth ini.
@@ -55,47 +59,42 @@ const FJHT = {
 
   /** Ambil data awal (sekali saja, untuk boot pertama kali). */
   async loadAll(){
-    const [mSnap, tSnap, rSnap, arSnap] = await Promise.all([
-      DOC_MEMBERS.get(), DOC_TX.get(), DOC_REQUESTS.get(), DOC_ARISAN.get()
+    const [mSnap, tSnap, rSnap] = await Promise.all([
+      DOC_MEMBERS.get(), DOC_TX.get(), DOC_REQUESTS.get()
     ]);
     return {
       members: mSnap.exists ? (mSnap.data().list || null) : null,
       tx: tSnap.exists ? (tSnap.data().list || null) : null,
       requests: rSnap.exists ? (rSnap.data().list || null) : null,
-      arisan: arSnap.exists ? (arSnap.data().list || null) : null,
     };
   },
 
   /** Isi Firestore dengan data awal HANYA jika koleksi masih kosong. */
-  async migrateSeedIfEmpty(seedMembers, seedTx, seedRequests, seedArisan){
+  async migrateSeedIfEmpty(seedMembers, seedTx, seedRequests){
     const current = await this.loadAll();
     const tasks = [];
     if(!current.members) tasks.push(DOC_MEMBERS.set({ list: seedMembers }));
     if(!current.tx) tasks.push(DOC_TX.set({ list: seedTx }));
     if(!current.requests) tasks.push(DOC_REQUESTS.set({ list: seedRequests }));
-    if(!current.arisan) tasks.push(DOC_ARISAN.set({ list: seedArisan || [] }));
     if(tasks.length) await Promise.all(tasks);
     return {
       members: current.members || seedMembers,
       tx: current.tx || seedTx,
       requests: current.requests || seedRequests,
-      arisan: current.arisan || (seedArisan || []),
     };
   },
 
   saveMembers(list){ return DOC_MEMBERS.set({ list }); },
   saveTx(list){ return DOC_TX.set({ list }); },
   saveRequests(list){ return DOC_REQUESTS.set({ list }); },
-  saveArisan(list){ return DOC_ARISAN.set({ list }); },
 
-  /** Dengarkan perubahan real-time (dari perangkat lain) dan panggil onChange({members,tx,requests,arisan}). */
+  /** Dengarkan perubahan real-time (dari perangkat lain) dan panggil onChange({members,tx,requests}). */
   subscribe(onChange){
-    const cache = { members: null, tx: null, requests: null, arisan: null };
-    const fire = ()=>{ if(cache.members && cache.tx && cache.requests && cache.arisan) onChange({ ...cache }); };
+    const cache = { members: null, tx: null, requests: null };
+    const fire = ()=>{ if(cache.members && cache.tx && cache.requests) onChange({ ...cache }); };
     DOC_MEMBERS.onSnapshot(s=>{ if(s.exists){ cache.members = s.data().list || []; fire(); } });
     DOC_TX.onSnapshot(s=>{ if(s.exists){ cache.tx = s.data().list || []; fire(); } });
     DOC_REQUESTS.onSnapshot(s=>{ if(s.exists){ cache.requests = s.data().list || []; fire(); } });
-    DOC_ARISAN.onSnapshot(s=>{ if(s.exists){ cache.arisan = s.data().list || []; fire(); } });
   },
 
   /** Login admin: username "admin" dipetakan ke email Firebase Auth. */
