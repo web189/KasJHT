@@ -13,6 +13,10 @@ import {
 let LIST = [];
 let countdownTimer = null;
 let autoDrawTimer = null;
+// Sama seperti di app.js: kunci sesi live-draw yg sudah dibind di client ini,
+// supaya render() tidak menimpa ulang #content (reset animasi reel) tiap kali
+// ada snapshot Firestore baru selagi kocokan masih berjalan.
+let liveBoundKey = null;
 
 /* ---------------- persistensi ---------------- */
 async function persist(successMsg) {
@@ -200,6 +204,19 @@ function historyPanelHtml() {
 function render() {
   const content = document.getElementById("content");
   const batch = activeBatch(LIST);
+
+  // Kalau kocokan LIVE yang sama sedang animasi jalan di client ini, jangan
+  // render ulang #content (lihat catatan di app.js untuk alasan lengkap).
+  const live = batch ? liveDrawInfo(batch) : null;
+  if (live) {
+    const maxDuration = Math.max(...REEL_TIMING.map((r) => r.duration));
+    const maxTotal = Math.max(maxDuration, LETTER_TOTAL_MS);
+    const key = `${batch.id}:${live.startedAt}`;
+    if (live.elapsed < maxTotal && key === liveBoundKey) return;
+  } else {
+    liveBoundKey = null;
+  }
+
   content.innerHTML = `
     <div class="panel-head" style="margin-top:6px;">
       <h1 class="font-display" style="font-size:22px;">🎁 Kelola Arisan</h1>
@@ -398,6 +415,9 @@ function bindLiveWidget(batch) {
 
   const prog = document.getElementById("adLiveProgress");
   if (prog) { prog.style.transition = `width ${maxDuration - Math.min(live.elapsed, maxDuration)}ms linear`; requestAnimationFrame(() => { prog.style.width = "100%"; }); }
+
+  // Tandai sesi live-draw ini sudah dibind di client ini (lihat app.js).
+  liveBoundKey = `${batch.id}:${live.startedAt}`;
 
   let doneCount = 0;
   const whenBothDone = () => { doneCount++; if (doneCount === 2) showResult(); };

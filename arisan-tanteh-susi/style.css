@@ -150,7 +150,8 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .icon-btn:hover{ color:var(--text); border-color:var(--border-strong); transform:translateY(-1px); }
 
 /* ---------------- hero ---------------- */
-.hero{ padding:28px 0 26px; text-align:center; }
+.hero{ position:relative; padding:28px 0 26px; text-align:center; overflow:hidden; }
+.hero-copy{ position:relative; z-index:1; }
 .hero-eyebrow{
   display:inline-flex; align-items:center; gap:7px; font-size:12px; font-weight:600; color:var(--gold-light);
   background:var(--gold-soft); border:1px solid var(--border-gold); padding:7px 14px; border-radius:20px; margin-bottom:18px;
@@ -163,6 +164,34 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
   -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; color:var(--gold);
 }
 .hero p{ color:var(--text-soft); max-width:48ch; margin:0 auto; font-size:14.5px; }
+
+/* dekorasi "detak jantung" (ECG pulse) di belakang teks hero — ringan:
+   cuma 1 transform:translateX yang di-loop, tanpa JS, tanpa canvas. */
+.hero-pulse{
+  position:absolute; left:0; right:0; top:50%; height:256px; z-index:0;
+  transform:translateY(-50%); opacity:.55; pointer-events:none;
+  -webkit-mask-image:linear-gradient(90deg, transparent, #000 14%, #000 86%, transparent);
+  mask-image:linear-gradient(90deg, transparent, #000 14%, #000 86%, transparent);
+}
+.hero-pulse-track{
+  width:200%; height:100%; display:block; will-change:transform;
+  /* 10s per putaran penuh = 1 "denyut" (blip) muncul tiap 5 detik */
+  animation:heroPulseScroll 10s linear infinite;
+  filter:blur(.6px) drop-shadow(0 0 6px rgba(230,25,196,.6)) drop-shadow(0 0 16px rgba(75,58,255,.35));
+}
+.hero-pulse-line{
+  fill:none; stroke:var(--rose-light); stroke-width:2.6; stroke-linejoin:round; stroke-linecap:round;
+}
+/* kilau "lampu" yg ikut menyapu bareng tiap denyut jantung lewat */
+.pulse-glow{
+  filter:blur(9px);
+  animation:pulseLampFlicker 5s ease-in-out infinite;
+}
+@keyframes pulseLampFlicker{ 0%,100%{ opacity:.5; } 50%{ opacity:1; } }
+@keyframes heroPulseScroll{ from{ transform:translateX(0); } to{ transform:translateX(-50%); } }
+@media (max-width:480px){
+  .hero-pulse{ height:184px; opacity:.45; }
+}
 
 /* ---------------- ticket card (motif utama) ---------------- */
 .ticket{
@@ -346,8 +375,8 @@ input::placeholder{ color:var(--text-faint); }
 .letter-row{ display:flex; justify-content:center; gap:3px; }
 .letter-key{
   flex:1; max-width:26px; aspect-ratio:1; display:flex; align-items:center; justify-content:center;
-  border-radius:5px; background:#0A0824; color:rgba(155,47,224,.28); font-size:10.5px; font-weight:700;
-  font-family:"Fraunces",serif; box-shadow:inset 0 0 0 1px rgba(155,47,224,.14); transition:.15s;
+  border-radius:5px; background:#171246; color:rgba(216,200,255,.78); font-size:10.5px; font-weight:700;
+  font-family:"Fraunces",serif; box-shadow:inset 0 0 0 1px rgba(155,47,224,.38); transition:.15s;
 }
 .letter-key.is-scanning{ background:#2A1050; color:var(--gold-light); box-shadow:inset 0 0 0 1px var(--gold), 0 0 8px 1px rgba(155,47,224,.55); transform:translateY(-1px); }
 .letter-key.is-hit{ background:linear-gradient(155deg, var(--gold-light), var(--gold)); color:var(--ink-on-accent); box-shadow:0 0 12px 2px rgba(155,47,224,.7); }

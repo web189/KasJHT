@@ -27,6 +27,15 @@ function slotCellHtml(m) {
 function randLetter() { return LETTER_ROWS[0][Math.floor(Math.random() * LETTER_ROWS[0].length)]; }
 
 /* ---------------- mesin 1: reel avatar (slot machine) ---------------- */
+// Koreografi 2 tahap: (1) berputar KENCANG & konstan (linear) untuk sebagian
+// besar durasi, lalu (2) baru MELAMBAT mulus di 10 detik terakhir menuju hasil
+// akhir. Hasil pemenang tetap ditentukan sebelumnya (winner) — bagian ini
+// murni mengatur choreography visual, tidak mengubah logic pengundian.
+const SLOT_DECEL_MS = 10000; // 10 detik terakhir baru melambat
+const SLOT_DECEL_EASE = "cubic-bezier(.14,.62,.24,1)"; // kurva perlambatan halus di fase akhir
+const SLOT_DECEL_CELLS = 7; // berapa sel yg "dilalui" selama fase melambat (kurva easing yg bikin makin ke akhir makin pelan)
+const SLOT_FAST_PXPS = 950; // kecepatan putaran fase kencang (px/detik) — konstan, tidak tergantung durasi reel
+
 export function runSlotSpin(idPrefix, eligible, winner, elapsedMs, onAllSettled, onReelSettle) {
   const maxDuration = Math.max(...REEL_TIMING.map((r) => r.duration));
   const others = eligible.filter((m) => m.id !== winner.id);
@@ -36,16 +45,59 @@ export function runSlotSpin(idPrefix, eligible, winner, elapsedMs, onAllSettled,
     const win = document.getElementById(`${idPrefix}Win${i}`);
     if (!strip) return;
     const pool = others.length ? others : [winner];
-    const seq = [...shuffle(pool), ...shuffle(pool), ...shuffle(pool), winner];
+    const remaining = Math.max(600, (maxDuration - elapsedMs) * (cfg.duration / maxDuration));
+    const decelDistance = SLOT_DECEL_CELLS * CELL_H;
+    const hasFastPhase = remaining > SLOT_DECEL_MS * 1.2;
+    // Supaya kecepatan fase "kencang" tetap konstan (px/detik) berapa pun sisa
+    // durasi reel ini, panjang strip (jumlah sel) dihitung dari jarak yg perlu
+    // ditempuh, bukan angka tetap — reel dgn sisa waktu lebih lama otomatis
+    // dapat lebih banyak sel supaya tetap terasa "kencang", bukan malah lambat.
+    let seqLen;
+    if (hasFastPhase) {
+      const fastMs = remaining - SLOT_DECEL_MS;
+      const fastDistance = (SLOT_FAST_PXPS * fastMs) / 1000;
+      seqLen = Math.max(SLOT_DECEL_CELLS + 3, Math.ceil((fastDistance + decelDistance) / CELL_H) + 1);
+    } else {
+      seqLen = SLOT_DECEL_CELLS + 3;
+    }
+    let body = [];
+    while (body.length < seqLen - 1) body = body.concat(shuffle(pool));
+    body = body.slice(0, seqLen - 1);
+    const seq = [...body, winner];
     strip.innerHTML = seq.map(slotCellHtml).join("");
     const targetY = -((seq.length - 1) * CELL_H) + (WINDOW_H / 2 - CELL_H / 2);
-    const remaining = Math.max(600, (maxDuration - elapsedMs) * (cfg.duration / maxDuration));
     strip.style.transition = "none";
     strip.style.transform = "translateY(0px)";
-    requestAnimationFrame(() => {
-      strip.style.transition = `transform ${remaining}ms cubic-bezier(.12,.66,.22,1)`;
-      strip.style.transform = `translateY(${targetY}px)`;
-    });
+    // Paksa reflow supaya posisi awal ("translateY(0)" + transition:none) benar2
+    // ke-render sebelum transition baru dipasang di bawah. Tanpa ini, di sebagian
+    // WebView/browser dua perubahan style ini kebaca dalam frame yg sama sehingga
+    // strip lompat langsung ke posisi akhir tanpa terlihat berputar sama sekali.
+    void strip.offsetHeight;
+
+    const startSpin = () => {
+      if (!hasFastPhase) {
+        // Waktu tersisa sudah mepet (mis. anggota baru buka halaman saat draw
+        // hampir selesai) — langsung jalankan fase perlambatan saja.
+        strip.style.transition = `transform ${remaining}ms ${SLOT_DECEL_EASE}`;
+        strip.style.transform = `translateY(${targetY}px)`;
+      } else {
+        const fastMs = remaining - SLOT_DECEL_MS;
+        const midY = targetY + decelDistance;
+        // Fase 1: berputar KENCANG, kecepatan konstan (linear) ~950px/detik.
+        strip.style.transition = `transform ${fastMs}ms linear`;
+        strip.style.transform = `translateY(${midY}px)`;
+        setTimeout(() => {
+          void strip.offsetHeight; // reflow lagi sebelum ganti transition fase 2
+          // Fase 2: 10 detik terakhir — melambat mulus ke posisi pemenang.
+          strip.style.transition = `transform ${SLOT_DECEL_MS}ms ${SLOT_DECEL_EASE}`;
+          strip.style.transform = `translateY(${targetY}px)`;
+        }, fastMs);
+      }
+    };
+    // Double rAF: tunggu 2 tick paint supaya state awal (transform:0) benar2
+    // ter-commit sebelum transition dipasang — lebih aman lintas WebView drpd 1 rAF.
+    requestAnimationFrame(() => requestAnimationFrame(startSpin));
+
     setTimeout(() => {
       win?.classList.add("is-settled");
       settledCount++;

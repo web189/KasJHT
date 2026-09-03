@@ -12,6 +12,11 @@ import {
 let LIST = [];
 const reg = { nama: "", hp: "" };
 let countdownTimer = null;
+// Kunci sesi live-draw yang animasinya SUDAH dijalankan di client ini.
+// Dipakai supaya render() tidak menimpa ulang #content (yang akan me-reset
+// reel ke posisi 0 dan memicu animasi baru) setiap kali Firestore mengirim
+// snapshot baru (mis. ada anggota lain daftar) SELAGI kocokan sedang jalan.
+let liveBoundKey = null;
 
 function statusMeta(status) {
   if (status === "pendaftaran") return { label: "Pendaftaran Dibuka", cls: "pendaftaran" };
@@ -143,6 +148,21 @@ function render() {
   const content = document.getElementById("content");
   const batch = activeBatch(LIST);
   const history = finishedBatches(LIST);
+
+  // Cek apakah ada kocokan LIVE yang sedang berjalan & masih dalam masa
+  // animasi (belum settle). Kalau sesi live-draw ini SAMA dengan yang
+  // sudah kita bind sebelumnya, jangan render ulang #content — biarkan
+  // animasi reel yang sedang jalan lanjut tanpa gangguan.
+  const live = batch ? liveDrawInfo(batch) : null;
+  if (live) {
+    const maxDuration = Math.max(...REEL_TIMING.map((r) => r.duration));
+    const maxTotal = Math.max(maxDuration, LETTER_TOTAL_MS);
+    const key = `${batch.id}:${live.startedAt}`;
+    if (live.elapsed < maxTotal && key === liveBoundKey) return;
+  } else {
+    liveBoundKey = null;
+  }
+
   content.innerHTML = (batch ? ticketHtml(batch) : emptyHtml()) + (history.length ? historyHtml(history) : "");
   bindContent();
   startCountdown();
@@ -227,6 +247,10 @@ function bindLiveWidget() {
     prog.style.transition = `width ${maxDuration - Math.min(live.elapsed, maxDuration)}ms linear`;
     requestAnimationFrame(() => { prog.style.width = "100%"; });
   }
+
+  // Tandai sesi live-draw ini sudah "dibind" di client ini, supaya render()
+  // tidak menimpa ulang DOM reel & me-reset animasi selama draw masih jalan.
+  liveBoundKey = `${batch.id}:${live.startedAt}`;
 
   // dua mesin jalan bersamaan; hasil akhir (nama pemenang) baru ditampilkan
   // setelah KEDUANYA selesai supaya terasa seperti satu momen pengumuman.
