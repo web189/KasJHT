@@ -8,7 +8,7 @@ import {
   REEL_TIMING, LETTER_TOTAL_MS, runSlotSpin, renderSlotSettled,
   letterMachineHtml, runLetterReveal, renderLetterSettled, spawnConfetti,
 } from "./draw-engine.js";
-import { beginDraw, finalizeDraw } from "./draw-actions.js";
+import { beginDraw, lockDrawResult } from "./draw-actions.js";
 
 let LIST = [];
 const reg = { nama: "", hp: "" };
@@ -63,9 +63,27 @@ function drawCtaHtml(batch, eligible) {
   return `
   <div class="draw-cta">
     <div class="draw-cta-badge">${icon("gift")}<span>Kocokan siap dimulai</span></div>
-    <p class="draw-cta-text">Tombol ini terbuka untuk siapa saja — anggota atau pengunjung mana pun boleh menekannya. Begitu ditekan, semua orang yang sedang membuka halaman ini akan melihat live draw yang sama secara bersamaan.</p>
+    <p class="draw-cta-text">Tombol ini terbuka untuk siapa saja — anggota atau pengunjung mana pun boleh menekannya. Begitu ditekan, semua orang yang sedang membuka halaman ini akan melihat live draw yang sama secara bersamaan. Hasilnya baru resmi setelah disahkan admin.</p>
     <button class="btn btn-gold btn-draw-cta" id="btnPublicDraw" style="width:100%;justify-content:center;">🎰<span>Mulai Kocok Sekarang</span></button>
     ${idleSlotHtml(eligible)}
+  </div>`;
+}
+
+/** Panel hasil kocok yang masih MENUNGGU keputusan admin — ditampilkan
+ *  begitu animasi live draw selesai. Nama yang muncul di sini BELUM resmi;
+ *  cuma admin yang bisa mengesahkan atau membatalkannya (lihat admin.js). */
+function drawPendingHtml(batch) {
+  const p = batch.pendingResult;
+  if (!p) return "";
+  return `
+  <div id="arPendingCard" style="margin-top:18px;">
+    <div class="live-badge pending"><span class="dot"></span>Menunggu Keputusan Admin</div>
+    <div class="draw-result">
+      <div class="draw-trophy">${icon("trophy")}</div>
+      <div class="draw-label">Hasil kocokan ronde ${p.round}</div>
+      <div class="draw-name">${escapeHtml(p.winnerNama)}</div>
+    </div>
+    <p class="pending-note">Nama di atas <b>belum resmi</b> — menunggu admin menyatakan sah atau tidaknya hasil kocokan ini.</p>
   </div>`;
 }
 
@@ -122,7 +140,7 @@ function ticketHtml(batch) {
         <div class="draw-label">Selamat kepada</div>
         <div class="draw-name" id="arLiveWinnerName"></div>
       </div>
-    </div>` : (batch.status === "berjalan" ? (eligibleMembers(batch).length ? drawCtaHtml(batch, eligibleMembers(batch)) : `<div class="full-note" style="margin-top:16px;">${icon("alert")}<span>Semua anggota sudah pernah menang. Menunggu admin menutup batch ini.</span></div>`) : "")}
+    </div>` : (batch.pendingResult ? drawPendingHtml(batch) : (batch.status === "berjalan" ? (eligibleMembers(batch).length ? drawCtaHtml(batch, eligibleMembers(batch)) : `<div class="full-note" style="margin-top:16px;">${icon("alert")}<span>Semua anggota sudah pernah menang. Menunggu admin menutup batch ini.</span></div>`) : ""))}
 
     ${(approved.length || pending.length) ? `
     <div class="perf"></div>
@@ -192,6 +210,11 @@ function updateFab(batch) {
     fab.classList.add("is-live");
     if (label) label.textContent = "Live!";
     fab.onclick = () => document.getElementById("arLiveCard")?.scrollIntoView({ behavior: "smooth", block: "center" });
+  } else if (batch.pendingResult) {
+    fab.hidden = false;
+    fab.classList.remove("is-live");
+    if (label) label.textContent = "Menunggu ACC";
+    fab.onclick = () => document.getElementById("arPendingCard")?.scrollIntoView({ behavior: "smooth", block: "center" });
   } else if (eligible.length) {
     fab.hidden = false;
     fab.classList.remove("is-live");
@@ -297,9 +320,11 @@ function bindLiveWidget() {
     if (result) result.style.display = "flex";
     const nameEl = document.getElementById("arLiveWinnerName");
     if (nameEl) nameEl.textContent = winner.nama;
-    // kunci & catat hasilnya — aman walau banyak pengunjung lain juga
-    // sedang menonton & mencoba mengunci di saat yang (hampir) sama.
-    finalizeDraw(batch.id, live.winnerId, live.winnerNama).catch(() => {});
+    // pindahkan ke status "menunggu ACC admin" — aman walau banyak pengunjung
+    // lain juga sedang menonton & mencoba mengunci di saat yang (hampir) sama.
+    // Belum ada yang tercatat menang di sini; itu baru terjadi kalau admin
+    // menekan "Sahkan" (lihat admin.js / draw-actions.js).
+    lockDrawResult(batch.id, live.winnerId, live.winnerNama).catch(() => {});
   };
 
   if (live.elapsed >= maxTotal) {

@@ -9,7 +9,7 @@ import {
   REEL_TIMING, LETTER_TOTAL_MS, runSlotSpin, renderSlotSettled,
   letterMachineHtml, runLetterReveal, renderLetterSettled,
 } from "./draw-engine.js";
-import { beginDraw, finalizeDraw } from "./draw-actions.js";
+import { beginDraw, lockDrawResult, approveDrawResult, rejectDrawResult } from "./draw-actions.js";
 
 let LIST = [];
 let countdownTimer = null;
@@ -90,6 +90,29 @@ function memRowHtml(m, batchId, kind) {
   </div>`;
 }
 
+/** Kocokan sudah selesai animasinya tapi BELUM resmi — cuma admin yang
+ *  bisa mengesahkan (approveDrawResult) atau membatalkan (rejectDrawResult).
+ *  Siapa pun boleh menekan tombol putar, tapi keabsahan pemenang mutlak
+ *  keputusan admin di sini. */
+function pendingResultHtml(batch) {
+  const p = batch.pendingResult;
+  if (!p) return "";
+  return `
+  <div id="adPendingCard" style="margin:14px 0;">
+    <div class="live-badge pending"><span class="dot"></span>Menunggu Keputusan Anda</div>
+    <div class="draw-result">
+      <div class="draw-trophy">${icon("trophy")}</div>
+      <div class="draw-label">Hasil kocokan ronde ${p.round}</div>
+      <div class="draw-name">${escapeHtml(p.winnerNama)}</div>
+    </div>
+    <p class="pending-note">Nama ini belum tercatat menang. Sahkan kalau kocokan berjalan wajar, atau batalkan untuk kocok ulang.</p>
+    <div class="actions-row" style="justify-content:center;margin-top:14px;">
+      <button class="btn btn-gold" id="btnApproveResult">${icon("check")}<span>Sahkan Pemenang</span></button>
+      <button class="btn btn-danger" id="btnRejectResult">${icon("close")}<span>Tidak Sah, Kocok Ulang</span></button>
+    </div>
+  </div>`;
+}
+
 function winnerOrderHtml(batch) {
   const approved = approvedMembers(batch);
   const order = (batch.winnerOrder || []).filter((id) => approved.some((m) => m.id === id) && !approved.find((m) => m.id === id)?.sudahMenang);
@@ -112,7 +135,7 @@ function batchPanelHtml(batch) {
   const eligible = eligibleMembers(batch);
   const live = liveDrawInfo(batch);
   const nextDraw = nextDrawDate(batch);
-  const canStartDraw = batch.status === "berjalan" && !live && eligible.length > 0;
+  const canStartDraw = batch.status === "berjalan" && !live && !batch.pendingResult && eligible.length > 0;
 
   return `
   <div class="panel">
@@ -131,7 +154,7 @@ function batchPanelHtml(batch) {
       ${(batch.drawHistory || []).length || approved.some((m) => m.sudahMenang) ? `<button class="btn btn-sm btn-danger" id="btnResetWinners" ${live ? "disabled" : ""} title="Kembalikan semua pemenang jadi eligible lagi">${icon("history")}<span>Reset Ulang Pemenang</span></button>` : ""}
       <button class="btn btn-sm btn-danger" id="btnDeleteBatch">${icon("trash")}<span>Hapus Batch</span></button>
     </div>
-    ${batch.status === "berjalan" ? `<p class="field-hint" style="margin:-6px 0 14px;">Tombol kocok ini juga tampil di halaman publik — anggota atau pengunjung mana pun boleh menekannya, hasilnya terkunci &amp; tercatat otomatis untuk semua orang.</p>` : ""}
+    ${batch.status === "berjalan" ? `<p class="field-hint" style="margin:-6px 0 14px;">Tombol kocok ini juga tampil di halaman publik — anggota atau pengunjung mana pun boleh menekannya. Hasilnya baru resmi &amp; tercatat setelah Anda sahkan di sini.</p>` : ""}
 
     ${batch.status !== "pendaftaran" ? `
     <div class="countdown-cap">${live ? "🎰 Kocokan sedang berlangsung" : `Kocokan berikutnya: <b>${fmtDate(nextDraw)}</b>`}</div>` : ""}
@@ -152,9 +175,9 @@ function batchPanelHtml(batch) {
         <div class="draw-trophy">${icon("trophy")}</div>
         <div class="draw-label">Pemenang ronde ini</div>
         <div class="draw-name" id="adLiveWinnerName"></div>
-        <div class="field-hint" id="adLiveSaved" style="margin-top:10px;">Menyimpan hasil…</div>
+        <div class="field-hint" id="adLiveSaved" style="margin-top:10px;">Menunggu keputusan Anda…</div>
       </div>
-    </div>` : ""}
+    </div>` : (batch.pendingResult ? pendingResultHtml(batch) : "")}
 
     <div class="group-label">Menunggu Persetujuan ${pending.length ? `<span class="badge-count">${pending.length}</span>` : ""}</div>
     ${pending.length ? `<div class="mem-grid">${pending.map((m) => memRowHtml(m, batch.id, "pending")).join("")}</div>` : `<div class="field-hint">Tidak ada pendaftar baru.</div>`}
@@ -333,6 +356,20 @@ async function startDraw(batch) {
   }
 }
 
+/* ---------------- sah / tidak sah hasil kocok (ACC admin) ----------------
+   Titik SATU-SATUNYA di mana pemenang benar-benar tercatat resmi. Siapa
+   saja boleh menekan tombol putar & menonton hasilnya, tapi keabsahannya
+   mutlak keputusan admin di sini. */
+async function decideResult(batchId, approve) {
+  if (!approve && !confirm("Batalkan hasil kocokan ini? Anggota otomatis kembali eligible dan batch bisa dikocok ulang oleh siapa saja.")) return;
+  try {
+    if (approve) { await approveDrawResult(batchId); toast("Pemenang disahkan ✓"); }
+    else { await rejectDrawResult(batchId); toast("Hasil dibatalkan — kocok ulang kapan saja"); }
+  } catch (err) {
+    toast("Gagal menyimpan keputusan: " + err.message, true);
+  }
+}
+
 /* ---------------- reset ulang pemenang ----------------
    Untuk kalau admin salah kocok / mau mengulang ronde dari nol: kembalikan semua
    anggota yang sudah pernah menang di batch ini jadi eligible lagi, dan hapus
@@ -346,6 +383,7 @@ async function resetWinners(batch) {
   (batch.members || []).forEach((m) => { m.sudahMenang = false; m.menangRound = null; m.menangTgl = null; });
   batch.drawHistory = [];
   batch.currentRound = 0;
+  batch.pendingResult = null;
   if (batch.status === "selesai") batch.status = "berjalan"; // buka lagi kalau sebelumnya ditutup karena semua sudah menang
   await persist("Pemenang direset — semua anggota aktif eligible lagi");
 }
@@ -353,12 +391,13 @@ async function resetWinners(batch) {
 function checkAutoDraw() {
   const batch = activeBatch(LIST);
   if (!batch || batch.status !== "berjalan") return;
+  if (batch.pendingResult) return; // menunggu keputusan admin dulu — jangan mulai apa pun
   const live = liveDrawInfo(batch);
   if (live) {
     // jaga-jaga: kalau animasi di semua tab sudah lewat durasinya tapi belum
     // ada yang berhasil mengunci hasil (mis. koneksi terputus), coba kunci di sini.
     const maxTotal = Math.max(Math.max(...REEL_TIMING.map((r) => r.duration)), LETTER_TOTAL_MS);
-    if (live.elapsed >= maxTotal) finalizeDraw(batch.id, live.winnerId, live.winnerNama).catch(() => {});
+    if (live.elapsed >= maxTotal) lockDrawResult(batch.id, live.winnerId, live.winnerNama).catch(() => {});
     return;
   }
   const eligible = eligibleMembers(batch);
@@ -375,6 +414,8 @@ function bindDashboard(batch) {
   document.getElementById("btnDeleteBatch")?.addEventListener("click", () => deleteBatch(batch.id));
   document.getElementById("btnResetWinners")?.addEventListener("click", () => resetWinners(batch));
   document.getElementById("btnSaveOrder")?.addEventListener("click", () => saveWinnerOrder(batch));
+  document.getElementById("btnApproveResult")?.addEventListener("click", () => decideResult(batch.id, true));
+  document.getElementById("btnRejectResult")?.addEventListener("click", () => decideResult(batch.id, false));
 
   document.querySelectorAll('[data-act="approve"]').forEach((b) => b.addEventListener("click", () => setMemberStatus(b.dataset.batch, b.dataset.mem, "approved")));
   document.querySelectorAll('[data-act="reject"]').forEach((b) => b.addEventListener("click", () => setMemberStatus(b.dataset.batch, b.dataset.mem, "rejected")));
@@ -412,8 +453,8 @@ function bindLiveWidget(batch) {
     if (result) result.style.display = "flex";
     const nameEl = document.getElementById("adLiveWinnerName");
     if (nameEl) nameEl.textContent = winner.nama;
-    finalizeDraw(batch.id, live.winnerId, live.winnerNama)
-      .then(() => { const saved = document.getElementById("adLiveSaved"); if (saved) saved.textContent = "Tersimpan ✓"; })
+    lockDrawResult(batch.id, live.winnerId, live.winnerNama)
+      .then(() => { const saved = document.getElementById("adLiveSaved"); if (saved) saved.textContent = "Menunggu keputusan Anda…"; })
       .catch(() => {});
   };
 
