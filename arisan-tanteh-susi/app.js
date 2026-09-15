@@ -13,6 +13,12 @@ import { beginDraw, finalizeDraw } from "./draw-actions.js";
 let LIST = [];
 const reg = { nama: "", hp: "" };
 let countdownTimer = null;
+// Tanda tangan kocokan yang SEDANG dianimasikan di tab ini (batchId+startedAt+winnerId).
+// Dipakai supaya render() tidak membongkar ulang mesin kocok yang lagi jalan hanya
+// karena ada snapshot Firestore lain yang tidak berhubungan (mis. ada pendaftar baru
+// masuk sementara reel masih berputar) — sumber utama bug "mesin kocok tidak tampil /
+// reelnya loncat-loncat balik ke awal".
+let boundLiveSig = null;
 
 function statusMeta(status) {
   if (status === "pendaftaran") return { label: "Pendaftaran Dibuka", cls: "pendaftaran" };
@@ -152,6 +158,18 @@ function render() {
   const content = document.getElementById("content");
   const batch = activeBatch(LIST);
   const history = finishedBatches(LIST);
+  const live = batch ? liveDrawInfo(batch) : null;
+  const sig = live ? `${batch.id}:${batch.liveDraw.startedAt}:${batch.liveDraw.winnerId}` : null;
+
+  // Kocokan yang sama masih berjalan & sudah ter-render di tab ini — jangan timpa
+  // ulang DOM-nya. Ini yang menjaga mesin kocok tetap tampil stabil (tidak reset
+  // ke posisi awal) walau ada perubahan data lain yang memicu snapshot baru.
+  if (sig && sig === boundLiveSig && document.getElementById("arLiveCard")) {
+    updateFab(batch);
+    return;
+  }
+  boundLiveSig = sig;
+
   content.innerHTML = (batch ? ticketHtml(batch) : emptyHtml()) + (history.length ? historyHtml(history) : "");
   bindContent();
   startCountdown();
@@ -220,6 +238,10 @@ function bindContent() {
     const maxDuration = Math.max(Math.max(...REEL_TIMING.map((r) => r.duration)), LETTER_TOTAL_MS);
     try {
       await beginDraw(LIST, batch.id, maxDuration);
+      // Jangan cuma menunggu snapshot Firestore memantul balik — render segera
+      // di tab ini juga, supaya orang yang menekan tombol langsung melihat mesin
+      // kocoknya, bukan cuma tulisan "Memulai…" yang menggantung.
+      render();
       toast("Live draw dimulai! Semua yang membuka halaman ini akan melihatnya sekarang.");
     } catch (err) {
       toast(err.message, true);
@@ -259,6 +281,13 @@ function bindLiveWidget() {
   const machine = document.getElementById("arLiveMachine");
   const maxDuration = Math.max(...REEL_TIMING.map((r) => r.duration));
   const maxTotal = Math.max(maxDuration, LETTER_TOTAL_MS);
+  // Pool wajah "pengganggu" di reel HARUS seluruh anggota approved (bukan cuma yang
+  // masih eligible) — reel ini murni tampilan/dramatisasi, pemenang sudah terkunci
+  // sebelum animasi mulai (lihat draw-engine.js). Kalau dibatasi ke yang masih
+  // eligible saja, makin banyak ronde sudah lewat, makin sedikit wajah yang tersisa
+  // (bisa tinggal 1!) — reel jadi terlihat "diam"/monoton karena isinya berulang
+  // sama saja di ketiga jendela. Pakai roster approved penuh supaya tetap ramai.
+  const decoyPool = approvedMembers(batch);
 
   const showResult = () => {
     machine?.classList.remove("is-spinning");
@@ -285,7 +314,8 @@ function bindLiveWidget() {
   const prog = document.getElementById("arLiveProgress");
   if (prog) {
     prog.style.transition = `transform ${maxDuration - Math.min(live.elapsed, maxDuration)}ms linear`;
-    requestAnimationFrame(() => { prog.style.transform = "scaleX(1)"; });
+    void prog.offsetHeight; // paksa reflow — lihat catatan di draw-engine.js runSlotSpin
+    prog.style.transform = "scaleX(1)";
   }
 
   // dua mesin jalan bersamaan; hasil akhir (nama pemenang) baru ditampilkan
@@ -296,7 +326,7 @@ function bindLiveWidget() {
     if (doneCount === 2) { showResult(); spawnConfetti(document.querySelector(".ticket")); }
   };
   runSlotSpin(
-    "arLive", eligible, winner, live.elapsed, whenBothDone,
+    "arLive", decoyPool, winner, live.elapsed, whenBothDone,
     (settled, total) => {
       if (!status || settled >= total) return;
       status.textContent = settled === total - 1 ? "🔴 LIVE — reel terakhir masih berputar… tahan napas!" : `🔴 LIVE — reel ${settled}/${total} berhenti…`;

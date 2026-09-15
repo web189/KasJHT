@@ -14,6 +14,9 @@ import { beginDraw, finalizeDraw } from "./draw-actions.js";
 let LIST = [];
 let countdownTimer = null;
 let autoDrawTimer = null;
+// Sama seperti di app.js: tanda tangan kocokan yang sedang dianimasikan di tab
+// admin ini, supaya render() tidak membongkar ulang mesin kocok yang lagi jalan.
+let boundLiveSig = null;
 
 /* ---------------- persistensi ---------------- */
 async function persist(successMsg) {
@@ -125,6 +128,7 @@ function batchPanelHtml(batch) {
       <button class="btn btn-sm" id="btnEditSettings">${icon("edit")}<span>Ubah Iuran/Kuota</span></button>
       ${batch.status === "pendaftaran" ? `<button class="btn btn-sm btn-gold" id="btnStartBatch" ${approved.length ? "" : "disabled"}>${icon("check")}<span>Tutup Pendaftaran &amp; Mulai</span></button>` : ""}
       ${batch.status === "berjalan" ? `<button class="btn btn-sm btn-gold" id="btnDraw" ${canStartDraw ? "" : "disabled"}>🎰<span>Mulai Kocok Sekarang</span></button>` : ""}
+      ${(batch.drawHistory || []).length || approved.some((m) => m.sudahMenang) ? `<button class="btn btn-sm btn-danger" id="btnResetWinners" ${live ? "disabled" : ""} title="Kembalikan semua pemenang jadi eligible lagi">${icon("history")}<span>Reset Ulang Pemenang</span></button>` : ""}
       <button class="btn btn-sm btn-danger" id="btnDeleteBatch">${icon("trash")}<span>Hapus Batch</span></button>
     </div>
     ${batch.status === "berjalan" ? `<p class="field-hint" style="margin:-6px 0 14px;">Tombol kocok ini juga tampil di halaman publik — anggota atau pengunjung mana pun boleh menekannya, hasilnya terkunci &amp; tercatat otomatis untuk semua orang.</p>` : ""}
@@ -202,6 +206,17 @@ function historyPanelHtml() {
 function render() {
   const content = document.getElementById("content");
   const batch = activeBatch(LIST);
+  const live = batch ? liveDrawInfo(batch) : null;
+  const sig = live ? `${batch.id}:${batch.liveDraw.startedAt}:${batch.liveDraw.winnerId}` : null;
+
+  // Kocokan yang sama masih berjalan & sudah ter-render di tab admin ini — jangan
+  // timpa ulang DOM-nya (itu yang bikin reel loncat balik ke awal tiap ada snapshot
+  // baru yang tidak berhubungan, mis. ada pendaftar baru masuk).
+  if (sig && sig === boundLiveSig && document.getElementById("adLiveCard")) {
+    return;
+  }
+  boundLiveSig = sig;
+
   content.innerHTML = `
     <div class="panel-head" style="margin-top:6px;">
       <h1 class="font-display" style="font-size:22px;">🎁 Kelola Arisan</h1>
@@ -309,10 +324,30 @@ async function startDraw(batch) {
   const maxDuration = Math.max(Math.max(...REEL_TIMING.map((r) => r.duration)), LETTER_TOTAL_MS);
   try {
     await beginDraw(LIST, batch.id, maxDuration);
+    // Render segera di dashboard ini juga — jangan cuma menunggu snapshot Firestore
+    // memantul balik, supaya mesin kocok langsung tampil begitu ditekan.
+    render();
     toast("Kocokan dimulai — live untuk semua orang!");
   } catch (err) {
     toast(err.message, true);
   }
+}
+
+/* ---------------- reset ulang pemenang ----------------
+   Untuk kalau admin salah kocok / mau mengulang ronde dari nol: kembalikan semua
+   anggota yang sudah pernah menang di batch ini jadi eligible lagi, dan hapus
+   riwayat kocokan batch ini. Urutan giliran (winnerOrder) TIDAK dihapus supaya
+   preferensi urutan yang sudah diatur admin tidak hilang percuma. */
+async function resetWinners(batch) {
+  if (liveDrawInfo(batch)) { toast("Tidak bisa reset selagi kocokan sedang berlangsung", true); return; }
+  const hasWinners = (batch.members || []).some((m) => m.sudahMenang) || (batch.drawHistory || []).length;
+  if (!hasWinners) { toast("Belum ada pemenang di batch ini", true); return; }
+  if (!confirm("Reset semua pemenang di batch ini? Semua anggota yang pernah menang akan jadi eligible lagi, dan riwayat kocokan batch ini akan dihapus. Tindakan ini tidak bisa dibatalkan.")) return;
+  (batch.members || []).forEach((m) => { m.sudahMenang = false; m.menangRound = null; m.menangTgl = null; });
+  batch.drawHistory = [];
+  batch.currentRound = 0;
+  if (batch.status === "selesai") batch.status = "berjalan"; // buka lagi kalau sebelumnya ditutup karena semua sudah menang
+  await persist("Pemenang direset — semua anggota aktif eligible lagi");
 }
 
 function checkAutoDraw() {
@@ -338,6 +373,7 @@ function bindDashboard(batch) {
   document.getElementById("btnStartBatch")?.addEventListener("click", () => startBatch(batch));
   document.getElementById("btnDraw")?.addEventListener("click", () => startDraw(batch));
   document.getElementById("btnDeleteBatch")?.addEventListener("click", () => deleteBatch(batch.id));
+  document.getElementById("btnResetWinners")?.addEventListener("click", () => resetWinners(batch));
   document.getElementById("btnSaveOrder")?.addEventListener("click", () => saveWinnerOrder(batch));
 
   document.querySelectorAll('[data-act="approve"]').forEach((b) => b.addEventListener("click", () => setMemberStatus(b.dataset.batch, b.dataset.mem, "approved")));
@@ -363,6 +399,10 @@ function bindLiveWidget(batch) {
   const machine = document.getElementById("adLiveMachine");
   const maxDuration = Math.max(...REEL_TIMING.map((r) => r.duration));
   const maxTotal = Math.max(maxDuration, LETTER_TOTAL_MS);
+  // Sama seperti app.js: pool wajah pengganggu di reel pakai roster approved PENUH,
+  // bukan cuma yang masih eligible — supaya reel tidak monoton/terlihat "diam" waktu
+  // batch sudah lanjut beberapa ronde dan cuma sedikit anggota yang belum menang.
+  const decoyPool = approvedMembers(batch);
 
   const showResult = () => {
     machine?.classList.remove("is-spinning");
@@ -387,11 +427,11 @@ function bindLiveWidget(batch) {
   }
 
   const prog = document.getElementById("adLiveProgress");
-  if (prog) { prog.style.transition = `transform ${maxDuration - Math.min(live.elapsed, maxDuration)}ms linear`; requestAnimationFrame(() => { prog.style.transform = "scaleX(1)"; }); }
+  if (prog) { prog.style.transition = `transform ${maxDuration - Math.min(live.elapsed, maxDuration)}ms linear`; void prog.offsetHeight; prog.style.transform = "scaleX(1)"; }
 
   let doneCount = 0;
   const whenBothDone = () => { doneCount++; if (doneCount === 2) showResult(); };
-  runSlotSpin("adLive", eligible, winner, live.elapsed, whenBothDone, (settled, total) => {
+  runSlotSpin("adLive", decoyPool, winner, live.elapsed, whenBothDone, (settled, total) => {
     if (!status || settled >= total) return;
     status.textContent = settled === total - 1 ? "🔴 LIVE — reel terakhir masih berputar…" : `🔴 LIVE — reel ${settled}/${total} berhenti…`;
   });

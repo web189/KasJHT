@@ -42,10 +42,23 @@ export function runSlotSpin(idPrefix, eligible, winner, elapsedMs, onAllSettled,
     const remaining = Math.max(600, (maxDuration - elapsedMs) * (cfg.duration / maxDuration));
     strip.style.transition = "none";
     strip.style.transform = "translateY(0px)";
-    requestAnimationFrame(() => {
-      strip.style.transition = `transform ${remaining}ms cubic-bezier(.12,.66,.22,1)`;
-      strip.style.transform = `translateY(${targetY}px)`;
-    });
+    // Paksa reflow SINKRON di sini (bukan cuma requestAnimationFrame) sebelum
+    // menyalakan transition. Di sebagian WebView (mis. preview browser di editor
+    // kode Android), satu requestAnimationFrame saja tidak cukup memisahkan
+    // "state awal" dari "state akhir + transition" — keduanya digabung jadi satu
+    // paint, transition-nya gagal ke-trigger, dan reel langsung "meloncat" ke
+    // posisi akhir tanpa animasi sama sekali (kelihatan seperti tidak berputar).
+    // Membaca offsetHeight memaksa browser mem-flush style lama dulu sebelum
+    // baris berikutnya dieksekusi, jadi transition-nya dijamin kepakai.
+    void strip.offsetHeight;
+    // cubic-bezier ease-out yang lebih landai: kurva lama (.12,.66,.22,1) ternyata
+    // menempuh ~99% jarak reel hanya dalam ~79% durasi, jadi sisa 21% waktu cuma
+    // "merayap" 1% terakhir — kelihatan seperti kencang terus lalu tiba-tiba
+    // melambat mendadak di beberapa detik terakhir. Kurva easeOutCubic ini
+    // menyebar perlambatannya lebih merata di ~40-45% durasi terakhir, jadi
+    // terasa melambat bertahap, bukan mendadak di ujung.
+    strip.style.transition = `transform ${remaining}ms cubic-bezier(.33,1,.68,1)`;
+    strip.style.transform = `translateY(${targetY}px)`;
     setTimeout(() => {
       win?.classList.add("is-settled");
       settledCount++;
