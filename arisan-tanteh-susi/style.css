@@ -1,9 +1,12 @@
 /* ============================================================
    Arisan Tanteh Susi — stylesheet MANDIRI
-   Evolusi desain 2026: Premium Dark Emerald Glass UI
-   (emerald + champagne gold + rose accent), tetap mempertahankan
-   identitas "tiket undian" dan seluruh class yang dipakai app.js /
-   admin.js / draw-engine.js. Vanilla CSS, tanpa framework.
+   Evolusi desain 2026: Sunset Glass UI — palet langit senja
+   (biru senja + ungu + magenta + koral + oranye + kuning keemasan),
+   tetap mempertahankan identitas "tiket undian" dan seluruh class
+   yang dipakai app.js / admin.js / draw-engine.js. Vanilla CSS,
+   tanpa framework. Nama variabel lama (--emerald/--gold/--rose)
+   sengaja dipertahankan supaya tidak perlu menyentuh app.js/admin.js —
+   isinya saja yang diganti ke warna baru.
 ============================================================ */
 *, *::before, *::after { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; scroll-behavior:smooth; }
@@ -21,21 +24,29 @@ html { -webkit-text-size-adjust: 100%; scroll-behavior:smooth; }
   --card-highlight:#1D4935;
 
   /* -------- emerald -------- */
-  --emerald:#19D98A;
-  --emerald-bright:#52F2AD;
-  --emerald-soft:rgba(25,217,138,.12);
-  --emerald-glow:rgba(25,217,138,.22);
+  --emerald:#5C7CD9;
+  --emerald-bright:#8AA6F2;
+  --emerald-soft:rgba(92,124,217,.12);
+  --emerald-glow:rgba(92,124,217,.22);
 
   /* -------- gold -------- */
-  --gold:#F5C95D;
-  --gold-light:#FFE49A;
-  --gold-deep:#B98B2D;
-  --gold-soft:rgba(245,201,93,.12);
+  --gold:#F7941D;
+  --gold-light:#FFC845;
+  --gold-deep:#C96A08;
+  --gold-soft:rgba(247,148,29,.12);
 
   /* -------- rose -------- */
-  --rose:#FF5F9F;
-  --rose-light:#FF82B4;
-  --rose-soft:rgba(255,95,159,.12);
+  --rose:#EA1E8C;
+  --rose-light:#FF6FBE;
+  --rose-soft:rgba(234,30,140,.12);
+
+  /* -------- aksen tambahan palet senja: ungu & koral -------- */
+  --purple:#B97FD9;
+  --purple-light:#D9B3EF;
+  --purple-soft:rgba(185,127,217,.14);
+  --coral:#F0728A;
+  --coral-light:#FFA3B0;
+  --coral-soft:rgba(240,114,138,.14);
 
   /* -------- text -------- */
   --text:#F8F7F0;
@@ -48,8 +59,8 @@ html { -webkit-text-size-adjust: 100%; scroll-behavior:smooth; }
   --border:rgba(255,255,255,.07);
 
   /* -------- border lain -------- */
-  --border-emerald:rgba(25,217,138,.18);
-  --border-gold:rgba(245,201,93,.22);
+  --border-emerald:rgba(92,124,217,.18);
+  --border-gold:rgba(247,148,29,.22);
   --border-strong:rgba(255,255,255,.14);
 
   --danger:#FF6B6B;
@@ -65,27 +76,32 @@ html { -webkit-text-size-adjust: 100%; scroll-behavior:smooth; }
 }
 
 @keyframes auroraDrift{
-  0%,100%{ background-position:0% 0%, 100% 10%, 40% 100%, 0 0; }
-  50%{ background-position:8% -6%, 92% 18%, 55% 92%, 0 0; }
+  0%,100%{ transform:translate3d(0,0,0) scale(1); }
+  50%{ transform:translate3d(-2.5%,-2%,0) scale(1.05); }
 }
 body{
   margin:0;
-  background:
-    radial-gradient(900px 560px at 8% -12%, rgba(25,217,138,.16), transparent 62%),
-    radial-gradient(820px 540px at 102% 6%, rgba(245,201,93,.13), transparent 60%),
-    radial-gradient(760px 520px at 46% 104%, rgba(255,95,159,.09), transparent 62%),
-    var(--bg-deep);
-  background-attachment:fixed;
-  background-size:140% 140%, 140% 140%, 140% 140%, auto;
-  animation:auroraDrift 26s ease-in-out infinite;
+  background:var(--bg-deep);
   color:var(--text); font-family:var(--font-ui);
   font-size:15px; line-height:1.55; -webkit-font-smoothing:antialiased; min-height:100vh;
-  position:relative;
+  position:relative; overflow-x:hidden;
 }
-/* butiran halus di seluruh latar — satu sentuhan tekstur premium, sangat
-   samar, supaya permukaan gelap tidak terasa "flat" di layar besar */
+/* lapisan cahaya senja — SATU elemen terkomposit, digerakkan lewat
+   transform (bukan background-position) supaya browser cukup memindah
+   layer di GPU tanpa menggambar ulang tiap frame. Jauh lebih ringan
+   dibanding menganimasikan background langsung di body. */
+body::after{
+  content:""; position:fixed; inset:-8% -8%; z-index:0; pointer-events:none; will-change:transform;
+  background:
+    radial-gradient(900px 560px at 8% -8%, rgba(92,124,217,.17), transparent 60%),
+    radial-gradient(760px 520px at 88% -4%, var(--purple-soft), transparent 58%),
+    radial-gradient(820px 540px at 100% 32%, rgba(247,148,29,.13), transparent 60%),
+    radial-gradient(760px 520px at 40% 104%, rgba(234,30,140,.11), transparent 62%);
+  animation:auroraDrift 30s ease-in-out infinite;
+}
+/* butiran halus — statis (tidak dianimasikan), jadi cuma digambar sekali */
 body::before{
-  content:""; position:fixed; inset:0; pointer-events:none; z-index:0; opacity:.5; mix-blend-mode:overlay;
+  content:""; position:fixed; inset:0; pointer-events:none; z-index:0; opacity:.4; mix-blend-mode:overlay;
   background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)' opacity='0.05'/></svg>");
 }
 .topbar, .wrap, .fab-draw, .modal-overlay, .toast-stack{ position:relative; z-index:1; }
@@ -110,15 +126,15 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
   display:flex; align-items:center; justify-content:space-between; gap:12px;
   padding:14px 18px; max-width:720px; margin:0 auto;
   position:sticky; top:0; z-index:60;
-  background:linear-gradient(180deg, rgba(4,16,12,.86), rgba(4,16,12,.55) 80%, transparent);
-  backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
+  background:linear-gradient(180deg, rgba(4,16,12,.92), rgba(4,16,12,.72) 80%, transparent);
+  backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px);
 }
 .topbar.wide{ max-width:1180px; }
 .brand{ display:flex; align-items:center; gap:11px; text-decoration:none; min-width:0; }
 .brand-mark{
   width:38px; height:38px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center;
   background:radial-gradient(circle at 32% 26%, var(--gold-light), var(--gold) 55%, var(--gold-deep) 100%);
-  color:#241a05; box-shadow:0 0 0 1px rgba(245,201,93,.25), 0 4px 14px -4px rgba(245,201,93,.55);
+  color:#241a05; box-shadow:0 0 0 1px rgba(247,148,29,.25), 0 4px 14px -4px rgba(247,148,29,.55);
 }
 .brand-mark svg{ width:19px; height:19px; }
 .brand-text b{ display:block; font-family:"Fraunces",serif; font-size:16px; font-weight:700; letter-spacing:-.01em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
@@ -136,15 +152,15 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .btn:active{ transform:translateY(0); filter:brightness(.96); }
 .btn svg{ width:15px; height:15px; flex-shrink:0; }
 .btn-gold{
-  background:linear-gradient(155deg, var(--gold-light), var(--gold) 55%, var(--gold-deep) 100%);
-  color:#241a05; border:none; box-shadow:var(--shadow-sm), inset 0 1px 0 rgba(255,255,255,.4);
+  background:linear-gradient(150deg, var(--gold-light), var(--gold) 60%, var(--coral) 130%);
+  color:#3a1400; border:none; box-shadow:var(--shadow-sm), inset 0 1px 0 rgba(255,255,255,.4);
 }
-.btn-gold:hover{ filter:brightness(1.07); box-shadow:var(--shadow-md), 0 0 26px -6px rgba(245,201,93,.65), inset 0 1px 0 rgba(255,255,255,.4); }
+.btn-gold:hover{ filter:brightness(1.07); box-shadow:var(--shadow-md), 0 0 26px -6px rgba(247,148,29,.65), inset 0 1px 0 rgba(255,255,255,.4); }
 .btn-ghost{ background:transparent; border-color:transparent; }
 .btn-ghost:hover{ background:var(--bg-elev-2); border-color:var(--border); }
 .btn-sm{ padding:8px 13px; min-height:38px; font-size:12.5px; }
 .btn-danger{ color:var(--rose-light); }
-.btn-danger:hover{ border-color:rgba(255,95,159,.4); }
+.btn-danger:hover{ border-color:rgba(234,30,140,.4); }
 .btn[disabled]{ opacity:.4; cursor:not-allowed; transform:none; box-shadow:none; }
 .icon-btn{
   width:40px; height:40px; min-height:0; border-radius:50%; display:inline-flex; align-items:center; justify-content:center;
@@ -158,15 +174,16 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .hero-eyebrow{
   display:inline-flex; align-items:center; gap:7px; font-size:12px; font-weight:700; color:var(--gold-light);
   background:var(--gold-soft); border:1px solid var(--border-gold); padding:7px 15px; border-radius:20px; margin-bottom:20px;
-  box-shadow:0 0 0 1px rgba(0,0,0,.15) inset, 0 6px 18px -10px rgba(245,201,93,.5);
+  box-shadow:0 0 0 1px rgba(0,0,0,.15) inset, 0 6px 18px -10px rgba(247,148,29,.5);
 }
 .hero h1{
   font-size:clamp(32px,7.6vw,50px); font-weight:700; margin:0 0 16px; line-height:1.06; letter-spacing:-.02em;
 }
 .hero h1 .ln2{
-  display:block; background:linear-gradient(100deg, var(--emerald-bright), var(--gold-light) 45%, var(--gold) 75%);
+  display:block;
+  background:linear-gradient(95deg, var(--emerald-bright) 0%, var(--purple-light) 24%, var(--rose-light) 46%, var(--coral) 64%, var(--gold) 82%, var(--gold-light) 100%);
   -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; color:var(--gold);
-  background-size:200% auto; animation:textShine 7s ease-in-out infinite;
+  background-size:220% auto; animation:textShine 8s ease-in-out infinite;
 }
 @keyframes textShine{ 0%,100%{ background-position:0% 50%; } 50%{ background-position:100% 50%; } }
 .hero p{ color:var(--text-soft); max-width:46ch; margin:0 auto; font-size:15px; line-height:1.6; }
@@ -180,7 +197,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
   transition:transform .3s var(--ease), box-shadow .3s var(--ease);
 }
 @media (hover:hover){
-  .ticket:hover{ transform:translateY(-3px); box-shadow:var(--shadow-lg), 0 0 44px -18px rgba(25,217,138,.35); }
+  .ticket:hover{ transform:translateY(-3px); box-shadow:var(--shadow-lg), 0 0 44px -18px rgba(92,124,217,.35); }
 }
 .ticket::before{
   /* highlight tipis di bagian atas, gaya glass */
@@ -189,8 +206,8 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 }
 .ticket::after{
   content:""; position:absolute; inset:-1px; border-radius:inherit; padding:1px; pointer-events:none; z-index:0;
-  background:linear-gradient(120deg, var(--border-gold), var(--rose-soft) 42%, rgba(245,201,93,.06) 68%, var(--border-gold));
-  background-size:240% 240%; animation:shimmerBorder 10s ease-in-out infinite;
+  background:linear-gradient(120deg, var(--border-emerald), var(--purple-soft) 28%, var(--rose-soft) 52%, var(--coral-soft) 70%, var(--border-gold));
+  background-size:280% 280%; animation:shimmerBorder 12s ease-in-out infinite;
   -webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
   -webkit-mask-composite:xor; mask-composite:exclude;
 }
@@ -204,10 +221,10 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
   text-transform:uppercase; letter-spacing:.05em; white-space:nowrap;
 }
 .ticket-status.pendaftaran{ background:var(--gold-soft); color:var(--gold-light); border:1px solid var(--border-gold); }
-.ticket-status.berjalan{ background:var(--rose-soft); color:var(--rose-light); border:1px solid rgba(255,95,159,.2); }
-.ticket-status.berjalan::before{ content:""; width:6px; height:6px; border-radius:50%; background:var(--rose); box-shadow:0 0 0 0 rgba(255,95,159,.6); animation:livePulse 1.6s ease-out infinite; }
+.ticket-status.berjalan{ background:var(--rose-soft); color:var(--rose-light); border:1px solid rgba(234,30,140,.2); }
+.ticket-status.berjalan::before{ content:""; width:6px; height:6px; border-radius:50%; background:var(--rose); box-shadow:0 0 0 0 rgba(234,30,140,.6); animation:livePulse 1.6s ease-out infinite; }
 .ticket-status.selesai{ background:var(--emerald-soft); color:var(--emerald-bright); border:1px solid var(--border-emerald); }
-@keyframes livePulse{ 0%{box-shadow:0 0 0 0 rgba(255,95,159,.55);} 70%{box-shadow:0 0 0 7px rgba(255,95,159,0);} 100%{box-shadow:0 0 0 0 rgba(255,95,159,0);} }
+@keyframes livePulse{ 0%{box-shadow:0 0 0 0 rgba(234,30,140,.55);} 70%{box-shadow:0 0 0 7px rgba(234,30,140,0);} 100%{box-shadow:0 0 0 0 rgba(234,30,140,0);} }
 
 .ticket-fee{ margin-top:16px; display:flex; align-items:baseline; gap:9px; flex-wrap:wrap; }
 .ticket-fee .label{ font-size:12px; color:var(--text-faint); }
@@ -238,8 +255,8 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
   border-radius:var(--radius-sm); padding:11px 4px 10px; text-align:center; position:relative; overflow:hidden;
   box-shadow:inset 0 1px 0 rgba(255,255,255,.06), var(--shadow-sm);
 }
-.cd-box::after{ content:""; position:absolute; inset:0; background:linear-gradient(180deg, rgba(245,201,93,.08), transparent 55%); pointer-events:none; }
-.cd-num{ font-family:"Fraunces",serif; font-size:clamp(20px,5.5vw,25px); font-weight:700; color:var(--gold-light); text-shadow:0 0 14px rgba(245,201,93,.25); }
+.cd-box::after{ content:""; position:absolute; inset:0; background:linear-gradient(180deg, rgba(247,148,29,.08), transparent 55%); pointer-events:none; }
+.cd-num{ font-family:"Fraunces",serif; font-size:clamp(20px,5.5vw,25px); font-weight:700; color:var(--gold-light); text-shadow:0 0 14px rgba(247,148,29,.25); }
 .cd-lbl{ font-size:9.5px; color:var(--text-faint); text-transform:uppercase; letter-spacing:.08em; margin-top:4px; }
 
 /* ---------------- kontrol form (global — supaya select di luar .field pun ikut gelap) ---------------- */
@@ -269,7 +286,7 @@ input::placeholder{ color:var(--text-faint); }
 /* ---------------- CTA kocok publik: siapa saja boleh menekan ---------------- */
 .draw-cta{
   position:relative; margin-top:4px; padding:20px 18px; border-radius:var(--radius-md); text-align:center;
-  background:linear-gradient(165deg, rgba(255,95,159,.14), rgba(245,201,93,.10) 55%, rgba(25,217,138,.08));
+  background:linear-gradient(165deg, rgba(234,30,140,.15), var(--purple-soft) 40%, rgba(247,148,29,.10) 70%, rgba(92,124,217,.08));
   border:1px solid var(--border-gold); box-shadow:inset 0 1px 0 rgba(255,255,255,.06), var(--shadow-sm);
 }
 .draw-cta-badge{
@@ -278,15 +295,22 @@ input::placeholder{ color:var(--text-faint); }
 }
 .draw-cta-text{ font-size:12.5px; color:var(--text-soft); max-width:38ch; margin:0 auto 15px; line-height:1.55; }
 .btn-draw-cta{
-  font-size:15px; padding:14px 18px; min-height:52px; border-radius:16px; position:relative; overflow:hidden;
-  animation:ctaPulse 2.6s ease-in-out infinite;
+  font-size:15px; padding:14px 18px; min-height:52px; border-radius:16px; position:relative; overflow:visible; isolation:isolate;
 }
 .btn-draw-cta span{ position:relative; z-index:1; }
-@keyframes ctaPulse{
-  0%,100%{ box-shadow:var(--shadow-sm), inset 0 1px 0 rgba(255,255,255,.4), 0 0 0 0 rgba(245,201,93,.45); }
-  50%{ box-shadow:var(--shadow-md), inset 0 1px 0 rgba(255,255,255,.4), 0 0 22px 4px rgba(245,201,93,.5); }
+.btn-draw-cta::before{
+  /* cincin cahaya terpisah, dianimasikan lewat opacity+transform (murah di GPU)
+     dan cuma berdenyut beberapa kali lalu diam — bukan selamanya, supaya
+     halaman tetap ringan kalau dibiarkan terbuka lama. */
+  content:""; position:absolute; inset:-5px; border-radius:20px; z-index:-1; pointer-events:none;
+  background:radial-gradient(circle, rgba(247,148,29,.55), transparent 72%);
+  opacity:0; transform:scale(.85); animation:ctaPulse 2.4s ease-in-out 5;
 }
-.btn-draw-cta[disabled]{ animation:none; }
+@keyframes ctaPulse{
+  0%,100%{ opacity:0; transform:scale(.85); }
+  50%{ opacity:1; transform:scale(1.1); }
+}
+.btn-draw-cta[disabled]::before{ animation:none; opacity:0; }
 .idle-pool{ margin-top:16px; display:flex; align-items:center; justify-content:center; gap:9px; flex-wrap:wrap; }
 .idle-pool-lbl{ font-size:11px; color:var(--text-faint); }
 .idle-pool-avatars{ display:flex; }
@@ -302,10 +326,17 @@ input::placeholder{ color:var(--text-faint); }
   position:fixed; right:18px; bottom:calc(18px + env(safe-area-inset-bottom, 0px)); z-index:200;
   display:flex; align-items:center; gap:8px; padding:14px 20px; border:none; border-radius:999px; cursor:pointer;
   background:linear-gradient(155deg, var(--gold-light), var(--gold) 55%, var(--gold-deep) 100%); color:#241a05;
-  font-family:var(--font-ui); font-weight:800; font-size:14px; letter-spacing:.01em;
-  box-shadow:0 14px 30px -10px rgba(245,201,93,.55), inset 0 1px 0 rgba(255,255,255,.45);
-  animation:fabPulse 2.4s ease-in-out infinite; transition:transform .18s var(--ease), box-shadow .18s var(--ease);
+  font-family:var(--font-ui); font-weight:800; font-size:14px; letter-spacing:.01em; isolation:isolate;
+  box-shadow:0 14px 30px -10px rgba(247,148,29,.55), inset 0 1px 0 rgba(255,255,255,.45);
+  transition:transform .18s var(--ease), box-shadow .18s var(--ease);
   -webkit-tap-highlight-color:transparent;
+}
+.fab-draw::after{
+  /* cincin denyut yang murah (opacity+transform), berhenti sendiri setelah
+     beberapa kali supaya tidak terus memakai daya saat halaman idle lama */
+  content:""; position:absolute; inset:-6px; border-radius:999px; z-index:-1; pointer-events:none;
+  background:radial-gradient(circle, rgba(247,148,29,.55), transparent 72%);
+  opacity:0; transform:scale(.85); animation:fabPulse 2.2s ease-in-out 5;
 }
 .fab-draw:hover{ transform:translateY(-3px) scale(1.03); }
 .fab-draw:active{ transform:translateY(0) scale(.98); }
@@ -313,11 +344,12 @@ input::placeholder{ color:var(--text-faint); }
 .fab-draw[hidden]{ display:none; }
 .fab-draw.is-live{
   background:linear-gradient(155deg, var(--rose-light), var(--rose) 65%); color:#3a0620;
-  box-shadow:0 14px 30px -10px rgba(255,95,159,.6), inset 0 1px 0 rgba(255,255,255,.45);
+  box-shadow:0 14px 30px -10px rgba(234,30,140,.6), inset 0 1px 0 rgba(255,255,255,.45);
 }
+.fab-draw.is-live::after{ background:radial-gradient(circle, rgba(234,30,140,.55), transparent 72%); }
 @keyframes fabPulse{
-  0%,100%{ box-shadow:0 14px 30px -10px rgba(245,201,93,.55), inset 0 1px 0 rgba(255,255,255,.45), 0 0 0 0 rgba(245,201,93,.4); }
-  50%{ box-shadow:0 14px 30px -10px rgba(245,201,93,.55), inset 0 1px 0 rgba(255,255,255,.45), 0 0 0 9px rgba(245,201,93,0); }
+  0%,100%{ opacity:0; transform:scale(.85); }
+  50%{ opacity:.9; transform:scale(1.18); }
 }
 @media (max-width:640px){
   .fab-draw{ right:14px; bottom:calc(14px + env(safe-area-inset-bottom, 0px)); padding:13px 18px; }
@@ -365,38 +397,38 @@ input::placeholder{ color:var(--text-faint); }
 /* ---------------- live draw / slot (dimensi TIDAK diubah — sinkron dgn draw-engine.js) ---------------- */
 .live-badge{
   display:inline-flex; align-items:center; gap:7px; font-size:11.5px; font-weight:700; color:var(--rose-light);
-  background:var(--rose-soft); border:1px solid rgba(255,95,159,.3); padding:6px 12px; border-radius:20px; margin-bottom:14px;
+  background:var(--rose-soft); border:1px solid rgba(234,30,140,.3); padding:6px 12px; border-radius:20px; margin-bottom:14px;
 }
-.live-badge .dot{ width:7px; height:7px; border-radius:50%; background:var(--rose); box-shadow:0 0 0 0 rgba(255,95,159,.6); animation:livePulse 1.4s ease-out infinite; }
+.live-badge .dot{ width:7px; height:7px; border-radius:50%; background:var(--rose); box-shadow:0 0 0 0 rgba(234,30,140,.6); animation:livePulse 1.4s ease-out infinite; }
 .wheel-status{ text-align:center; font-size:12.5px; font-weight:700; color:var(--text-soft); margin:0 0 14px; min-height:16px; }
 .slot-machine{
   position:relative; border-radius:22px; padding:3px; margin:2px auto 8px; max-width:340px;
   background:linear-gradient(135deg, var(--gold-light), var(--gold) 30%, var(--gold-deep) 55%, var(--gold-light) 78%, var(--gold));
-  box-shadow:var(--shadow-lg), 0 0 26px -8px rgba(245,201,93,.55); transition:box-shadow .3s;
+  box-shadow:var(--shadow-lg), 0 0 26px -8px rgba(247,148,29,.55); transition:box-shadow .3s;
 }
 .slot-machine.is-spinning{ animation:slotHum 1.5s ease-in-out infinite; }
-@keyframes slotHum{ 0%,100%{ box-shadow:var(--shadow-lg), 0 0 26px -8px rgba(245,201,93,.55);} 50%{ box-shadow:var(--shadow-lg), 0 0 34px -2px rgba(245,201,93,.8);} }
+@keyframes slotHum{ 0%,100%{ box-shadow:var(--shadow-lg), 0 0 26px -8px rgba(247,148,29,.55);} 50%{ box-shadow:var(--shadow-lg), 0 0 34px -2px rgba(247,148,29,.8);} }
 .slot-machine.is-jackpot{ animation:slotFlash 1s ease; }
-@keyframes slotFlash{ 0%{box-shadow:var(--shadow-lg),0 0 26px -8px rgba(245,201,93,.55);} 30%{box-shadow:var(--shadow-lg),0 0 52px 6px rgba(245,201,93,.95);} 100%{box-shadow:var(--shadow-lg),0 0 26px -8px rgba(245,201,93,.55);} }
+@keyframes slotFlash{ 0%{box-shadow:var(--shadow-lg),0 0 26px -8px rgba(247,148,29,.55);} 30%{box-shadow:var(--shadow-lg),0 0 52px 6px rgba(247,148,29,.95);} 100%{box-shadow:var(--shadow-lg),0 0 26px -8px rgba(247,148,29,.55);} }
 .slot-inner{ position:relative; overflow:hidden; border-radius:19px; padding:12px 8px 14px; background:radial-gradient(120% 140% at 50% -10%, #16110a 0%, #0c0906 60%, #060403 100%); }
 .slot-reels{ position:relative; display:flex; justify-content:center; gap:6px; }
 .slot-window{
   position:relative; width:clamp(58px,19vw,80px); height:200px; overflow:hidden; border-radius:10px;
   background:linear-gradient(180deg, #050302, #0c0704);
-  box-shadow:inset 0 0 0 2px rgba(245,201,93,.35), inset 0 14px 16px -8px rgba(0,0,0,.85), inset 0 -14px 16px -8px rgba(0,0,0,.85);
+  box-shadow:inset 0 0 0 2px rgba(247,148,29,.35), inset 0 14px 16px -8px rgba(0,0,0,.85), inset 0 -14px 16px -8px rgba(0,0,0,.85);
   transition:box-shadow .2s;
 }
 .slot-window.is-settled{ animation:settleGlow .55s ease; }
-@keyframes settleGlow{ 0%{box-shadow:inset 0 0 0 2px rgba(245,201,93,.35), inset 0 14px 16px -8px rgba(0,0,0,.85), inset 0 -14px 16px -8px rgba(0,0,0,.85);} 45%{box-shadow:inset 0 0 0 2px var(--rose), 0 0 18px 2px rgba(255,95,159,.6);} 100%{box-shadow:inset 0 0 0 2px rgba(245,201,93,.35), inset 0 14px 16px -8px rgba(0,0,0,.85), inset 0 -14px 16px -8px rgba(0,0,0,.85);} }
+@keyframes settleGlow{ 0%{box-shadow:inset 0 0 0 2px rgba(247,148,29,.35), inset 0 14px 16px -8px rgba(0,0,0,.85), inset 0 -14px 16px -8px rgba(0,0,0,.85);} 45%{box-shadow:inset 0 0 0 2px var(--rose), 0 0 18px 2px rgba(234,30,140,.6);} 100%{box-shadow:inset 0 0 0 2px rgba(247,148,29,.35), inset 0 14px 16px -8px rgba(0,0,0,.85), inset 0 -14px 16px -8px rgba(0,0,0,.85);} }
 .slot-strip{ position:absolute; left:0; top:0; width:100%; }
 .slot-window.is-idle{ height:90px; }
 .slot-strip.is-idle{ position:static; display:flex; align-items:center; justify-content:center; height:100%; }
 .slot-cell{ height:66px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; padding:0 5px; }
 .slot-avatar{ width:28px; height:28px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:10.5px; font-weight:800; color:#fff; box-shadow:0 2px 4px rgba(0,0,0,.45); }
 .slot-name{ font-size:9px; font-weight:700; color:var(--gold-light); max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; text-shadow:0 1px 2px rgba(0,0,0,.6); }
-.slot-payline{ position:absolute; left:-4px; right:-4px; top:100px; height:2px; z-index:3; pointer-events:none; background:linear-gradient(90deg, transparent, var(--rose) 12%, var(--rose) 88%, transparent); box-shadow:0 0 10px 1px rgba(255,95,159,.7); }
+.slot-payline{ position:absolute; left:-4px; right:-4px; top:100px; height:2px; z-index:3; pointer-events:none; background:linear-gradient(90deg, transparent, var(--rose) 12%, var(--rose) 88%, transparent); box-shadow:0 0 10px 1px rgba(234,30,140,.7); }
 .slot-progress{ height:4px; border-radius:4px; margin-top:12px; overflow:hidden; background:rgba(255,255,255,.08); }
-.slot-progress-fill{ height:100%; width:0%; border-radius:4px; background:linear-gradient(90deg, var(--rose), var(--gold-light)); transition:width .1s linear; }
+.slot-progress-fill{ height:100%; width:100%; border-radius:4px; background:linear-gradient(90deg, var(--rose), var(--gold-light)); transform:scaleX(0); transform-origin:left; transition:transform .1s linear; }
 .draw-result{ display:flex; flex-direction:column; align-items:center; gap:4px; margin:18px 0 4px; }
 
 .draw-trophy{ width:50px; height:50px; border-radius:16px; display:flex; align-items:center; justify-content:center; background:linear-gradient(155deg, var(--gold-light), var(--gold)); color:#241a06; box-shadow:var(--shadow-sm); }
@@ -410,26 +442,26 @@ input::placeholder{ color:var(--text-faint); }
 .letter-board{
   display:flex; flex-direction:column; gap:5px; padding:12px 10px; border-radius:14px;
   background:radial-gradient(120% 160% at 50% -20%, #16110a 0%, #0c0906 60%, #060403 100%);
-  box-shadow:inset 0 0 0 1.5px rgba(245,201,93,.3), 0 0 0 3px var(--bg-elev), var(--shadow-sm);
+  box-shadow:inset 0 0 0 1.5px rgba(247,148,29,.3), 0 0 0 3px var(--bg-elev), var(--shadow-sm);
 }
 .letter-row{ display:flex; justify-content:center; gap:3px; }
 .letter-key{
   flex:1; max-width:26px; aspect-ratio:1; display:flex; align-items:center; justify-content:center;
-  border-radius:5px; background:#14100a; color:rgba(245,201,93,.28); font-size:10.5px; font-weight:700;
-  font-family:"Fraunces",serif; box-shadow:inset 0 0 0 1px rgba(245,201,93,.14); transition:.15s;
+  border-radius:5px; background:#14100a; color:rgba(247,148,29,.28); font-size:10.5px; font-weight:700;
+  font-family:"Fraunces",serif; box-shadow:inset 0 0 0 1px rgba(247,148,29,.14); transition:.15s;
 }
-.letter-key.is-scanning{ background:#241b0d; color:var(--gold-light); box-shadow:inset 0 0 0 1px var(--gold), 0 0 8px 1px rgba(245,201,93,.55); transform:translateY(-1px); }
-.letter-key.is-hit{ background:linear-gradient(155deg, var(--gold-light), var(--gold)); color:#241a05; box-shadow:0 0 12px 2px rgba(245,201,93,.7); }
+.letter-key.is-scanning{ background:#241b0d; color:var(--gold-light); box-shadow:inset 0 0 0 1px var(--gold), 0 0 8px 1px rgba(247,148,29,.55); transform:translateY(-1px); }
+.letter-key.is-hit{ background:linear-gradient(155deg, var(--gold-light), var(--gold)); color:#241a05; box-shadow:0 0 12px 2px rgba(247,148,29,.7); }
 .result-strip{ display:flex; justify-content:center; flex-wrap:wrap; gap:5px; margin-top:12px; perspective:400px; }
 .result-flap{
   width:30px; height:38px; border-radius:6px; position:relative; background:#14100a;
-  box-shadow:inset 0 0 0 1px rgba(245,201,93,.22), 0 3px 6px rgba(0,0,0,.4);
+  box-shadow:inset 0 0 0 1px rgba(247,148,29,.22), 0 3px 6px rgba(0,0,0,.4);
   display:flex; align-items:center; justify-content:center; overflow:hidden;
 }
 .result-flap.is-space{ background:transparent; box-shadow:none; width:14px; }
 .result-flap .flap-char{
   font-family:"Fraunces",serif; font-weight:700; font-size:17px; color:var(--gold-light);
-  text-shadow:0 0 8px rgba(245,201,93,.4);
+  text-shadow:0 0 8px rgba(247,148,29,.4);
 }
 .result-flap.is-settled{ animation:flapSettle .4s ease; }
 @keyframes flapSettle{ 0%{ transform:rotateX(60deg); opacity:.4; } 100%{ transform:rotateX(0); opacity:1; } }
@@ -566,12 +598,22 @@ footer.site-footer a{ color:var(--gold-light); text-decoration:none; }
   .brand-text span{ display:none; }
 }
 
-/* ---------------- gerak & aksesibilitas ---------------- */
+/* ---------------- gerak & aksesibilitas ----------------
+   Hormati preferensi "kurangi gerakan" TAPI jangan sampai mematikan
+   transisi FUNGSIONAL (reel kocok pakai CSS transition yang di-drive JS).
+   Kalau semua transition dipaksa 0ms, reel jadi terasa "tidak berputar"
+   sama sekali — jadi yang dihentikan cuma animasi dekoratif/loop yang
+   tidak membawa informasi penting. */
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
-    animation-duration:.01ms !important;
-    animation-iteration-count:1 !important;
-    transition-duration:.01ms !important;
-    scroll-behavior:auto !important;
+  body::after,
+  .hero h1 .ln2,
+  .ticket::after,
+  .fab-draw::after,
+  .btn-draw-cta::before,
+  .slot-machine.is-spinning,
+  .slot-machine.is-jackpot,
+  .ticket-status.berjalan::before,
+  .live-badge .dot {
+    animation:none !important;
   }
 }

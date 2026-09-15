@@ -83,6 +83,43 @@ sesuaikan dua tautan itu:
 - di `script.js` (folder induk): cari `arisan-tanteh-susi/index.html` (2 tempat)
 - di `arisan-tanteh-susi/index.html`: cari `../index.html` (2 tempat)
 
+## Update: perbaikan bug reel + performa jauh lebih ringan
+
+**Bug reel kocok "tidak berputar" — diperbaiki.** Penyebabnya aturan CSS
+`@media (prefers-reduced-motion: reduce)` versi lama yang memaksa
+`transition-duration: .01ms !important` ke SEMUA elemen. Animasi reel kocok
+dijalankan lewat CSS `transition` yang durasinya di-set oleh JavaScript
+(bisa 40–60 detik) — begitu HP/browser preview punya setelan "kurangi
+gerakan" aktif (banyak terjadi di Android/WebView secara default), transisi
+itu langsung dipaksa jadi ~0 detik, sehingga reel "meloncat" ke hasil akhir
+tanpa terlihat berputar sama sekali. Sekarang aturan itu dipersempit —
+cuma menghentikan animasi dekoratif yang berulang terus (latar, denyut
+tombol, dsb), tidak lagi menyentuh transisi reel yang justru membawa
+informasi penting.
+
+**Website dibuat jauh lebih ringan**, tanpa mengorbankan tampilan:
+- Latar "aurora" senja yang bergerak dulu menganimasikan `background-position`
+  langsung di `<body>` (dipaksa gambar ulang tiap frame, + `background-attachment:fixed`
+  yang berat di mobile). Sekarang dipindah ke satu lapisan terpisah yang
+  digerakkan lewat `transform` — cukup dipindah oleh GPU, jauh lebih hemat.
+- Progress bar saat live draw dulu menganimasikan `width` (memicu reflow
+  tiap frame). Sekarang pakai `transform: scaleX()` yang jauh lebih murah.
+- Tombol "Mulai Kocok Sekarang" & tombol kocok mengambang (FAB) dulu
+  menganimasikan `box-shadow` **selamanya** selama batch "berjalan" (bisa
+  berhari-hari halaman dibiarkan terbuka). Sekarang efek denyutnya jadi
+  cincin cahaya terpisah yang dianimasikan lewat `opacity`/`transform`,
+  dan cuma berdenyut beberapa kali lalu diam — bukan tanpa henti.
+- Blur kaca (`backdrop-filter`) di topbar yang sticky dikurangi dari 10px
+  ke 6px — kombinasi sticky + blur tebal termasuk yang paling berat untuk
+  discroll di HP kelas menengah ke bawah.
+- Font Google yang diunduh dirampingkan (bobot 500 yang sebenarnya tidak
+  dipakai di mana pun dihapus dari permintaan).
+
+Semua perubahan ini murni teknis (tidak mengubah tampilan yang terlihat
+mata secara berarti) — situsnya harus terasa jauh lebih mulus terutama di
+HP dengan spesifikasi menengah ke bawah, dan reel kocok sekarang benar-benar
+terlihat berputar di semua kondisi perangkat.
+
 ## Update: siapa saja boleh mengocok (bukan cuma admin)
 
 Perubahan utama dari versi sebelumnya:

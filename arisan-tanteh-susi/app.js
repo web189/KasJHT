@@ -277,15 +277,15 @@ function bindLiveWidget() {
     renderSlotSettled("arLive", winner);
     renderLetterSettled("arLive", winner.nama);
     const prog = document.getElementById("arLiveProgress");
-    if (prog) { prog.style.transition = "none"; prog.style.width = "100%"; }
+    if (prog) { prog.style.transition = "none"; prog.style.transform = "scaleX(1)"; }
     showResult();
     return;
   }
 
   const prog = document.getElementById("arLiveProgress");
   if (prog) {
-    prog.style.transition = `width ${maxDuration - Math.min(live.elapsed, maxDuration)}ms linear`;
-    requestAnimationFrame(() => { prog.style.width = "100%"; });
+    prog.style.transition = `transform ${maxDuration - Math.min(live.elapsed, maxDuration)}ms linear`;
+    requestAnimationFrame(() => { prog.style.transform = "scaleX(1)"; });
   }
 
   // dua mesin jalan bersamaan; hasil akhir (nama pemenang) baru ditampilkan

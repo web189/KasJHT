@@ -189,7 +189,7 @@ function historyPanelHtml() {
     <div class="panel-head"><h3>${icon("history")} Batch Selesai</h3></div>
     ${finished.map((b) => `
       <div class="mem-row">
-        <div class="coin-avatar" style="background:${avatarBg("#3FC6A2")}">${icon("trophy")}</div>
+        <div class="coin-avatar" style="background:${avatarBg("#5C7CD9")}">${icon("trophy")}</div>
         <div style="flex:1;min-width:0;">
           <div class="mm-name">${escapeHtml(b.nama)}</div>
           <div class="mm-sub">${(b.members || []).filter((m) => m.sudahMenang).length} pemenang · selesai</div>
@@ -381,13 +381,13 @@ function bindLiveWidget(batch) {
     renderSlotSettled("adLive", winner);
     renderLetterSettled("adLive", winner.nama);
     const prog = document.getElementById("adLiveProgress");
-    if (prog) { prog.style.transition = "none"; prog.style.width = "100%"; }
+    if (prog) { prog.style.transition = "none"; prog.style.transform = "scaleX(1)"; }
     showResult();
     return;
   }
 
   const prog = document.getElementById("adLiveProgress");
-  if (prog) { prog.style.transition = `width ${maxDuration - Math.min(live.elapsed, maxDuration)}ms linear`; requestAnimationFrame(() => { prog.style.width = "100%"; }); }
+  if (prog) { prog.style.transition = `transform ${maxDuration - Math.min(live.elapsed, maxDuration)}ms linear`; requestAnimationFrame(() => { prog.style.transform = "scaleX(1)"; }); }
 
   let doneCount = 0;
   const whenBothDone = () => { doneCount++; if (doneCount === 2) showResult(); };

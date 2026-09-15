@@ -162,7 +162,7 @@ if (typeof document !== "undefined" && !document.getElementById("confettiKeyfram
 }
 export function spawnConfetti(container) {
   if (!container) return;
-  const colors = ["#DDAE44", "#F7DC8A", "#E8709A", "#3FC6A2"];
+  const colors = ["#F7941D", "#FFC845", "#EA1E8C", "#5C7CD9"];
   let html = "";
   for (let i = 0; i < 26; i++) {
     const left = Math.random() * 100, delay = (Math.random() * 0.35).toFixed(2), dur = (1.3 + Math.random() * 0.8).toFixed(2);
