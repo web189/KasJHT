@@ -27,6 +27,35 @@ function slotCellHtml(m) {
 function randLetter() { return LETTER_ROWS[0][Math.floor(Math.random() * LETTER_ROWS[0].length)]; }
 
 /* ---------------- mesin 1: reel avatar (slot machine) ---------------- */
+// Profil kecepatan reel: KENCANG & KONSTAN untuk sebagian besar durasi, lalu
+// melambat mulus (deselerasi seragam, seperti benda direm) hanya di
+// DECEL_TAIL_MS terakhir — angka ini FIXED dalam milidetik, bukan persentase
+// dari total durasi, supaya reel 42 detik maupun 60 detik sama-sama terasa
+// "kencang lama, baru melambat di ~10 detik penghabisan", bukan melambat
+// bertahap sepanjang separuh durasi (itu yang bikin terasa "pelan" terus).
+//
+// Ini SENGAJA tidak pakai CSS transition sama sekali (posisi dihitung &
+// ditulis manual tiap frame via requestAnimationFrame) supaya:
+// 1) Presisi — durasi fase lambat benar-benar tetap 10 detik, tidak
+//    tergantung/terdistorsi oleh kurva bezier yang scaling-nya proporsional
+//    ke total durasi.
+// 2) Tidak lagi bergantung ke perilaku CSS transition di berbagai WebView
+//    (sumber bug "reel tidak berputar" yang sebelumnya sempat terjadi).
+const DECEL_TAIL_MS = 10000;
+// Kecepatan target di fase "kencang", dalam piksel per milidetik.
+// CATATAN PENTING (bug yang diperbaiki): sebelumnya jarak strip cuma 3×
+// panjang pool + 1 (pemenang) — untuk durasi 42–60 detik itu artinya reel
+// harus menempuh jarak yang sama pendeknya dalam waktu yang jauh lebih
+// lama, sehingga kecepatan hasil hitungan (targetY / waktu) jadi SANGAT
+// lambat (di bawah ~30px/detik, cuma seperti geser pelan-pelan, bukan
+// "berputar"). Perbaikannya: hitung dulu MAU secepat apa reel terlihat
+// (SPIN_SPEED), lalu tentukan berapa kali pool perlu diulang supaya jarak
+// tempuh cukup untuk kecepatan itu selama fase kencang+lambat — bukan
+// sebaliknya (jarak tetap kecil, kecepatan ikut-ikutan kecil).
+const SPIN_SPEED = 0.55; // px/ms ≈ 550px/detik — kencang & jelas terlihat berputar di HP, tanpa terlalu berat
+const MIN_LAPS = 4;   // minimal tetap 4 putaran pool penuh (variasi visual), walau durasi tersisa singkat
+const MAX_LAPS = 90;  // batas atas supaya jumlah elemen DOM tidak meledak untuk durasi terpanjang (60 detik)
+
 export function runSlotSpin(idPrefix, eligible, winner, elapsedMs, onAllSettled, onReelSettle) {
   const maxDuration = Math.max(...REEL_TIMING.map((r) => r.duration));
   const others = eligible.filter((m) => m.id !== winner.id);
@@ -36,35 +65,58 @@ export function runSlotSpin(idPrefix, eligible, winner, elapsedMs, onAllSettled,
     const win = document.getElementById(`${idPrefix}Win${i}`);
     if (!strip) return;
     const pool = others.length ? others : [winner];
-    const seq = [...shuffle(pool), ...shuffle(pool), ...shuffle(pool), winner];
+
+    const remaining = Math.max(600, (maxDuration - elapsedMs) * (cfg.duration / maxDuration));
+    // Fase lambat (tail) maksimal DECEL_TAIL_MS, tapi kalau viewer baru gabung
+    // saat sisa waktu sudah lebih pendek dari itu, seluruh sisa waktu jadi
+    // fase lambat (tidak mungkin ada fase kencang kalau waktunya sendiri
+    // sudah kurang dari 10 detik).
+    const tail = Math.min(DECEL_TAIL_MS, remaining);
+    const fast = remaining - tail;
+
+    // Jarak yang dibutuhkan supaya fase kencang benar-benar terasa secepat
+    // SPIN_SPEED (jarak fase-kencang + jarak fase-lambat, deselerasi seragam
+    // dari SPIN_SPEED ke 0 rata-rata menempuh setengah kecepatan awal).
+    const desiredDistance = SPIN_SPEED * (fast + tail / 2);
+    const lapDistance = pool.length * CELL_H;
+    const laps = Math.min(MAX_LAPS, Math.max(MIN_LAPS, Math.ceil(desiredDistance / lapDistance)));
+
+    const seq = [];
+    for (let lap = 0; lap < laps; lap++) seq.push(...shuffle(pool));
+    seq.push(winner);
     strip.innerHTML = seq.map(slotCellHtml).join("");
     const targetY = -((seq.length - 1) * CELL_H) + (WINDOW_H / 2 - CELL_H / 2);
-    const remaining = Math.max(600, (maxDuration - elapsedMs) * (cfg.duration / maxDuration));
+
     strip.style.transition = "none";
-    strip.style.transform = "translateY(0px)";
-    // Paksa reflow SINKRON di sini (bukan cuma requestAnimationFrame) sebelum
-    // menyalakan transition. Di sebagian WebView (mis. preview browser di editor
-    // kode Android), satu requestAnimationFrame saja tidak cukup memisahkan
-    // "state awal" dari "state akhir + transition" — keduanya digabung jadi satu
-    // paint, transition-nya gagal ke-trigger, dan reel langsung "meloncat" ke
-    // posisi akhir tanpa animasi sama sekali (kelihatan seperti tidak berputar).
-    // Membaca offsetHeight memaksa browser mem-flush style lama dulu sebelum
-    // baris berikutnya dieksekusi, jadi transition-nya dijamin kepakai.
-    void strip.offsetHeight;
-    // cubic-bezier ease-out yang lebih landai: kurva lama (.12,.66,.22,1) ternyata
-    // menempuh ~99% jarak reel hanya dalam ~79% durasi, jadi sisa 21% waktu cuma
-    // "merayap" 1% terakhir — kelihatan seperti kencang terus lalu tiba-tiba
-    // melambat mendadak di beberapa detik terakhir. Kurva easeOutCubic ini
-    // menyebar perlambatannya lebih merata di ~40-45% durasi terakhir, jadi
-    // terasa melambat bertahap, bukan mendadak di ujung.
-    strip.style.transition = `transform ${remaining}ms cubic-bezier(.33,1,.68,1)`;
-    strip.style.transform = `translateY(${targetY}px)`;
-    setTimeout(() => {
+
+    // Kecepatan konstan di fase kencang, diturunkan dari total jarak (targetY)
+    // supaya jarak fase-kencang (v*fast) + jarak fase-lambat (v*tail/2, karena
+    // deselerasi seragam dari v ke 0) pas berjumlah targetY. Karena jarak
+    // (targetY) sekarang dihitung mengikuti SPIN_SPEED di atas, v yang keluar
+    // dari sini akan mendekati SPIN_SPEED (bisa sedikit lebih cepat kalau laps
+    // dibulatkan ke atas) — bukan lagi puluhan kali lebih lambat seperti bug
+    // sebelumnya, dan tetap presisi mendarat tepat di pemenang saat waktu habis.
+    const v = targetY / (fast + tail / 2);
+
+    let rafId = null;
+    const start = performance.now();
+    const settle = () => {
+      strip.style.transform = `translateY(${targetY}px)`;
       win?.classList.add("is-settled");
       settledCount++;
       if (onReelSettle) onReelSettle(settledCount, REEL_TIMING.length);
       if (settledCount === REEL_TIMING.length && onAllSettled) onAllSettled();
-    }, remaining);
+    };
+    const frame = (now) => {
+      const t = now - start;
+      if (t >= remaining) { settle(); return; }
+      const pos = t <= fast
+        ? v * t
+        : v * fast + v * (t - fast) - (v / (2 * tail)) * (t - fast) * (t - fast);
+      strip.style.transform = `translateY(${pos}px)`;
+      rafId = requestAnimationFrame(frame);
+    };
+    rafId = requestAnimationFrame(frame);
   });
 }
 
@@ -175,7 +227,7 @@ if (typeof document !== "undefined" && !document.getElementById("confettiKeyfram
 }
 export function spawnConfetti(container) {
   if (!container) return;
-  const colors = ["#F7941D", "#FFC845", "#EA1E8C", "#5C7CD9"];
+  const colors = ["#FF6B6B", "#FFC857", "#FF4F81", "#20C997"];
   let html = "";
   for (let i = 0; i < 26; i++) {
     const left = Math.random() * 100, delay = (Math.random() * 0.35).toFixed(2), dur = (1.3 + Math.random() * 0.8).toFixed(2);

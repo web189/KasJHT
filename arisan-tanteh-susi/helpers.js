@@ -2,8 +2,8 @@
    Arisan Tanteh Susi — util murni (tanpa Firebase)
 ============================================================ */
 export const COLOR_CHOICES = [
-  "#D9A83C", "#DA6E96", "#4A9484", "#A8703F", "#6B80D9",
-  "#C24F42", "#4FA3BE", "#A98BDA", "#8A9C5C", "#DC8A47",
+  "#FF6B6B", "#FF4F81", "#FFC857", "#20C997", "#A876C7",
+  "#FF9166", "#3FBFA6", "#E85D9C", "#E8A22E", "#7C6FD9",
 ];
 
 export function rupiah(n) {

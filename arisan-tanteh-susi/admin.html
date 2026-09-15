@@ -5,11 +5,18 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Kelola Arisan Tanteh Susi</title>
 <meta name="robots" content="noindex">
-<meta name="theme-color" content="#0E1712">
+<meta name="theme-color" content="#24152F">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700;800&family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
+<script>
+  try{
+    var t=localStorage.getItem("arisan-theme");
+    if(!t){ t=matchMedia("(prefers-color-scheme: light)").matches?"light":"dark"; }
+    if(t==="light"){ document.documentElement.setAttribute("data-theme","light"); }
+  }catch(e){}
+</script>
 </head>
 <body>
 
@@ -35,6 +42,10 @@
     <div class="brand-text"><b>Kelola Arisan Tanteh Susi</b><span>Dashboard admin · terpisah dari JHT KAS</span></div>
   </a>
   <div class="top-actions">
+    <button class="icon-btn theme-toggle" id="themeToggle" type="button" aria-label="Ganti mode terang/gelap" title="Mode terang/gelap">
+      <svg class="sun-ic" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.5"/><path d="M12 2.5v2.5M12 19v2.5M4.6 4.6l1.8 1.8M17.6 17.6l1.8 1.8M2.5 12H5M19 12h2.5M4.6 19.4l1.8-1.8M17.6 6.4l1.8-1.8"/></svg>
+      <svg class="moon-ic" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8.5 8.5 0 019.5 4 8.5 8.5 0 1020 14.5z"/></svg>
+    </button>
     <a class="icon-btn" href="index.html" title="Lihat halaman publik">
       <svg width="16" height="16"><use href="#ic-external"/></svg>
     </a>
@@ -53,5 +64,22 @@
 </div>
 
 <script type="module" src="admin.js"></script>
+<script>
+  (function(){
+    var root = document.documentElement;
+    var btn = document.getElementById("themeToggle");
+    if (btn) btn.addEventListener("click", function(){
+      var isLight = root.getAttribute("data-theme") === "light";
+      if (isLight){ root.removeAttribute("data-theme"); try{ localStorage.setItem("arisan-theme","dark"); }catch(e){} }
+      else { root.setAttribute("data-theme","light"); try{ localStorage.setItem("arisan-theme","light"); }catch(e){} }
+    });
+    var bar = document.querySelector(".topbar");
+    if (bar){
+      var onScroll = function(){ bar.classList.toggle("is-scrolled", window.scrollY > 8); };
+      document.addEventListener("scroll", onScroll, { passive:true });
+      onScroll();
+    }
+  })();
+</script>
 </body>
 </html>

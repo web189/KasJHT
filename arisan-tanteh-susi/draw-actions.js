@@ -15,7 +15,7 @@
      aman dipakai bersamaan oleh banyak orang di banyak HP/PC.
 ============================================================ */
 import { Arisan } from "./firebase.js";
-import { eligibleMembers, todayISO } from "./helpers.js";
+import { eligibleMembers, todayISO, liveDrawInfo } from "./helpers.js";
 
 export function pickWinner(batch) {
   const eligible = eligibleMembers(batch);
@@ -35,7 +35,16 @@ export async function beginDraw(list, batchId, maxDurationMs) {
   const batch = list.find((b) => b.id === batchId);
   if (!batch) throw new Error("Batch tidak ditemukan");
   if (batch.status !== "berjalan") throw new Error("Arisan ini belum berjalan");
-  if (batch.liveDraw && batch.liveDraw.active) return batch; // sudah ada yang mulai duluan
+  // PENTING: jangan cek batch.liveDraw.active mentah-mentah. Kalau ada sesi
+  // kocok sebelumnya yang macet/ditinggal sebelum sempat finalizeDraw() (mis.
+  // gara-gara bug reel yang sudah diperbaiki), flag "active" itu bisa nyangkut
+  // permanen di database walau kocokannya sudah lama kelar/expired — akibatnya
+  // SEMUA klik "Mulai Kocok" berikutnya cuma no-op diam-diam (toast sukses
+  // muncul, tapi tidak ada kocokan baru yang benar-benar dibuat, dan mesinnya
+  // tidak pernah tampil). liveDrawInfo() sudah tahu cara mendeteksi kocokan
+  // yang sudah kedaluwarsa (lewat GRACE_MS) — pakai itu supaya kocokan basi
+  // tidak mengunci kocokan baru selamanya.
+  if (liveDrawInfo(batch)) return batch; // masih benar-benar berlangsung — sudah ada yang mulai duluan
   const winner = pickWinner(batch);
   if (!winner) throw new Error("Tidak ada anggota yang eligible untuk dikocok");
   batch.liveDraw = {
