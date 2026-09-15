@@ -8,15 +8,11 @@ import {
   REEL_TIMING, LETTER_TOTAL_MS, runSlotSpin, renderSlotSettled,
   letterMachineHtml, runLetterReveal, renderLetterSettled, spawnConfetti,
 } from "./draw-engine.js";
+import { beginDraw, finalizeDraw } from "./draw-actions.js";
 
 let LIST = [];
 const reg = { nama: "", hp: "" };
 let countdownTimer = null;
-// Kunci sesi live-draw yang animasinya SUDAH dijalankan di client ini.
-// Dipakai supaya render() tidak menimpa ulang #content (yang akan me-reset
-// reel ke posisi 0 dan memicu animasi baru) setiap kali Firestore mengirim
-// snapshot baru (mis. ada anggota lain daftar) SELAGI kocokan sedang jalan.
-let liveBoundKey = null;
 
 function statusMeta(status) {
   if (status === "pendaftaran") return { label: "Pendaftaran Dibuka", cls: "pendaftaran" };
@@ -49,13 +45,21 @@ function countdownHtml(targetIso, idPrefix, caption) {
 
 function idleSlotHtml(eligible) {
   if (!eligible.length) return "";
-  const cells = eligible.slice(0, 8).map((m) => `<div class="slot-cell"><span class="slot-avatar" style="background:${avatarBg(colorFor(m.nama))}">${initials(m.nama)}</span></div>`).join("");
+  const avatars = eligible.slice(0, 10).map((m) => `<span class="idle-avatar" style="background:${avatarBg(colorFor(m.nama))}" title="${escapeHtml(m.nama)}">${initials(m.nama)}</span>`).join("");
+  return `<div class="idle-pool"><span class="idle-pool-lbl">Yang eligible dikocok:</span><div class="idle-pool-avatars">${avatars}</div></div>`;
+}
+
+/** Panel CTA kocok publik — SIAPA SAJA yang membuka halaman ini boleh
+ *  menekan tombol ini untuk memulai live draw, bukan cuma admin. Hasilnya
+ *  tetap ditentukan & dikunci oleh sistem (acak / urutan giliran), tombol
+ *  ini cuma memicu momennya supaya semua orang bisa nonton bareng. */
+function drawCtaHtml(batch, eligible) {
   return `
-  <div class="slot-machine">
-    <div class="slot-inner">
-      <div class="wheel-status">🎰 Menunggu jadwal kocok berikutnya…</div>
-      <div class="slot-window is-idle"><div class="slot-strip is-idle">${cells.slice(0, 1) || ""}</div></div>
-    </div>
+  <div class="draw-cta">
+    <div class="draw-cta-badge">${icon("gift")}<span>Kocokan siap dimulai</span></div>
+    <p class="draw-cta-text">Tombol ini terbuka untuk siapa saja — anggota atau pengunjung mana pun boleh menekannya. Begitu ditekan, semua orang yang sedang membuka halaman ini akan melihat live draw yang sama secara bersamaan.</p>
+    <button class="btn btn-gold btn-draw-cta" id="btnPublicDraw" style="width:100%;justify-content:center;">🎰<span>Mulai Kocok Sekarang</span></button>
+    ${idleSlotHtml(eligible)}
   </div>`;
 }
 
@@ -112,7 +116,7 @@ function ticketHtml(batch) {
         <div class="draw-label">Selamat kepada</div>
         <div class="draw-name" id="arLiveWinnerName"></div>
       </div>
-    </div>` : (batch.status === "berjalan" ? idleSlotHtml(eligibleMembers(batch)) : "")}
+    </div>` : (batch.status === "berjalan" ? (eligibleMembers(batch).length ? drawCtaHtml(batch, eligibleMembers(batch)) : `<div class="full-note" style="margin-top:16px;">${icon("alert")}<span>Semua anggota sudah pernah menang. Menunggu admin menutup batch ini.</span></div>`) : "")}
 
     ${(approved.length || pending.length) ? `
     <div class="perf"></div>
@@ -148,25 +152,40 @@ function render() {
   const content = document.getElementById("content");
   const batch = activeBatch(LIST);
   const history = finishedBatches(LIST);
-
-  // Cek apakah ada kocokan LIVE yang sedang berjalan & masih dalam masa
-  // animasi (belum settle). Kalau sesi live-draw ini SAMA dengan yang
-  // sudah kita bind sebelumnya, jangan render ulang #content — biarkan
-  // animasi reel yang sedang jalan lanjut tanpa gangguan.
-  const live = batch ? liveDrawInfo(batch) : null;
-  if (live) {
-    const maxDuration = Math.max(...REEL_TIMING.map((r) => r.duration));
-    const maxTotal = Math.max(maxDuration, LETTER_TOTAL_MS);
-    const key = `${batch.id}:${live.startedAt}`;
-    if (live.elapsed < maxTotal && key === liveBoundKey) return;
-  } else {
-    liveBoundKey = null;
-  }
-
   content.innerHTML = (batch ? ticketHtml(batch) : emptyHtml()) + (history.length ? historyHtml(history) : "");
   bindContent();
   startCountdown();
   bindLiveWidget();
+  updateFab(batch);
+}
+
+/* ---------------- tombol kocok mengambang (di luar konten beranda) ----------------
+   Selalu bisa dijangkau walau sedang scroll jauh — supaya pengunjung tidak perlu
+   mencari-cari tombol kocok, dan supaya jelas ini terbuka untuk siapa saja. */
+function updateFab(batch) {
+  const fab = document.getElementById("fabDraw");
+  if (!fab) return;
+  const label = fab.querySelector(".fab-label");
+  if (!batch || batch.status !== "berjalan") { fab.hidden = true; fab.onclick = null; return; }
+  const live = liveDrawInfo(batch);
+  const eligible = eligibleMembers(batch);
+  if (live) {
+    fab.hidden = false;
+    fab.classList.add("is-live");
+    if (label) label.textContent = "Live!";
+    fab.onclick = () => document.getElementById("arLiveCard")?.scrollIntoView({ behavior: "smooth", block: "center" });
+  } else if (eligible.length) {
+    fab.hidden = false;
+    fab.classList.remove("is-live");
+    if (label) label.textContent = "Kocok";
+    fab.onclick = () => {
+      const target = document.getElementById("btnPublicDraw");
+      if (target) target.scrollIntoView({ behavior: "smooth", block: "center" });
+    };
+  } else {
+    fab.hidden = true;
+    fab.onclick = null;
+  }
 }
 
 function bindContent() {
@@ -188,6 +207,24 @@ function bindContent() {
       toast("Pendaftaran terkirim! Tunggu di-ACC admin ya.");
     } catch (err) {
       toast("Gagal mengirim pendaftaran: " + err.message, true);
+    }
+  });
+
+  document.getElementById("btnPublicDraw")?.addEventListener("click", async (e) => {
+    const btn = e.currentTarget;
+    const batch = activeBatch(LIST);
+    if (!batch) return;
+    btn.disabled = true;
+    const label = btn.querySelector("span");
+    if (label) label.textContent = "Memulai…";
+    const maxDuration = Math.max(Math.max(...REEL_TIMING.map((r) => r.duration)), LETTER_TOTAL_MS);
+    try {
+      await beginDraw(LIST, batch.id, maxDuration);
+      toast("Live draw dimulai! Semua yang membuka halaman ini akan melihatnya sekarang.");
+    } catch (err) {
+      toast(err.message, true);
+      btn.disabled = false;
+      if (label) label.textContent = "Mulai Kocok Sekarang";
     }
   });
 }
@@ -231,6 +268,9 @@ function bindLiveWidget() {
     if (result) result.style.display = "flex";
     const nameEl = document.getElementById("arLiveWinnerName");
     if (nameEl) nameEl.textContent = winner.nama;
+    // kunci & catat hasilnya — aman walau banyak pengunjung lain juga
+    // sedang menonton & mencoba mengunci di saat yang (hampir) sama.
+    finalizeDraw(batch.id, live.winnerId, live.winnerNama).catch(() => {});
   };
 
   if (live.elapsed >= maxTotal) {
@@ -247,10 +287,6 @@ function bindLiveWidget() {
     prog.style.transition = `width ${maxDuration - Math.min(live.elapsed, maxDuration)}ms linear`;
     requestAnimationFrame(() => { prog.style.width = "100%"; });
   }
-
-  // Tandai sesi live-draw ini sudah "dibind" di client ini, supaya render()
-  // tidak menimpa ulang DOM reel & me-reset animasi selama draw masih jalan.
-  liveBoundKey = `${batch.id}:${live.startedAt}`;
 
   // dua mesin jalan bersamaan; hasil akhir (nama pemenang) baru ditampilkan
   // setelah KEDUANYA selesai supaya terasa seperti satu momen pengumuman.

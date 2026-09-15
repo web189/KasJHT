@@ -9,14 +9,11 @@ import {
   REEL_TIMING, LETTER_TOTAL_MS, runSlotSpin, renderSlotSettled,
   letterMachineHtml, runLetterReveal, renderLetterSettled,
 } from "./draw-engine.js";
+import { beginDraw, finalizeDraw } from "./draw-actions.js";
 
 let LIST = [];
 let countdownTimer = null;
 let autoDrawTimer = null;
-// Sama seperti di app.js: kunci sesi live-draw yg sudah dibind di client ini,
-// supaya render() tidak menimpa ulang #content (reset animasi reel) tiap kali
-// ada snapshot Firestore baru selagi kocokan masih berjalan.
-let liveBoundKey = null;
 
 /* ---------------- persistensi ---------------- */
 async function persist(successMsg) {
@@ -130,6 +127,7 @@ function batchPanelHtml(batch) {
       ${batch.status === "berjalan" ? `<button class="btn btn-sm btn-gold" id="btnDraw" ${canStartDraw ? "" : "disabled"}>🎰<span>Mulai Kocok Sekarang</span></button>` : ""}
       <button class="btn btn-sm btn-danger" id="btnDeleteBatch">${icon("trash")}<span>Hapus Batch</span></button>
     </div>
+    ${batch.status === "berjalan" ? `<p class="field-hint" style="margin:-6px 0 14px;">Tombol kocok ini juga tampil di halaman publik — anggota atau pengunjung mana pun boleh menekannya, hasilnya terkunci &amp; tercatat otomatis untuk semua orang.</p>` : ""}
 
     ${batch.status !== "pendaftaran" ? `
     <div class="countdown-cap">${live ? "🎰 Kocokan sedang berlangsung" : `Kocokan berikutnya: <b>${fmtDate(nextDraw)}</b>`}</div>` : ""}
@@ -150,7 +148,7 @@ function batchPanelHtml(batch) {
         <div class="draw-trophy">${icon("trophy")}</div>
         <div class="draw-label">Pemenang ronde ini</div>
         <div class="draw-name" id="adLiveWinnerName"></div>
-        <button class="btn btn-gold" id="btnConfirmDraw" style="margin-top:14px;">${icon("check")}<span>Konfirmasi &amp; Catat Pemenang</span></button>
+        <div class="field-hint" id="adLiveSaved" style="margin-top:10px;">Menyimpan hasil…</div>
       </div>
     </div>` : ""}
 
@@ -204,19 +202,6 @@ function historyPanelHtml() {
 function render() {
   const content = document.getElementById("content");
   const batch = activeBatch(LIST);
-
-  // Kalau kocokan LIVE yang sama sedang animasi jalan di client ini, jangan
-  // render ulang #content (lihat catatan di app.js untuk alasan lengkap).
-  const live = batch ? liveDrawInfo(batch) : null;
-  if (live) {
-    const maxDuration = Math.max(...REEL_TIMING.map((r) => r.duration));
-    const maxTotal = Math.max(maxDuration, LETTER_TOTAL_MS);
-    const key = `${batch.id}:${live.startedAt}`;
-    if (live.elapsed < maxTotal && key === liveBoundKey) return;
-  } else {
-    liveBoundKey = null;
-  }
-
   content.innerHTML = `
     <div class="panel-head" style="margin-top:6px;">
       <h1 class="font-display" style="font-size:22px;">🎁 Kelola Arisan</h1>
@@ -319,41 +304,28 @@ async function saveWinnerOrder(batch) {
   await persist("Urutan giliran disimpan");
 }
 
-/* ---------------- mulai & konfirmasi kocok ---------------- */
-function pickWinner(batch) {
-  const eligible = eligibleMembers(batch);
-  const order = batch.winnerOrder || [];
-  for (const id of order) {
-    const m = eligible.find((x) => x.id === id);
-    if (m) return m;
-  }
-  return eligible[Math.floor(Math.random() * eligible.length)];
-}
+/* ---------------- mulai kocok (siapa pun boleh — lihat draw-actions.js) ---------------- */
 async function startDraw(batch) {
-  const winner = pickWinner(batch);
-  if (!winner) { toast("Tidak ada anggota yang eligible", true); return; }
   const maxDuration = Math.max(Math.max(...REEL_TIMING.map((r) => r.duration)), LETTER_TOTAL_MS);
-  batch.liveDraw = { active: true, startedAt: Date.now(), durationMs: maxDuration, winnerId: winner.id, winnerNama: winner.nama };
-  await persist();
-}
-async function confirmDraw(batch) {
-  const live = batch.liveDraw;
-  if (!live) return;
-  const m = batch.members.find((x) => x.id === live.winnerId);
-  const round = (batch.currentRound || 0) + 1;
-  if (m) { m.sudahMenang = true; m.menangRound = round; m.menangTgl = todayISO(); }
-  batch.drawHistory = batch.drawHistory || [];
-  batch.drawHistory.push({ round, tgl: todayISO(), winnerId: live.winnerId, winnerNama: live.winnerNama });
-  batch.currentRound = round;
-  batch.winnerOrder = (batch.winnerOrder || []).filter((id) => id !== live.winnerId);
-  batch.liveDraw = null;
-  if (!eligibleMembers(batch).length) batch.status = "selesai";
-  await persist("Pemenang dicatat!");
+  try {
+    await beginDraw(LIST, batch.id, maxDuration);
+    toast("Kocokan dimulai — live untuk semua orang!");
+  } catch (err) {
+    toast(err.message, true);
+  }
 }
 
 function checkAutoDraw() {
   const batch = activeBatch(LIST);
-  if (!batch || batch.status !== "berjalan" || batch.liveDraw) return;
+  if (!batch || batch.status !== "berjalan") return;
+  const live = liveDrawInfo(batch);
+  if (live) {
+    // jaga-jaga: kalau animasi di semua tab sudah lewat durasinya tapi belum
+    // ada yang berhasil mengunci hasil (mis. koneksi terputus), coba kunci di sini.
+    const maxTotal = Math.max(Math.max(...REEL_TIMING.map((r) => r.duration)), LETTER_TOTAL_MS);
+    if (live.elapsed >= maxTotal) finalizeDraw(batch.id, live.winnerId, live.winnerNama).catch(() => {});
+    return;
+  }
   const eligible = eligibleMembers(batch);
   if (!eligible.length) return;
   if (new Date(nextDrawDate(batch) + "T00:00:00").getTime() <= Date.now()) startDraw(batch);
@@ -367,7 +339,6 @@ function bindDashboard(batch) {
   document.getElementById("btnDraw")?.addEventListener("click", () => startDraw(batch));
   document.getElementById("btnDeleteBatch")?.addEventListener("click", () => deleteBatch(batch.id));
   document.getElementById("btnSaveOrder")?.addEventListener("click", () => saveWinnerOrder(batch));
-  document.getElementById("btnConfirmDraw")?.addEventListener("click", () => confirmDraw(batch));
 
   document.querySelectorAll('[data-act="approve"]').forEach((b) => b.addEventListener("click", () => setMemberStatus(b.dataset.batch, b.dataset.mem, "approved")));
   document.querySelectorAll('[data-act="reject"]').forEach((b) => b.addEventListener("click", () => setMemberStatus(b.dataset.batch, b.dataset.mem, "rejected")));
@@ -401,7 +372,9 @@ function bindLiveWidget(batch) {
     if (result) result.style.display = "flex";
     const nameEl = document.getElementById("adLiveWinnerName");
     if (nameEl) nameEl.textContent = winner.nama;
-    document.getElementById("btnConfirmDraw")?.addEventListener("click", () => confirmDraw(batch));
+    finalizeDraw(batch.id, live.winnerId, live.winnerNama)
+      .then(() => { const saved = document.getElementById("adLiveSaved"); if (saved) saved.textContent = "Tersimpan ✓"; })
+      .catch(() => {});
   };
 
   if (live.elapsed >= maxTotal) {
@@ -415,9 +388,6 @@ function bindLiveWidget(batch) {
 
   const prog = document.getElementById("adLiveProgress");
   if (prog) { prog.style.transition = `width ${maxDuration - Math.min(live.elapsed, maxDuration)}ms linear`; requestAnimationFrame(() => { prog.style.width = "100%"; }); }
-
-  // Tandai sesi live-draw ini sudah dibind di client ini (lihat app.js).
-  liveBoundKey = `${batch.id}:${live.startedAt}`;
 
   let doneCount = 0;
   const whenBothDone = () => { doneCount++; if (doneCount === 2) showResult(); };

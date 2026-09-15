@@ -35,7 +35,8 @@ arisan-tanteh-susi/
 ├─ firebase.js     lapisan data — Firebase Modular SDK (lebih ringan dari compat SDK)
 ├─ helpers.js      fungsi utilitas murni (format tanggal/uang, avatar, dsb — tanpa Firebase)
 ├─ draw-engine.js  mesin animasi kocok (reel avatar + papan huruf), dipakai bareng
-├─ app.js          logika halaman publik
+├─ draw-actions.js aksi kocok bersama (mulai & kunci pemenang) — dipakai app.js & admin.js
+├─ app.js          logika halaman publik (termasuk tombol kocok publik + FAB)
 └─ admin.js        logika dashboard admin
 ```
 
@@ -82,15 +83,49 @@ sesuaikan dua tautan itu:
 - di `script.js` (folder induk): cari `arisan-tanteh-susi/index.html` (2 tempat)
 - di `arisan-tanteh-susi/index.html`: cari `../index.html` (2 tempat)
 
+## Update: siapa saja boleh mengocok (bukan cuma admin)
+
+Perubahan utama dari versi sebelumnya:
+
+- **Halaman publik (`index.html`) sekarang punya tombol "Mulai Kocok Sekarang"
+  sendiri**, tampil di kartu tiket saat status arisan "Berjalan" dan belum
+  ada kocokan yang live. Siapa pun yang membuka halaman ini — anggota atau
+  bukan — boleh menekannya. Begitu ditekan, semua orang yang sedang membuka
+  halaman (di HP/PC masing-masing) langsung melihat live draw yang sama.
+- **Tombol kocok mengambang (floating action button)** muncul di pojok kanan
+  bawah, di luar alur konten utama, selama ada kocokan yang bisa/sedang
+  dimulai — supaya pengunjung tidak perlu scroll mencari tombolnya.
+- Tombol "Mulai Kocok Sekarang" di dashboard admin (`admin.html`) tetap ada,
+  cuma sekarang sama-sama memanggil logika yang sama dengan halaman publik
+  (lihat `draw-actions.js`) — tidak ada jalur khusus admin lagi.
+- **Hasil kocokan dikunci otomatis** begitu animasi selesai di layar siapa
+  pun yang sedang menonton (tidak perlu lagi admin klik "Konfirmasi" secara
+  manual). Fungsi `finalizeDraw()` di `draw-actions.js` selalu mengambil data
+  terbaru dari server dulu sebelum menulis, jadi aman dipanggil bersamaan
+  dari banyak tab.
+- Siapa yang MENANG tetap 100% ditentukan oleh sistem (urutan giliran yang
+  diatur admin, atau acak kalau belum diatur) — tepat saat kocokan dimulai,
+  bukan oleh siapa yang menekan tombolnya. Menekan tombol cuma memicu
+  momennya, tidak memengaruhi hasil.
+- Ini bisa dibuka untuk publik karena aturan keamanan Firestore
+  (`kas/arisan`) memang sudah `allow read, write: if true` sejak awal — jadi
+  secara teknis siapa pun yang tahu URL memang sudah bisa menulis data ke
+  dokumen ini. Kalau ke depannya kamu ingin tombol kocok publik ini dibatasi
+  lagi (mis. hanya anggota yang login), perlu ditambah lapisan otentikasi
+  baru di Firestore rules + UI, bukan cuma di `app.js`.
+
 ## Fitur yang tersedia
 
 **Halaman publik**
 - Kartu batch bergaya "tiket undian" (nama, status, iuran, kuota, countdown)
 - Form pendaftaran (nama + WhatsApp opsional) — langsung masuk status "pending"
 - Daftar anggota aktif & yang menunggu ACC (medali koin dengan avatar warna)
-- Tampilan live kocok (mesin slot 3-reel) yang tersinkron real-time — semua
-  orang yang sedang membuka halaman ini di HP/PC masing-masing melihat
-  animasi & hasil yang sama
+- **Tombol "Mulai Kocok Sekarang" terbuka untuk siapa saja**, plus tombol
+  kocok mengambang (FAB) yang selalu terlihat di pojok layar
+- Tampilan live kocok (mesin slot 3-reel + papan huruf) yang tersinkron
+  real-time — semua orang yang sedang membuka halaman ini di HP/PC
+  masing-masing melihat animasi & hasil yang sama, dan hasilnya otomatis
+  terkunci/tercatat begitu animasi selesai
 - Riwayat batch yang sudah selesai
 
 **Dashboard admin (terpisah, perlu login)**
@@ -99,7 +134,9 @@ sesuaikan dua tautan itu:
 - Ubah iuran & kuota kapan saja
 - Tutup pendaftaran & mulai arisan
 - Atur urutan giliran menang (opsional — kalau kosong, diundi acak)
-- Mulai kocok manual, atau biarkan otomatis jalan saat tanggal kocok tiba
-  (dicek tiap 20 detik selama dashboard admin terbuka)
-- Konfirmasi & catat pemenang tiap ronde, riwayat otomatis tersimpan
+- Mulai kocok manual (tombol yang sama juga tampil di halaman publik), atau
+  biarkan otomatis jalan saat tanggal kocok tiba (dicek tiap 20 detik selama
+  dashboard admin terbuka)
+- Pemenang tiap ronde tercatat otomatis begitu animasi selesai, riwayat
+  otomatis tersimpan
 - Hapus batch / hapus riwayat batch selesai
