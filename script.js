@@ -1308,7 +1308,7 @@ function bindTopbarCommon(){
   document.getElementById("mmPengajuan")?.addEventListener("click", ()=>{ closeMobileMenu(); goto("/pengajuan"); });
   document.getElementById("mmRiwayat")?.addEventListener("click", ()=>{ closeMobileMenu(); goto("/riwayat"); });
   document.getElementById("mmAset")?.addEventListener("click", ()=>{ closeMobileMenu(); goto("/aset"); });
-  document.getElementById("mmArisan")?.addEventListener("click", ()=>{ closeMobileMenu(); goto("/arisan"); });
+  document.getElementById("mmArisan")?.addEventListener("click", ()=>{ closeMobileMenu(); window.open("https://web189.github.io/KasJHT/arisan-tanteh-susi/index.html","_blank","noopener"); });
   document.getElementById("mmGameToggle")?.addEventListener("click", (e)=>{
     e.stopPropagation();
     const sub = document.getElementById("mmGameSubmenu");
@@ -1329,7 +1329,7 @@ function bindTopbarCommon(){
   document.getElementById("dnPengajuan")?.addEventListener("click", ()=> goto("/pengajuan"));
   document.getElementById("dnRiwayat")?.addEventListener("click", ()=> goto("/riwayat"));
   document.getElementById("dnAset")?.addEventListener("click", ()=> goto("/aset"));
-  document.getElementById("dnArisan")?.addEventListener("click", ()=> goto("/arisan"));
+  document.getElementById("dnArisan")?.addEventListener("click", ()=> window.open("https://web189.github.io/KasJHT/arisan-tanteh-susi/index.html","_blank","noopener"));
   document.getElementById("dnExportExcel")?.addEventListener("click", ()=>{ exportExcel(getFilteredTxList(false)); closeDesktopDropdowns(); });
   document.getElementById("dnExportPdf")?.addEventListener("click", ()=>{ exportPdf(getFilteredTxList(false)); closeDesktopDropdowns(); });
   document.getElementById("dnJadwal")?.addEventListener("click", ()=>{ closeDesktopDropdowns(); window.open("https://web189.github.io/Jadwal-Admin/","_blank","noopener"); });
