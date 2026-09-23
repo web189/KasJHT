@@ -1162,7 +1162,7 @@ function renderGuest(){
       </div>
     </div>
   </div>
-  <footer class="site-footer">JHT KAS Adm PRG — mode uji, data tersimpan di penyimpanan lokal perangkat ini.</footer>
+  <footer class="site-footer">[JHT_KAS_Adm_PRG] :: build lokal, state persist ke localStorage browser ini. Zero backend, zero drama. Dirakit dengan JS vanilla oleh <a href="https://benyoriki.com/" target="_blank" rel="noopener">benyoriki.com</a></footer>
   `;
 }
 
@@ -1308,7 +1308,7 @@ function bindTopbarCommon(){
   document.getElementById("mmPengajuan")?.addEventListener("click", ()=>{ closeMobileMenu(); goto("/pengajuan"); });
   document.getElementById("mmRiwayat")?.addEventListener("click", ()=>{ closeMobileMenu(); goto("/riwayat"); });
   document.getElementById("mmAset")?.addEventListener("click", ()=>{ closeMobileMenu(); goto("/aset"); });
-  document.getElementById("mmArisan")?.addEventListener("click", ()=>{ closeMobileMenu(); window.open("https://web189.github.io/KasJHT/arisan-tanteh-susi/index.html","_blank","noopener"); });
+  document.getElementById("mmArisan")?.addEventListener("click", ()=>{ closeMobileMenu(); window.open("https://benyoriki.github.io/Arisan/","_blank","noopener"); });
   document.getElementById("mmGameToggle")?.addEventListener("click", (e)=>{
     e.stopPropagation();
     const sub = document.getElementById("mmGameSubmenu");
@@ -1329,7 +1329,7 @@ function bindTopbarCommon(){
   document.getElementById("dnPengajuan")?.addEventListener("click", ()=> goto("/pengajuan"));
   document.getElementById("dnRiwayat")?.addEventListener("click", ()=> goto("/riwayat"));
   document.getElementById("dnAset")?.addEventListener("click", ()=> goto("/aset"));
-  document.getElementById("dnArisan")?.addEventListener("click", ()=> window.open("https://web189.github.io/KasJHT/arisan-tanteh-susi/index.html","_blank","noopener"));
+  document.getElementById("dnArisan")?.addEventListener("click", ()=> window.open("https://benyoriki.github.io/Arisan/","_blank","noopener"));
   document.getElementById("dnExportExcel")?.addEventListener("click", ()=>{ exportExcel(getFilteredTxList(false)); closeDesktopDropdowns(); });
   document.getElementById("dnExportPdf")?.addEventListener("click", ()=>{ exportPdf(getFilteredTxList(false)); closeDesktopDropdowns(); });
   document.getElementById("dnJadwal")?.addEventListener("click", ()=>{ closeDesktopDropdowns(); window.open("https://web189.github.io/Jadwal-Admin/","_blank","noopener"); });
@@ -1579,7 +1579,7 @@ function renderArisanPage(){
       ${history.length ? arisanHistoryHtml(history) : ""}
     </div>
   </div>
-  <footer class="site-footer">JHT KAS Adm PRG — mode uji, data tersimpan di penyimpanan lokal perangkat ini.</footer>
+  <footer class="site-footer">[JHT_KAS_Adm_PRG] :: build lokal, state persist ke localStorage browser ini. Zero backend, zero drama. Dirakit dengan JS vanilla oleh <a href="https://benyoriki.com/" target="_blank" rel="noopener">benyoriki.com</a></footer>
   `;
 }
 
@@ -1759,7 +1759,7 @@ function renderPengajuanPage(){
       </div>
     </div>
   </div>
-  <footer class="site-footer">JHT KAS Adm PRG — mode uji, data tersimpan di penyimpanan lokal perangkat ini.</footer>
+  <footer class="site-footer">[JHT_KAS_Adm_PRG] :: build lokal, state persist ke localStorage browser ini. Zero backend, zero drama. Dirakit dengan JS vanilla oleh <a href="https://benyoriki.com/" target="_blank" rel="noopener">benyoriki.com</a></footer>
   `;
 }
 
@@ -1867,7 +1867,7 @@ function renderRiwayatPage(){
       </div>
     </div>
   </div>
-  <footer class="site-footer">JHT KAS Adm PRG — mode uji, data tersimpan di penyimpanan lokal perangkat ini.</footer>
+  <footer class="site-footer">[JHT_KAS_Adm_PRG] :: build lokal, state persist ke localStorage browser ini. Zero backend, zero drama. Dirakit dengan JS vanilla oleh <a href="https://benyoriki.com/" target="_blank" rel="noopener">benyoriki.com</a></footer>
   `;
 }
 
@@ -1976,7 +1976,7 @@ function renderAsetPage(){
       </div>
     </div>
   </div>
-  <footer class="site-footer">JHT KAS Adm PRG — mode uji, data tersimpan di penyimpanan lokal perangkat ini.</footer>
+  <footer class="site-footer">[JHT_KAS_Adm_PRG] :: build lokal, state persist ke localStorage browser ini. Zero backend, zero drama. Dirakit dengan JS vanilla oleh <a href="https://benyoriki.com/" target="_blank" rel="noopener">benyoriki.com</a></footer>
   `;
 }
 
