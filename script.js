@@ -918,10 +918,10 @@ function topbar(){
          mobile (digantikan hamburger + panel seperti sebelumnya). ---- -->
     <nav class="desktop-nav" id="desktopNav">
       <div class="desktop-nav-inner">
-        <a class="dnav-link" href="#/" id="dnHome">${icon('home')}<span>Home</span></a>
-        <button class="dnav-link" id="dnPengajuan">${icon('plus-circle')}<span>Ajukan Pembelian</span></button>
-        <button class="dnav-link" id="dnRiwayat">${icon('inbox')}<span>Riwayat Pengajuan</span>${pendingCount>0?`<span class="dnav-badge">${pendingCount}</span>`:""}</button>
-        <button class="dnav-link" id="dnAset">${icon('box')}<span>Aset</span></button>
+        <a class="dnav-link ${state.route==='/'?'active':''}" href="#/" id="dnHome">${icon('home')}<span>Home</span></a>
+        <button class="dnav-link ${state.route==='/pengajuan'?'active':''}" id="dnPengajuan">${icon('plus-circle')}<span>Ajukan Pembelian</span></button>
+        <button class="dnav-link ${state.route==='/riwayat'?'active':''}" id="dnRiwayat">${icon('inbox')}<span>Riwayat Pengajuan</span>${pendingCount>0?`<span class="dnav-badge">${pendingCount}</span>`:""}</button>
+        <button class="dnav-link ${state.route==='/aset'?'active':''}" id="dnAset">${icon('box')}<span>Aset</span></button>
         <button class="dnav-link dnav-arisan" id="dnArisan">${icon('gift')}<span>Arisan Tanteh Susi</span>${arisanMenuBadge()}</button>
         <div class="dnav-dropdown" id="dnDownloadWrap">
           <button class="dnav-link dnav-trigger" id="dnDownloadToggle">${icon('download')}<span>Unduh Data</span>${icon('down')}</button>
@@ -941,8 +941,8 @@ function topbar(){
         <div class="dnav-dropdown" id="dnGameWrap">
           <button class="dnav-link dnav-trigger" id="dnGameToggle">${icon('gamepad')}<span>Game</span>${icon('down')}</button>
           <div class="dnav-menu" id="dnGameMenu">
-            <button class="dnav-menu-item" data-game="catur"><span class="dnav-emoji">♟️</span><span>Catur</span></button>
-            <button class="dnav-menu-item" data-game="ular"><span class="dnav-emoji">🐍</span><span>Ular Tangga</span></button>
+            <button class="dnav-menu-item" data-game="catur">${icon('chess')}<span>Catur</span></button>
+            <button class="dnav-menu-item" data-game="ular">${icon('ladder')}<span>Ular Tangga</span></button>
             <button class="dnav-menu-item" data-game="monopoli">${icon('dice')}<span>Monopoly</span></button>
           </div>
         </div>
@@ -975,8 +975,8 @@ function topbar(){
       <div class="mm-label" style="--tone:#8B5CF6;">Hiburan</div>
       <button class="mm-item mm-expandable" id="mmGameToggle" data-tone="fun" aria-expanded="false"><span class="mm-ico-wrap">${icon('gamepad')}</span><span>Game</span><span class="mm-chev">${icon('chevron-right')}</span></button>
       <div class="mm-submenu" id="mmGameSubmenu">
-        <button class="mm-item" data-game="catur" data-tone="fun"><span class="mm-ico-wrap">♟️</span><span>Catur</span></button>
-        <button class="mm-item" data-game="ular" data-tone="fun"><span class="mm-ico-wrap">🐍</span><span>Ular Tangga</span></button>
+        <button class="mm-item" data-game="catur" data-tone="fun"><span class="mm-ico-wrap">${icon('chess')}</span><span>Catur</span></button>
+        <button class="mm-item" data-game="ular" data-tone="fun"><span class="mm-ico-wrap">${icon('ladder')}</span><span>Ular Tangga</span></button>
         <button class="mm-item" data-game="monopoli" data-tone="fun"><span class="mm-ico-wrap">${icon('dice')}</span><span>Monopoly</span></button>
       </div>
       <div class="mm-footer">Website Developer <a href="https://benyoriki.com/" target="_blank" rel="noopener">benyoriki.com</a></div>
@@ -1000,8 +1000,9 @@ function genCandle(prevClose){
   const low = Math.max(0.5, Math.min(open,close) - vol*Math.random()*0.5);
   return {open, close, high, low};
 }
+let heroChartN = 36;
 function initHeroChartData(){
-  const n = 36;
+  const n = heroChartN;
   let price = 100;
   const arr = [];
   for(let i=0;i<n;i++){ const c = genCandle(price); arr.push(c); price = c.close; }
@@ -1011,27 +1012,31 @@ function initHeroChart(){
   const svg = document.getElementById("heroChartSvg");
   if(!svg) return;
   if(heroChartTimer){ clearInterval(heroChartTimer); heroChartTimer = null; }
+  heroChartN = Math.max(26, Math.min(64, Math.round((svg.clientWidth||600)/20)));
   heroChartData = initHeroChartData();
   drawHeroChart();
   heroChartTimer = setInterval(()=>{
     if(!document.getElementById("heroChartSvg")){ clearInterval(heroChartTimer); heroChartTimer = null; return; }
     const last = heroChartData[heroChartData.length-1];
     heroChartData.push(genCandle(last.close));
-    if(heroChartData.length>36) heroChartData.shift();
+    if(heroChartData.length>heroChartN) heroChartData.shift();
     drawHeroChart();
   }, 1500);
 }
 function drawHeroChart(){
   const svg = document.getElementById("heroChartSvg");
   if(!svg || !heroChartData) return;
-  const W = 600, H = 130;
+  const W = Math.round(svg.clientWidth||600), H = Math.round(svg.clientHeight||130);
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  const padT = H>150 ? 50 : 14, padB = H>150 ? 34 : 14;
   const n = heroChartData.length;
-  const cw = W/n;
+  const plotW = W > 700 ? W - 150 : W;
+  const cw = plotW/n;
   const highs = heroChartData.map(c=>c.high), lows = heroChartData.map(c=>c.low);
   const max = Math.max(...highs), min = Math.min(...lows);
   const pad = (max-min)*0.1 || 1;
   const top = max+pad, bottom = min-pad;
-  const scaleY = v => H - ((v-bottom)/(top-bottom))*H;
+  const scaleY = v => padT + (1 - (v-bottom)/(top-bottom))*(H-padT-padB);
 
   let bars = "";
   heroChartData.forEach((c,i)=>{
@@ -1048,7 +1053,7 @@ function drawHeroChart(){
   const linePts = heroChartData.map((c,i)=> `${(i*cw+cw/2).toFixed(2)},${scaleY(c.close).toFixed(2)}`);
   const lastX = (n-1)*cw + cw/2;
   const lastY = scaleY(heroChartData[n-1].close);
-  const areaPts = `0,${H} ${linePts.join(" ")} ${W},${H}`;
+  const areaPts = `${(cw/2).toFixed(2)},${H-padB+6} ${linePts.join(" ")} ${lastX.toFixed(2)},${H-padB+6}`;
 
   svg.innerHTML = `
     <defs>
@@ -1094,42 +1099,41 @@ function renderGuest(){
   <div class="container">
     <div class="hero">
       <div class="hero-top">
-        <div>
-          <div class="hero-eyebrow">Transparansi Kas dan Anggaran Pembelian Barang dan Jasa</div>
+        <div class="hero-head">
+          <div class="hero-eyebrow">Transparansi kas dan anggaran pembelian barang dan jasa</div>
           <h1>Rekap Kas Admin GDNG 2026</h1>
-          <div class="hero-chart" id="heroChart">
-            <svg class="hero-chart-svg" id="heroChartSvg" viewBox="0 0 600 130" preserveAspectRatio="none"></svg>
-            <div class="hero-chart-tag">
-              <span class="hct-dot"></span><span>KAS-IDX</span>
-            </div>
-            <div class="hero-chart-price" id="heroChartPrice">
-              <span class="hcp-val mono" id="heroChartVal">0</span>
-              <span class="hcp-chg mono" id="heroChartChg">+0.00%</span>
-            </div>
-            <div class="hero-chart-range">
-              <span>H <b class="mono" id="heroChartHi">0</b></span>
-              <span>L <b class="mono" id="heroChartLo">0</b></span>
-            </div>
-          </div>
         </div>
-        <div class="hero-stamp">Terbuka<br>untuk<br>semua</div>
+        <div class="hero-stamp"><span class="hs-dot"></span>Terbuka untuk semua</div>
       </div>
 
-      ${excelPanelHtml(false)}
+      <div class="hero-chart" id="heroChart">
+        <svg class="hero-chart-svg" id="heroChartSvg" viewBox="0 0 600 130" preserveAspectRatio="none"></svg>
+        <div class="hero-chart-tag">
+          <span class="hct-dot"></span><span>KAS-IDX</span>
+        </div>
+        <div class="hero-chart-price" id="heroChartPrice">
+          <span class="hcp-val mono" id="heroChartVal">0</span>
+          <span class="hcp-chg mono" id="heroChartChg">+0.00%</span>
+        </div>
+        <div class="hero-chart-range">
+          <span>H <b class="mono" id="heroChartHi">0</b></span>
+          <span>L <b class="mono" id="heroChartLo">0</b></span>
+        </div>
+      </div>
 
       <div class="saldo-strip reveal">
         <div class="saldo-col in">
-          <span class="saldo-label">Kas Masuk</span>
+          <span class="saldo-label">Kas masuk</span>
           <span class="saldo-fig mono money-blur">${moneyDual(t.masuk)}</span>
         </div>
         <span class="saldo-op">−</span>
         <div class="saldo-col out">
-          <span class="saldo-label">Kas Keluar</span>
+          <span class="saldo-label">Kas keluar</span>
           <span class="saldo-fig mono money-blur">${moneyDual(t.keluar)}</span>
         </div>
         <span class="saldo-op">=</span>
         <div class="saldo-col final">
-          <span class="saldo-label">Saldo Akhir</span>
+          <span class="saldo-label">Saldo akhir</span>
           <span class="saldo-fig mono money-blur">${moneyDual(t.saldo)}</span>
         </div>
       </div>
@@ -1138,8 +1142,10 @@ function renderGuest(){
         <span>${state.moneyRevealed ? 'Sembunyikan Semua Nominal' : 'Tampilkan Semua Nominal'}</span>
       </button>
 
+      ${excelPanelHtml(false)}
+
       <div class="panel" style="margin-top:16px;">
-        <div class="panel-head"><h3>🏆 Peringkat Setoran Anggota</h3><span class="hint">urut dari yang paling rajin setor</span></div>
+        <div class="panel-head"><h3>${icon('trophy')}Peringkat Setoran Anggota</h3><span class="hint">urut dari yang paling rajin setor</span></div>
         <div class="rank-list">
           ${ranking.length ? ranking.map((r,i)=>{
             const m = memberById(r.id);
@@ -1220,7 +1226,7 @@ function excelPanelHtml(withActions){
   return `
     <div class="panel panel-ledger">
       <div class="panel-head ${collapsible ? 'panel-head-toggle' : ''}" ${collapsible ? `id="ledgerToggle" role="button" tabindex="0" aria-expanded="${isOpen}"` : ""}>
-        <h3>📋 Tabel Excel Real Time</h3>
+        <h3>${icon('sheet')}Tabel Excel Real Time</h3>
         ${collapsible ? `<span class="panel-head-hint">${isOpen?'Sembunyikan filter':'Tampilkan filter'}<span class="panel-head-chev">${icon('chevron-right')}</span></span>` : ""}
       </div>
       ${isDesktopWidth() ? `
@@ -1498,14 +1504,14 @@ function arisanBatchHtml(batch){
       <div class="arisan-quota-label"><span>Slot Anggota</span><span class="mono">${taken} orang · Kuota bebas berapa saja</span></div>
     </div>`}
 
-    ${arisanCountdownHtml(nextDraw, "arCd", batch.status==="berjalan" ? "⏱️ Kocokan berikutnya:" : "🎯 Kocokan pertama dijadwalkan:")}
+    ${arisanCountdownHtml(nextDraw, "arCd", batch.status==="berjalan" ? "Kocokan berikutnya:" : "Kocokan pertama dijadwalkan:")}
 
     ${!liveInfo && batch.status==="berjalan" ? arisanIdleSlotHtml(arisanEligibleMembers(batch)) : ""}
 
     ${liveInfo ? `
     <div class="arisan-live-card" id="arLiveCard">
       <div class="arisan-live-badge"><span class="dot"></span>LIVE — Kocokan Sedang Berlangsung</div>
-      <div class="wheel-status-label" id="arLiveStatus">🔴 LIVE — reel sedang berputar…</div>
+      <div class="wheel-status-label" id="arLiveStatus">● LIVE — reel sedang berputar…</div>
       ${slotMachineMarkup("arLive")}
       <div class="draw-result" id="arLiveResult" style="display:none;">
         <div class="draw-confetti" id="arLiveConfetti"></div>
@@ -1528,7 +1534,7 @@ function arisanBatchHtml(batch){
     </div>
 
     ${history.length ? `
-    <div class="arisan-mem-group-label">🏆 Riwayat Kocokan</div>
+    <div class="arisan-mem-group-label">${icon('trophy')}Riwayat Kocokan</div>
     <div class="arisan-history-list">
       ${history.map(h=>`
         <div class="arisan-history-item">
@@ -1552,7 +1558,7 @@ function arisanEmptyHtml(){
 function arisanHistoryHtml(list){
   return `
   <div class="panel" style="margin-top:16px;">
-    <div class="panel-head"><h3>📜 Riwayat Batch Arisan Selesai</h3></div>
+    <div class="panel-head"><h3>${icon('history')}Riwayat Batch Arisan Selesai</h3></div>
     <div class="arisan-mem-list">
       ${list.map(b=>`
         <div class="arisan-mem-row is-eligible">
@@ -1572,7 +1578,7 @@ function renderArisanPage(){
   <div class="container">
     <div class="hero">
       <button class="back-link" id="backHome2">&larr; Kembali ke beranda</button>
-      <div class="hero-eyebrow">🎁 Kocok Tiap Tanggal 05 · Transparan &amp; Seru</div>
+      <div class="hero-eyebrow">${icon('gift')}Kocok Tiap Tanggal 05 · Transparan &amp; Seru</div>
       <h1>Arisan Tanteh Susi</h1>
       <p class="hero-sub">Ikut arisan bulanan, iuran ringan, dikocok terbuka di depan semua anggota. Daftar, tunggu di-ACC admin, lalu nantikan giliranmu menang!</p>
       ${batch ? arisanBatchHtml(batch) : arisanEmptyHtml()}
@@ -1637,7 +1643,7 @@ function bindArisanLiveWidget(){
   if(liveInfo.elapsed >= liveInfo.durationMs){
     // telat gabung — reel sudah harusnya berhenti, langsung tampilkan hasilnya
     machine?.classList.add("is-jackpot");
-    if(status) status.textContent = `🎉 Pemenangnya adalah ${winner.nama}!`;
+    if(status) status.textContent = `Pemenangnya adalah ${winner.nama}!`;
     document.getElementById("arLiveResult").style.display = "flex";
     document.getElementById("arLiveWinnerName").textContent = winner.nama;
     const prog = document.getElementById("arLiveProgress");
@@ -1659,14 +1665,14 @@ function bindArisanLiveWidget(){
     ()=>{
       machine?.classList.remove("is-spinning");
       machine?.classList.add("is-jackpot");
-      if(status) status.textContent = `🎉 Pemenangnya adalah ${winner.nama}!`;
+      if(status) status.textContent = `Pemenangnya adalah ${winner.nama}!`;
       document.getElementById("arLiveResult").style.display = "flex";
       document.getElementById("arLiveWinnerName").textContent = winner.nama;
       spawnConfetti(document.getElementById("arLiveConfetti"));
     },
     (settled, total)=>{
       if(!status || settled>=total) return;
-      status.textContent = settled===total-1 ? "🔴 LIVE — reel terakhir masih berputar… tahan napas!" : `🔴 LIVE — reel ${settled}/${total} berhenti…`;
+      status.textContent = settled===total-1 ? "● LIVE — reel terakhir masih berputar… tahan napas!" : `● LIVE — reel ${settled}/${total} berhenti…`;
     }
   );
 }
@@ -2139,7 +2145,7 @@ function secArisan(){
   const finished = finishedArisanBatches();
   return `
     <div class="admin-topline">
-      <div><h2>🎁 Arisan Tanteh Susi</h2><div class="sub">Buka pendaftaran, ACC anggota, dan kocok pemenang tiap bulan</div></div>
+      <div><h2>${icon('gift')}Arisan Tanteh Susi</h2><div class="sub">Buka pendaftaran, ACC anggota, dan kocok pemenang tiap bulan</div></div>
       ${!batch ? `<button class="btn btn-primary" id="arisanNewBatchBtn">${icon('plus-circle')}<span>Buka Pendaftaran Baru</span></button>` : ""}
     </div>
 
@@ -2147,7 +2153,7 @@ function secArisan(){
 
     ${finished.length ? `
     <div class="panel" style="margin-top:16px;">
-      <div class="panel-head"><h3>📜 Riwayat Batch Selesai</h3></div>
+      <div class="panel-head"><h3>${icon('history')}Riwayat Batch Selesai</h3></div>
       <div class="arisan-mem-list">
         ${finished.map(b=>`
           <div class="arisan-mem-row is-eligible">
@@ -2201,7 +2207,7 @@ function secArisanBatchHtml(batch){
       </div>
     </div>
 
-    ${arisanCountdownHtml(nextDraw, "adCd", batch.status==="berjalan" ? "⏱️ Kocokan berikutnya:" : "🎯 Kocokan pertama dijadwalkan:")}
+    ${arisanCountdownHtml(nextDraw, "adCd", batch.status==="berjalan" ? "Kocokan berikutnya:" : "Kocokan pertama dijadwalkan:")}
 
     <!-- Mesin slot ditempel LANGSUNG di bawah hitung mundur (bukan pop-up
          modal terpisah lagi). Saat belum waktunya kocok, tampilkan pratinjau
@@ -2213,7 +2219,7 @@ function secArisanBatchHtml(batch){
     ${arisanLiveDrawInfo(batch) ? `
     <div class="arisan-live-card" id="adDrawCard">
       <div class="arisan-live-badge"><span class="dot"></span>LIVE — Kocokan Sedang Berlangsung</div>
-      <div class="wheel-status-label" id="adWheelStatus">🔴 LIVE — reel sedang berputar…</div>
+      <div class="wheel-status-label" id="adWheelStatus">● LIVE — reel sedang berputar…</div>
       ${slotMachineMarkup("adDraw")}
       <div class="draw-result" id="adDrawResult" style="display:none;">
         <div class="draw-confetti" id="adDrawConfetti"></div>
@@ -2249,7 +2255,7 @@ function secArisanBatchHtml(batch){
       `).join("")}
     </div>` : ""}
 
-    <div class="arisan-mem-group-label">👥 Anggota Aktif (${approved.length})</div>
+    <div class="arisan-mem-group-label">${icon('users')}Anggota Aktif (${approved.length})</div>
     <div class="arisan-mem-list">
       ${approved.length ? approved.map(m=>`
         <div class="arisan-mem-row ${m.sudahMenang?'is-winner':'is-eligible'}">
@@ -2262,7 +2268,7 @@ function secArisanBatchHtml(batch){
     </div>
 
     ${history.length ? `
-    <div class="arisan-mem-group-label">🏆 Riwayat Kocokan</div>
+    <div class="arisan-mem-group-label">${icon('trophy')}Riwayat Kocokan</div>
     <div class="arisan-history-list">
       ${history.map(h=>`
         <div class="arisan-history-item">
@@ -2277,11 +2283,11 @@ function secArisanBatchHtml(batch){
 function arisanBatchFormModal(){
   const defaultDate = (()=>{ const d=new Date(); d.setMonth(d.getMonth()+1); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-05`; })();
   return `
-    <div class="modal-head"><h3>🎁 Buka Pendaftaran Arisan</h3><button class="icon-btn" id="modalClose">&times;</button></div>
+    <div class="modal-head"><h3>${icon('gift')}Buka Pendaftaran Arisan</h3><button class="icon-btn" id="modalClose">&times;</button></div>
     <div class="field"><label>Nama Batch</label><input type="text" id="abNama" placeholder="mis. Arisan Tanteh Susi — Batch Oktober 2026" value="Arisan Tanteh Susi — Batch ${monthLabel(defaultDate.slice(0,7))}"></div>
     <div class="field"><label>Iuran / bulan (Rp)</label><input type="number" id="abBiaya" value="150000"></div>
     <div class="field"><label>Tanggal Kocokan Pertama</label><input type="date" id="abTgl" value="${defaultDate}"></div>
-    <p class="field-hint">🎟️ Kuota anggota bebas berapa saja — siapa pun boleh daftar selama status masih "Pendaftaran Dibuka". Pendaftaran hanya berhenti saat admin menekan tombol "Tutup Pendaftaran &amp; Mulai". Kocokan berikutnya otomatis dijadwalkan tiap tanggal yang sama setiap bulan.</p>
+    <p class="field-hint">Kuota anggota bebas berapa saja — siapa pun boleh daftar selama status masih "Pendaftaran Dibuka". Pendaftaran hanya berhenti saat admin menekan tombol "Tutup Pendaftaran &amp; Mulai". Kocokan berikutnya otomatis dijadwalkan tiap tanggal yang sama setiap bulan.</p>
     <div class="modal-actions">
       <button class="btn" id="modalClose2">Batal</button>
       <button class="btn btn-primary" id="abSave">${icon('gift')}<span>Buka Pendaftaran</span></button>
@@ -2366,7 +2372,7 @@ function arisanWinnerOrderModal(members, baseDateIso, opts){
     </div>`;
   }).join("");
   return `
-    <div class="modal-head"><h3>🎯 ${isEdit ? "Atur Ulang Urutan Pemenang" : "Tentukan Urutan Pemenang"}</h3><button class="icon-btn" id="modalClose">&times;</button></div>
+    <div class="modal-head"><h3>${icon('trophy')}${isEdit ? "Atur Ulang Urutan Pemenang" : "Tentukan Urutan Pemenang"}</h3><button class="icon-btn" id="modalClose">&times;</button></div>
     <p class="field-hint">${isEdit
       ? "Susun ulang giliran menang untuk anggota yang belum pernah dapat arisan. Mesin slot tetap tampil tiap kocokan supaya seru, tapi hasilnya akan selalu mengikuti urutan yang kamu atur di sini — bukan diundi acak."
       : "Sebelum arisan dimulai, tentukan dulu siapa dapat arisan di bulan apa untuk semua anggota yang sudah di-ACC. Mesin slot nanti tetap tampil berputar tiap bulan biar seru, tapi hasilnya sudah pasti mengikuti urutan yang kamu atur di sini."}</p>
@@ -2478,7 +2484,7 @@ function arisanIdleSlotHtml(eligible){
   const reels = [0,1,2].map(i=>`<div class="slot-reel-window is-idle"><div class="slot-reel-strip is-idle">${cellHtml(pick(i))}</div></div>`).join("");
   return `
   <div class="arisan-live-card arisan-idle-card">
-    <div class="wheel-status-label">🎰 Mesin kocok siap — menanti jadwal kocokan berikutnya</div>
+    <div class="wheel-status-label">Mesin kocok siap — menanti jadwal kocokan berikutnya</div>
     <div class="slot-machine">
       <div class="slot-inner">
         <div class="slot-marquee">${bulb(14)}</div>
@@ -2626,7 +2632,7 @@ function bindArisanAdminLiveWidget(batch){
   function showResult(){
     machine?.classList.remove("is-spinning");
     machine?.classList.add("is-jackpot");
-    if(status) status.textContent = `🎉 Pemenangnya adalah ${winner.nama}!`;
+    if(status) status.textContent = `Pemenangnya adalah ${winner.nama}!`;
     resultEl.style.display = "flex";
     document.getElementById("adDrawWinnerName").textContent = winner.nama;
     spawnConfetti(document.getElementById("adDrawConfetti"));
@@ -2650,13 +2656,13 @@ function bindArisanAdminLiveWidget(batch){
     showResult();
   } else {
     machine?.classList.add("is-spinning");
-    if(status) status.textContent = `🔴 LIVE — mengocok ${eligible.length} peserta…`;
+    if(status) status.textContent = `● LIVE — mengocok ${eligible.length} peserta…`;
     _startSlotProgress("adDraw", liveInfo.elapsed);
     runSlotMachineSpin("adDraw", eligible, winner, liveInfo.elapsed,
       showResult,
       (settled, total)=>{
         if(!status || settled>=total) return;
-        status.textContent = settled===total-1 ? "🔴 LIVE — reel terakhir masih berputar… tahan napas!" : `🔴 LIVE — reel ${settled}/${total} berhenti…`;
+        status.textContent = settled===total-1 ? "● LIVE — reel terakhir masih berputar… tahan napas!" : `● LIVE — reel ${settled}/${total} berhenti…`;
       }
     );
   }
@@ -2681,7 +2687,7 @@ function bindArisanAdminLiveWidget(batch){
     if(stillEligible.length===0) batch.status = "selesai";
     batch.liveDraw = { active:false }; // tutup siaran live di halaman tamu
     saveArisanList();
-    toast(`🎉 ${winner.nama} menang ronde ${mem.menangRound}! Tersimpan ke riwayat.`);
+    toast(`${winner.nama} menang ronde ${mem.menangRound}! Tersimpan ke riwayat.`);
     refreshAdminContent();
   });
 }
@@ -2744,7 +2750,7 @@ function secDashboard(){
         <div class="mini-bar-labels">${perMonth.map(m=>`<span>${monthLabel(m.k)}</span>`).join("")}</div>
       </div>
       <div class="panel">
-        <div class="panel-head"><h3>🏆 Peringkat Setoran</h3><span class="hint"><a href="javascript:void(0)" id="goAnggotaBtn" style="color:var(--ink-soft);text-decoration:underline;">lihat semua</a></span></div>
+        <div class="panel-head"><h3>${icon('trophy')}Peringkat Setoran</h3><span class="hint"><a href="javascript:void(0)" id="goAnggotaBtn" style="color:var(--ink-soft);text-decoration:underline;">lihat semua</a></span></div>
         <div class="rank-list">
           ${ranking.map((r,i)=>{
             const m = memberById(r.id);
@@ -3461,7 +3467,7 @@ function openChess(){
 }
 function renderChessModal(){
   document.getElementById("gameModalBody").innerHTML = `
-    <div class="game-head"><h3>♟️ Catur</h3><button class="icon-btn" id="gameCloseBtn">${icon('close')}</button></div>
+    <div class="game-head"><h3>${icon('chess')}Catur</h3><button class="icon-btn" id="gameCloseBtn">${icon('close')}</button></div>
     <div class="game-sub">Mode bebas — pilih bidak lalu ketuk kotak tujuan. Cocok untuk main santai berdua di satu perangkat.</div>
     <div class="game-toolbar">
       <span class="game-turn-badge"><span class="game-turn-dot" style="background:${chessTurn==='w'?'#f4f4f4':'#222'};border:1px solid var(--border);"></span>Giliran: ${chessTurn==='w'?'Putih':'Hitam'}</span>
@@ -3533,10 +3539,10 @@ function renderLadderBoard(){
   }
   const current = ladderPlayers[ladderTurnIdx];
   document.getElementById("gameModalBody").innerHTML = `
-    <div class="game-head"><h3>🐍 Ular Tangga</h3><button class="icon-btn" id="gameCloseBtn">${icon('close')}</button></div>
+    <div class="game-head"><h3>${icon('ladder')}Ular Tangga</h3><button class="icon-btn" id="gameCloseBtn">${icon('close')}</button></div>
     <div class="game-toolbar">
       ${ladderWinner
-        ? `<span class="game-turn-badge"><span class="game-turn-dot" style="background:${ladderWinner.color}"></span>${ladderWinner.name} menang! 🎉</span>`
+        ? `<span class="game-turn-badge"><span class="game-turn-dot" style="background:${ladderWinner.color}"></span>${ladderWinner.name} menang!</span>`
         : `<span class="game-turn-badge"><span class="game-turn-dot" style="background:${current.color}"></span>Giliran: ${current.name}</span>`}
       <button class="btn btn-sm" id="ladderResetBtn">${icon('history')}<span>Main Ulang</span></button>
     </div>
@@ -3546,8 +3552,8 @@ function renderLadderBoard(){
       <button class="btn btn-primary" id="ladderRollBtn" ${ladderWinner?'disabled':''} style="flex:1;justify-content:center;">${icon('dice')}<span>Lempar Dadu</span></button>
     </div>
     <div class="game-legend">
-      <span>🪜 Tangga = naik</span>
-      <span>🐍 Ular = turun</span>
+      <span>${icon('ladder')}Tangga = naik</span>
+      <span>Ular = turun</span>
     </div>
   `;
   bindGameClose();
@@ -3621,7 +3627,7 @@ function renderMonoBoard(){
   }
   const current = monoPlayers[monoTurnIdx];
   document.getElementById("gameModalBody").innerHTML = `
-    <div class="game-head"><h3>🎲 Monopoly</h3><button class="icon-btn" id="gameCloseBtn">${icon('close')}</button></div>
+    <div class="game-head"><h3>${icon('dice')}Monopoly</h3><button class="icon-btn" id="gameCloseBtn">${icon('close')}</button></div>
     <div class="game-toolbar">
       <span class="game-turn-badge"><span class="game-turn-dot" style="background:${current.color}"></span>Giliran: ${current.name}</span>
       <button class="btn btn-sm" id="monoResetBtn">${icon('history')}<span>Main Ulang</span></button>
