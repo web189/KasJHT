@@ -1028,9 +1028,10 @@ function drawHeroChart(){
   if(!svg || !heroChartData) return;
   const W = Math.round(svg.clientWidth||600), H = Math.round(svg.clientHeight||130);
   svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
-  const padT = H>150 ? 50 : 14, padB = H>150 ? 34 : 14;
+  const narrow = W < 520;
+  const padT = narrow ? 66 : (H>150 ? 50 : 14), padB = narrow ? 36 : (H>150 ? 34 : 14);
   const n = heroChartData.length;
-  const plotW = W > 700 ? W - 150 : W;
+  const plotW = narrow ? W - 16 : W - 138;
   const cw = plotW/n;
   const highs = heroChartData.map(c=>c.high), lows = heroChartData.map(c=>c.low);
   const max = Math.max(...highs), min = Math.min(...lows);
@@ -1101,11 +1102,12 @@ function renderGuest(){
       <div class="hero-top">
         <div class="hero-head">
           <div class="hero-eyebrow">Transparansi kas dan anggaran pembelian barang dan jasa</div>
-          <h1>Rekap Kas Admin GDNG 2026</h1>
+          <h1>Rekap Kas Admin <span class="h1-br">GDNG 2026</span></h1>
         </div>
         <div class="hero-stamp"><span class="hs-dot"></span>Terbuka untuk semua</div>
       </div>
 
+      <div class="hero-grid">
       <div class="hero-chart" id="heroChart">
         <svg class="hero-chart-svg" id="heroChartSvg" viewBox="0 0 600 130" preserveAspectRatio="none"></svg>
         <div class="hero-chart-tag">
@@ -1136,6 +1138,7 @@ function renderGuest(){
           <span class="saldo-label">Saldo akhir</span>
           <span class="saldo-fig mono money-blur">${moneyDual(t.saldo)}</span>
         </div>
+      </div>
       </div>
       <button class="money-toggle-btn" id="moneyToggleBtn">
         ${icon(state.moneyRevealed ? 'eye-off' : 'eye')}
@@ -1199,7 +1202,8 @@ function excelPanelHtml(withActions){
   const list = getFilteredTxList(withActions);
   const typeFilter = withActions ? state.adminTxFilter : state.guestTxFilter;
   const filterIdPrefix = withActions ? "a" : "g";
-  const ROW_H = 46, HEAD_H = 44;
+  const mobileCards = !withActions && window.innerWidth<=640;
+  const ROW_H = mobileCards ? 87 : 46, HEAD_H = mobileCards ? 0 : 44;
   const maxH = state.viewRows==="all" ? null : (HEAD_H + Number(state.viewRows)*ROW_H);
   const collapsible = !withActions;
   const isOpen = !collapsible || state.guestFilterOpen;
@@ -1245,7 +1249,7 @@ function excelTableHtml(list, withActions, maxHeightPx){
   const capStyle = maxHeightPx===undefined ? "" : (maxHeightPx===null ? `max-height:none;` : `max-height:${maxHeightPx}px;`);
   return `
   <div class="excel-wrap" style="${capStyle}">
-    <table class="excel">
+    <table class="excel${withActions?'':' excel-cards'}">
       <thead>
         <tr>
           <th class="col-no">No</th>
@@ -1268,7 +1272,7 @@ function excelTableHtml(list, withActions, maxHeightPx){
             <td class="col-name"><span class="avatar-mini" style="background:${avatarBg(colorOf(t.admin))}">${initials(nameOf(t.admin))}</span>${nameOf(t.admin)}</td>
             <td><span class="tx-shift-chip">${t.shift||"Non Shift"}</span></td>
             <td class="col-amt"><span class="amt-pill ${isIn?'in':'out'} ${withActions?'':'money-blur'}">${isIn?'↑':'↓'} ${moneyDual(amount)}</span></td>
-            <td class="col-ket">${escapeHtml(t.ket) || "—"}</td>
+            <td class="col-ket${t.ket?'':' is-empty'}">${escapeHtml(t.ket) || "—"}</td>
             ${withActions ? `<td class="col-no"><button class="icon-btn sm" data-edit="${t.id}" title="Ubah">${icon('edit')}</button><button class="icon-btn sm" style="color:var(--rust);" data-del="${t.id}" title="Hapus">${icon('trash')}</button></td>` : ""}
           </tr>`;
         }).join("")}
