@@ -8,11 +8,11 @@ html{
   --gold:#FFC857; --gold-2:#FF9F1C;
   --mint:#3DDC97; --coral:#FF6B57;
   --line:rgba(255,200,87,.16);
-  --glass:rgba(16,21,28,.72);
+  --glass:rgba(13,17,23,.96);
   scroll-behavior:smooth;
   -webkit-tap-highlight-color:transparent;
 }
-html[data-theme="light"]{ --line:rgba(160,100,0,.18); --glass:rgba(255,255,255,.78); }
+html[data-theme="light"]{ --line:rgba(160,100,0,.18); --glass:rgba(255,255,255,.96); }
 
 body{
   font-feature-settings:"tnum" 1,"cv11" 1;
@@ -22,7 +22,7 @@ body{
 
 /* Latar: grid halus + dua pendar cahaya, statis (0 biaya animasi) */
 html[data-theme="dark"] body::before{
-  content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
+  content:"";position:fixed;top:0;left:0;right:0;bottom:0;z-index:-1;pointer-events:none;
   background:
     radial-gradient(900px 480px at 85% -10%,rgba(255,159,28,.13),transparent 60%),
     radial-gradient(700px 420px at -10% 30%,rgba(61,220,151,.07),transparent 60%),
@@ -35,8 +35,6 @@ html[data-theme="dark"] body::before{
 /* ---------- Topbar & navigasi ---------- */
 html .topbar{
   background:var(--glass);
-  -webkit-backdrop-filter:blur(14px) saturate(140%);
-          backdrop-filter:blur(14px) saturate(140%);
   border-bottom:1px solid transparent;
   border-image:linear-gradient(90deg,transparent,var(--gold),var(--coral),transparent) 1;
 }
@@ -63,9 +61,13 @@ html .dnav-link.active::after,html .dnav-link[aria-current="page"]::after{
 html .hero{padding-top:28px;}
 html .hero h1{
   font-family:var(--font-display);font-weight:800;
-  font-size:clamp(30px,6.4vw,54px);line-height:1.02;letter-spacing:-.035em;
-  background:linear-gradient(180deg,var(--ink) 60%,rgba(var(--ink-r),var(--ink-g),var(--ink-b),.82));
-  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+  font-size:34px;font-size:clamp(30px,6.4vw,54px);line-height:1.02;letter-spacing:-.035em;
+}
+@supports ((-webkit-background-clip:text) or (background-clip:text)){
+  html .hero h1{
+    background:linear-gradient(180deg,var(--ink) 60%,rgba(var(--ink-r),var(--ink-g),var(--ink-b),.82));
+    -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+  }
 }
 html .hero-eyebrow{color:var(--gold);font-weight:600;}
 html .hero-stamp{
@@ -73,8 +75,7 @@ html .hero-stamp{
   background:rgba(61,220,151,.08);color:var(--mint);
   box-shadow:0 0 18px -4px rgba(61,220,151,.45);
 }
-html .hs-dot{box-shadow:0 0 0 0 rgba(61,220,151,.6);animation:tpPulse 2s infinite;}
-@keyframes tpPulse{70%{box-shadow:0 0 0 7px rgba(61,220,151,0);}100%{box-shadow:0 0 0 0 rgba(61,220,151,0);}}
+html .hs-dot{box-shadow:0 0 0 0 rgba(61,220,151,.6);}
 
 /* Kartu grafik: bingkai garis emas + sudut siku ala terminal */
 html .hero-chart,html .saldo-strip,html .panel{
@@ -84,17 +85,11 @@ html .hero-chart,html .saldo-strip,html .panel{
   background:
     linear-gradient(180deg,rgba(255,255,255,.035),rgba(255,255,255,0) 40%),
     var(--bg-elev);
-  box-shadow:0 1px 0 rgba(255,255,255,.05) inset,0 24px 48px -28px rgba(0,0,0,.65);
+  box-shadow:0 1px 0 rgba(255,255,255,.05) inset,0 10px 24px -16px rgba(0,0,0,.6);
 }
 html[data-theme="light"] .hero-chart,
 html[data-theme="light"] .saldo-strip,
 html[data-theme="light"] .panel{box-shadow:0 20px 40px -28px rgba(60,80,120,.35);}
-html .hero-chart::after{
-  content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;
-  background:linear-gradient(115deg,transparent 40%,rgba(255,200,87,.08) 50%,transparent 60%);
-  background-size:250% 100%;animation:tpSheen 7s linear infinite;
-}
-@keyframes tpSheen{from{background-position:130% 0;}to{background-position:-130% 0;}}
 html .hero-chart-price{font-family:var(--font-mono);font-weight:700;letter-spacing:-.02em;}
 html .hero-chart-tag{
   border-radius:999px;border:1px solid var(--line);
@@ -104,7 +99,7 @@ html .hero-chart-tag{
 /* Saldo: angka jadi pusat perhatian */
 html .saldo-strip{overflow:hidden;}
 html .saldo-strip::before{
-  content:"";position:absolute;inset:0;pointer-events:none;
+  content:"";position:absolute;top:0;left:0;right:0;bottom:0;pointer-events:none;
   background:radial-gradient(420px 160px at 0% 0%,rgba(255,159,28,.16),transparent 70%);
 }
 html .saldo-fig,html .rank-amt,html .rank-pct{font-family:var(--font-mono);font-variant-numeric:tabular-nums;}
@@ -200,8 +195,33 @@ html ::selection{background:rgba(255,200,87,.35);}
 }
 
 /* Hemat baterai & aksesibilitas gerak */
-@media (prefers-reduced-motion:reduce){
-  html .hero-chart::after,html .hs-dot{animation:none;}
-  html *{transition-duration:.01ms !important;}
+@media (prefers-reduced-motion:reduce){ html *{animation:none !important;transition-duration:.01ms !important;} }
+
+/* ---------- Animasi masuk (sekali, hanya opacity/transform) ---------- */
+@keyframes tpIn{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:none;}}
+html .hero h1,html .hero-chart,html .saldo-strip,html .panel{animation:tpIn .45s ease-out both;}
+html .saldo-strip{animation-delay:.08s;}
+html .panel{animation-delay:.14s;}
+
+/* ---------- Bar navigasi bawah (HP) ---------- */
+.tp-bnav{display:none;}
+@media (max-width:700px){
+  body{padding-bottom:72px;}
+  .tp-bnav{
+    display:flex;position:fixed;left:0;right:0;bottom:0;z-index:60;
+    padding:6px 8px calc(6px + env(safe-area-inset-bottom,0px));
+    background:var(--glass);border-top:1px solid var(--line);
+  }
+  .tp-bnav a{
+    flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;
+    padding:6px 2px;border-radius:12px;text-decoration:none;
+    font-size:11px;font-weight:600;color:var(--ink-soft);position:relative;
+  }
+  .tp-bnav svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+  .tp-bnav a.on{color:var(--gold);background:rgba(255,200,87,.10);}
+  .tp-bnav a.on::before{content:"";position:absolute;top:-7px;left:30%;right:30%;height:2px;border-radius:2px;background:var(--gold);}
 }
-@media (max-width:700px){ html .hero-chart::after{animation:none;} }
+
+/* Footer: tautan developer */
+html .site-footer a{color:var(--gold);font-weight:700;text-decoration:none;border-bottom:1px solid rgba(255,200,87,.4);transition:color .2s,border-color .2s;}
+html .site-footer a:hover{color:var(--gold-2);border-bottom-color:var(--gold-2);}

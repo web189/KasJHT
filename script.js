@@ -1171,7 +1171,7 @@ function renderGuest(){
       </div>
     </div>
   </div>
-  <footer class="site-footer">JHT KAS Adm PRG — mode uji, data tersimpan di penyimpanan lokal perangkat ini.</footer>
+  <footer class="site-footer">Website dan sistem developer <a href="https://benyoriki.com" target="_blank" rel="noopener noreferrer">benyoriki.com</a></footer>
   `;
 }
 
@@ -1589,7 +1589,7 @@ function renderArisanPage(){
       ${history.length ? arisanHistoryHtml(history) : ""}
     </div>
   </div>
-  <footer class="site-footer">JHT KAS Adm PRG — mode uji, data tersimpan di penyimpanan lokal perangkat ini.</footer>
+  <footer class="site-footer">Website dan sistem developer <a href="https://benyoriki.com" target="_blank" rel="noopener noreferrer">benyoriki.com</a></footer>
   `;
 }
 
@@ -1769,7 +1769,7 @@ function renderPengajuanPage(){
       </div>
     </div>
   </div>
-  <footer class="site-footer">JHT KAS Adm PRG — mode uji, data tersimpan di penyimpanan lokal perangkat ini.</footer>
+  <footer class="site-footer">Website dan sistem developer <a href="https://benyoriki.com" target="_blank" rel="noopener noreferrer">benyoriki.com</a></footer>
   `;
 }
 
@@ -1877,7 +1877,7 @@ function renderRiwayatPage(){
       </div>
     </div>
   </div>
-  <footer class="site-footer">JHT KAS Adm PRG — mode uji, data tersimpan di penyimpanan lokal perangkat ini.</footer>
+  <footer class="site-footer">Website dan sistem developer <a href="https://benyoriki.com" target="_blank" rel="noopener noreferrer">benyoriki.com</a></footer>
   `;
 }
 
@@ -1986,7 +1986,7 @@ function renderAsetPage(){
       </div>
     </div>
   </div>
-  <footer class="site-footer">JHT KAS Adm PRG — mode uji, data tersimpan di penyimpanan lokal perangkat ini.</footer>
+  <footer class="site-footer">Website dan sistem developer <a href="https://benyoriki.com" target="_blank" rel="noopener noreferrer">benyoriki.com</a></footer>
   `;
 }
 
