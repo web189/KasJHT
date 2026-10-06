@@ -64,7 +64,7 @@ html .hero{padding-top:28px;}
 html .hero h1{
   font-family:var(--font-display);font-weight:800;
   font-size:clamp(30px,6.4vw,54px);line-height:1.02;letter-spacing:-.035em;
-  background:linear-gradient(180deg,var(--ink) 40%,rgba(var(--ink-r),var(--ink-g),var(--ink-b),.62));
+  background:linear-gradient(180deg,var(--ink) 60%,rgba(var(--ink-r),var(--ink-g),var(--ink-b),.82));
   -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
 }
 html .hero-eyebrow{color:var(--gold);font-weight:600;}
@@ -127,7 +127,8 @@ html .excel-wrap{
   scrollbar-width:thin;scrollbar-color:var(--gold-2) transparent;
 }
 html .excel-wrap thead th{
-  background:rgba(255,200,87,.07);color:var(--ink-soft);
+  background:linear-gradient(rgba(255,200,87,.09),rgba(255,200,87,.09)),var(--bg-elev-2);
+  color:var(--ink-soft);
   font-weight:600;letter-spacing:.01em;
 }
 html .excel-wrap tbody tr{transition:background .15s;}
