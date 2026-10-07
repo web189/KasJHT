@@ -14,7 +14,7 @@
    ============================================================ */
 'use strict';
 
-var CACHE_VERSION = '2026-10-07.1';
+var CACHE_VERSION = '2026-10-08.1';
 var APP_CACHE = 'kas-jht-app-' + CACHE_VERSION;
 var CDN_CACHE = 'kas-jht-cdn-' + CACHE_VERSION;
 
@@ -26,8 +26,8 @@ var PRECACHE = [
   "./assets/icon-180.png",
   "./manifest.json?v=20261004a",
   "./style.css?v=20261004a",
-  "./theme-pro.css?v=20261006c",
-  "./enhance.js?v=20261006c",
+  "./theme-pro.css?v=20261008a",
+  "./enhance.js?v=20261008a",
   "./assets/piggy.png",
   "./firebase-config.js?v=20261004a",
   "./script.js?v=20261007a",

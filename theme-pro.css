@@ -188,7 +188,7 @@ html ::selection{background:rgba(255,200,87,.35);}
 
 /* ---------- Desktop lebar ---------- */
 @media (min-width:1100px){
-  html .hero h1{font-size:clamp(44px,4.6vw,64px);}
+  html .hero h1{font-size:clamp(40px,3.8vw,52px);}
   html .panel{padding:26px 28px;}
   html .rank-list{grid-template-columns:repeat(3,1fr);}
   html .rank-list > .rank-row:first-child{grid-column:1 / -1;}
@@ -210,7 +210,8 @@ html .panel{animation-delay:.14s;}
   .tp-bnav{
     display:flex;position:fixed;left:0;right:0;bottom:0;z-index:60;
     padding:6px 8px calc(6px + env(safe-area-inset-bottom,0px));
-    background:var(--glass);border-top:1px solid var(--line);
+    background:#0d1117;background:var(--bg-elev);border-top:1px solid var(--line);
+    box-shadow:0 -8px 20px -12px rgba(0,0,0,.5);
   }
   .tp-bnav a{
     flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;
@@ -225,3 +226,30 @@ html .panel{animation-delay:.14s;}
 /* Footer: tautan developer */
 html .site-footer a{color:var(--gold);font-weight:700;text-decoration:none;border-bottom:1px solid rgba(255,200,87,.4);transition:color .2s,border-color .2s;}
 html .site-footer a:hover{color:var(--gold-2);border-bottom-color:var(--gold-2);}
+
+/* ---------- Perbaikan v5 ---------- */
+html .hero h1{text-wrap:balance;}
+.tp-bnav{background:#0d1117;background:var(--bg-elev);}
+html[data-theme="light"] .tp-bnav{background:#fff;}
+body.tp-menu-open .tp-bnav{display:none;}
+
+/* Progres scroll: garis emas tipis di paling atas */
+.tp-progress{position:fixed;top:0;left:0;right:0;height:3px;z-index:90;pointer-events:none;
+  background:linear-gradient(90deg,var(--gold),var(--coral));
+  -webkit-transform-origin:0 50%;transform-origin:0 50%;
+  -webkit-transform:scaleX(0);transform:scaleX(0);}
+
+/* Peringkat: Setor / Keluar / Sisa selalu sejajar 3 kolom di HP */
+@media (max-width:700px){
+  html .rank-breakdown{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;}
+  html .rank-breakdown .rb-op,html .rank-breakdown::before{display:none;}
+  html .rb-chip{min-width:0;padding:7px 8px;}
+  html .rb-chip-val{font-size:11.5px;overflow:hidden;text-overflow:ellipsis;}
+  html .rb-chip-label{font-size:10.5px;}
+}
+
+/* Desktop: grafik & harga lebih menonjol */
+@media (min-width:900px){
+  html .hero-chart-price{font-size:32px;}
+  html .rank-row:first-child .rank-amt{font-size:22px;}
+}

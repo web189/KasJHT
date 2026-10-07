@@ -22,7 +22,36 @@
       if(on)a[j].setAttribute("aria-current","page");else a[j].removeAttribute("aria-current");
     }
   }
-  function ready(){document.body.appendChild(nav);mark();}
+  function ready(){document.body.appendChild(nav);mark();start();}
   if(window.addEventListener){window.addEventListener("hashchange",mark,false);}
+  /* Sembunyikan bar bawah saat menu geser terbuka */
+  function menuState(){
+    var open=!!document.querySelector(".mobile-menu-panel.open");
+    var c=document.body.className.replace(/\s*tp-menu-open/,"");
+    var n=open?(c+" tp-menu-open"):c;
+    if(n!==document.body.className)document.body.className=n;
+  }
+  /* Garis progres scroll (rAF, pasif, sangat ringan) */
+  var bar=document.createElement("div"),tick=false;
+  bar.className="tp-progress";bar.setAttribute("aria-hidden","true");
+  function prog(){
+    tick=false;
+    var d=document.documentElement,max=d.scrollHeight-d.clientHeight;
+    var v=max>0?(window.pageYOffset||d.scrollTop)/max:0;
+    var t="scaleX("+(v>1?1:v)+")";
+    bar.style.webkitTransform=t;bar.style.transform=t;
+  }
+  function onScroll(){
+    if(tick)return;tick=true;
+    (window.requestAnimationFrame||function(f){setTimeout(f,16);})(prog);
+  }
+  function start(){
+    document.body.appendChild(bar);prog();
+    window.addEventListener("scroll",onScroll,false);
+    window.addEventListener("resize",onScroll,false);
+    if(window.MutationObserver){
+      new MutationObserver(menuState).observe(document.body,{subtree:true,attributes:true,attributeFilter:["class"]});
+    }
+  }
   if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",ready,false);}else{ready();}
 })();
