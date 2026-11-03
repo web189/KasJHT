@@ -14,7 +14,7 @@
    ============================================================ */
 'use strict';
 
-var CACHE_VERSION = '2026-11-06.1';
+var CACHE_VERSION = '2026-11-07.1';
 var APP_CACHE = 'kas-jht-app-' + CACHE_VERSION;
 var CDN_CACHE = 'kas-jht-cdn-' + CACHE_VERSION;
 
@@ -32,11 +32,11 @@ var PRECACHE = [
   "./pwa.js?v=20261106a",
   "./favicon.ico",
   "./assets/favicon-32.png",
-  "./assets/icon-180.png?v=2",
-  "./assets/icon-192.png?v=2",
-  "./assets/icon-512.png?v=2",
-  "./assets/icon-192-maskable.png?v=2",
-  "./assets/icon-512-maskable.png?v=2",
+  "./assets/icon-180.png?v=3",
+  "./assets/icon-192.png?v=3",
+  "./assets/icon-512.png?v=3",
+  "./assets/icon-192-maskable.png?v=3",
+  "./assets/icon-512-maskable.png?v=3",
   "./assets/piggy.png",
   "./assets/piggy-sm.png",
   "./assets/fonts/bricolage-grotesque-latin-700-normal.woff2",
