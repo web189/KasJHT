@@ -14,7 +14,7 @@
    ============================================================ */
 'use strict';
 
-var CACHE_VERSION = '2026-10-08.1';
+var CACHE_VERSION = '2026-11-03.1';
 var APP_CACHE = 'kas-jht-app-' + CACHE_VERSION;
 var CDN_CACHE = 'kas-jht-cdn-' + CACHE_VERSION;
 
@@ -26,8 +26,14 @@ var PRECACHE = [
   "./assets/icon-180.png",
   "./manifest.json?v=20261004a",
   "./style.css?v=20261004a",
-  "./theme-pro.css?v=20261008a",
-  "./enhance.js?v=20261008a",
+  "./theme-2026.css?v=20261103a",
+  "./assets/fonts/bricolage-grotesque-latin-700-normal.woff2",
+  "./assets/fonts/bricolage-grotesque-latin-800-normal.woff2",
+  "./assets/fonts/figtree-latin-400-normal.woff2",
+  "./assets/fonts/figtree-latin-500-normal.woff2",
+  "./assets/fonts/figtree-latin-600-normal.woff2",
+  "./assets/fonts/figtree-latin-700-normal.woff2",
+  "./enhance.js?v=20261103a",
   "./assets/piggy.png",
   "./firebase-config.js?v=20261004a",
   "./script.js?v=20261007a",

@@ -32,10 +32,10 @@
    memakai default putih/hitam browser, bukan variabel tema. style.css
    akan menyempurnakan semuanya begitu selesai dimuat; loading screen 8
    detik memberi banyak waktu untuk itu. */
-html[data-theme="dark"]{background:#0A0D12;}
-html[data-theme="dark"] body{background:#0A0D12;color:#EEF1F6;}
-html[data-theme="light"]{background:#EEF1F6;}
-html[data-theme="light"] body{background:#EEF1F6;color:#0F141C;}
+html[data-theme="dark"]{background:#150E10;}
+html[data-theme="dark"] body{background:#150E10;color:#F8F0E8;}
+html[data-theme="light"]{background:#F3EFF0;}
+html[data-theme="light"] body{background:#F3EFF0;color:#2A171C;}
 body{margin:0;min-height:100vh;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;}
 #bootLoader{
   position:fixed;inset:0;z-index:20000;
@@ -70,16 +70,15 @@ body{margin:0;min-height:100vh;font-family:-apple-system,BlinkMacSystemFont,"Seg
 <link rel="icon" type="image/png" sizes="512x512" href="./assets/icon-512.png">
 <link rel="apple-touch-icon" sizes="180x180" href="./assets/icon-180.png">
 <link rel="manifest" href="./manifest.json?v=20261004a">
-<meta name="theme-color" content="#8A0303">
+<meta name="theme-color" content="#150E10">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Kas JHT">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=IBM+Plex+Mono:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="preload" href="./assets/fonts/bricolage-grotesque-latin-800-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="./assets/fonts/figtree-latin-600-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="./style.css?v=20261004a">
-<link rel="stylesheet" href="./theme-pro.css?v=20261008a">
+<link rel="stylesheet" href="./theme-2026.css?v=20261103a">
 </head>
 <body>
 
@@ -169,7 +168,7 @@ body{margin:0;min-height:100vh;font-family:-apple-system,BlinkMacSystemFont,"Seg
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js" defer></script>
 <script src="./firebase-config.js?v=20261004a" defer></script>
 <script src="./script.js?v=20261007a" defer></script>
-<script src="./enhance.js?v=20261008a" defer></script>
+<script src="./enhance.js?v=20261103a" defer></script>
 <script src="pwa.js" data-app-name="Kas JHT" data-accent="#c62828" defer></script>
 </body>
 </html>
