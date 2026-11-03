@@ -14,33 +14,41 @@
    ============================================================ */
 'use strict';
 
-var CACHE_VERSION = '2026-11-03.1';
+var CACHE_VERSION = '2026-11-06.1';
 var APP_CACHE = 'kas-jht-app-' + CACHE_VERSION;
 var CDN_CACHE = 'kas-jht-cdn-' + CACHE_VERSION;
 
 /* File inti yang di-cache saat pemasangan (relatif terhadap lokasi sw.js) */
 var PRECACHE = [
   "./",
-  "./assets/icon-192.png",
-  "./assets/icon-512.png",
-  "./assets/icon-180.png",
-  "./manifest.json?v=20261004a",
+  "./index.html",
+  "./version.json",
+  "./manifest.json?v=20261105a",
   "./style.css?v=20261004a",
-  "./theme-2026.css?v=20261103a",
+  "./theme-2026.css?v=20261105a",
+  "./script.js?v=20261007a",
+  "./firebase-config.js?v=20261004a",
+  "./enhance.js?v=20261104a",
+  "./pwa.js?v=20261106a",
+  "./favicon.ico",
+  "./assets/favicon-32.png",
+  "./assets/icon-180.png?v=2",
+  "./assets/icon-192.png?v=2",
+  "./assets/icon-512.png?v=2",
+  "./assets/icon-192-maskable.png?v=2",
+  "./assets/icon-512-maskable.png?v=2",
+  "./assets/piggy.png",
+  "./assets/piggy-sm.png",
   "./assets/fonts/bricolage-grotesque-latin-700-normal.woff2",
   "./assets/fonts/bricolage-grotesque-latin-800-normal.woff2",
   "./assets/fonts/figtree-latin-400-normal.woff2",
   "./assets/fonts/figtree-latin-500-normal.woff2",
   "./assets/fonts/figtree-latin-600-normal.woff2",
   "./assets/fonts/figtree-latin-700-normal.woff2",
-  "./enhance.js?v=20261103a",
-  "./assets/piggy.png",
-  "./firebase-config.js?v=20261004a",
-  "./script.js?v=20261007a",
-  "pwa.js",
-  "./assets/icon-192-maskable.png",
-  "./assets/icon-512-maskable.png",
-  "manifest.json"
+  /* SDK Firebase: disimpan agar aplikasi bisa dibuka tanpa internet */
+  "https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js",
+  "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js",
+  "https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"
 ];
 
 /* Bagian situs lain di bawah folder yang sama — TIDAK boleh disentuh service worker ini */
@@ -51,14 +59,17 @@ var INDEX_URL = new URL('./', self.location).href;
 
 self.addEventListener('install', function (event) {
   event.waitUntil(
-    caches.open(APP_CACHE).then(function (cache) {
+    Promise.all([caches.open(APP_CACHE), caches.open(CDN_CACHE)]).then(function (cs) {
       /* add satu-satu: kalau ada 1 file gagal, pemasangan tidak ikut batal */
       return Promise.all(PRECACHE.map(function (u) {
+        var cache = /^https?:/.test(u) ? cs[1] : cs[0];
         return cache.add(new Request(u, { cache: 'reload' })).catch(function () {});
       }));
     }).then(function () { return self.skipWaiting(); })
   );
 });
+
+self.addEventListener('message', function (e) { if (e.data === 'SKIP_WAITING') self.skipWaiting(); });
 
 self.addEventListener('activate', function (event) {
   event.waitUntil(
@@ -94,10 +105,10 @@ function fetchWithTimeout(req, ms) {
 function offlineResponse() {
   var html = '<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">' +
     '<title>Tidak ada koneksi</title><body style="margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;' +
-    'background:#0b1220;color:#e8eefc;font-family:Segoe UI,Arial,sans-serif;text-align:center;padding:24px">' +
-    '<div><h2 style="margin:0 0 8px">Tidak ada koneksi internet</h2>' +
-    '<p style="margin:0 0 18px;opacity:.75">Halaman ini belum tersimpan untuk mode offline.<br>Periksa internet lalu coba lagi.</p>' +
-    '<button onclick="location.reload()" style="padding:10px 22px;border:0;border-radius:8px;background:#2f7dff;color:#fff;font-size:15px;cursor:pointer">Coba lagi</button></div>';
+    'background:#150E10;color:#F8F0E8;font-family:Segoe UI,Arial,sans-serif;text-align:center;padding:24px">' +
+    '<div><h2 style="margin:0 0 8px">Sedang offline</h2>' +
+    '<p style="margin:0 0 18px;color:#CFC0B7">Halaman ini belum tersimpan. Buka sekali saat online, setelah itu bisa dibuka tanpa internet.</p>' +
+    '<button onclick="location.reload()" style="padding:11px 24px;border:0;border-radius:14px;background:#F2B84B;color:#2B1700;font-weight:700;font-size:15px;cursor:pointer">Coba lagi</button></div>';
   return new Response(html, { status: 503, headers: { 'Content-Type': 'text/html; charset=utf-8' } });
 }
 
@@ -105,7 +116,8 @@ function networkFirst(event, isNav) {
   var req = event.request;
   return caches.open(APP_CACHE).then(function (cache) {
     return cache.match(req).then(function (cached) {
-      return fetchWithTimeout(req, cached ? NETWORK_TIMEOUT_MS : 0).then(function (res) {
+      var fresh = new Request(req.url, { cache: 'no-cache', credentials: 'same-origin' });
+      return fetchWithTimeout(fresh, cached ? NETWORK_TIMEOUT_MS : 0).then(function (res) {
         if (res && res.status === 200 && res.type === 'basic') {
           event.waitUntil(cache.put(req, res.clone()).catch(function () {}));
         }

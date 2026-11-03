@@ -549,3 +549,114 @@ table.excel td.col-ket{color:var(--ink-soft);}
 /* ---------- Penyempurnaan: kolom aksi tabel admin sejajar ---------- */
 table.excel td.col-no:last-child{width:96px;white-space:nowrap;text-align:right;}
 table.excel td.col-no:last-child .icon-btn{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;margin-left:4px;border-radius:11px;vertical-align:middle;}
+
+/* ==========================================================================
+   LOADING SCREEN 4 detik — "Semar Terbangun"
+   Horor ringan: vinyet merah marun, tetesan darah, kilau berdenyut seperti
+   detak jantung, judul glitch singkat. Hanya transform/opacity (ringan untuk
+   Windows 7); tanpa filter/blur animasi.
+   ========================================================================== */
+.boot-loader{
+  background:
+    radial-gradient(ellipse 70% 55% at 50% 38%,rgba(142,27,34,.42),transparent 70%),
+    radial-gradient(ellipse 120% 90% at 50% 50%,transparent 45%,rgba(0,0,0,.85) 100%),
+    #0b0506;
+  animation:none;transition:opacity .45s ease,visibility .45s ease;
+}
+.boot-loader::before{
+  /* garis pindai statis tipis (tanpa animasi) */
+  background-image:repeating-linear-gradient(0deg,rgba(255,255,255,.035) 0 1px,transparent 1px 4px);
+  background-size:auto;opacity:.5;
+}
+.boot-loader::after{display:none;}
+.boot-coin{display:none;}
+
+/* tetesan darah dari atas */
+.boot-drips{position:absolute;top:0;left:0;right:0;height:0;z-index:0;pointer-events:none;}
+.boot-drips i{
+  position:absolute;top:-110px;left:var(--x);width:5px;height:var(--h);border-radius:0 0 6px 6px;
+  background:linear-gradient(180deg,rgba(142,27,34,0),#8E1B22 35%,#E03A43);
+  -webkit-transform:translateY(0);transform:translateY(0);opacity:0;
+  animation:bootDrip 2.4s cubic-bezier(.5,0,.8,.6) var(--d) infinite;
+}
+.boot-drips i::after{content:"";position:absolute;left:-2px;bottom:-4px;width:9px;height:9px;border-radius:50%;background:#E03A43;}
+@keyframes bootDrip{
+  0%{opacity:0;transform:translateY(0);}
+  12%{opacity:.9;}
+  70%{opacity:.9;transform:translateY(calc(100vh + 120px));}
+  100%{opacity:0;transform:translateY(calc(100vh + 120px));}
+}
+
+.boot-inner{width:min(340px,86vw);}
+.boot-piggy-wrap{width:190px;height:190px;margin-bottom:14px;}
+.boot-ring{
+  position:absolute;left:10px;top:10px;right:10px;bottom:10px;border-radius:50%;
+  border:2px solid rgba(224,58,67,.55);
+  animation:bootBeat 1.1s ease-out infinite;
+}
+.boot-piggy-glow{
+  left:-10px;top:-10px;right:-10px;bottom:-10px;filter:none;
+  background:radial-gradient(circle,rgba(224,58,67,.5),rgba(142,27,34,.22) 50%,transparent 72%);
+  animation:bootBeatGlow 1.1s ease-in-out infinite;
+}
+@keyframes bootBeat{
+  0%{transform:scale(.8);opacity:.9;}
+  70%,100%{transform:scale(1.35);opacity:0;}
+}
+@keyframes bootBeatGlow{
+  0%,100%{transform:scale(.92);opacity:.6;}
+  18%{transform:scale(1.1);opacity:1;}
+  32%{transform:scale(.98);opacity:.75;}
+  46%{transform:scale(1.08);opacity:.95;}
+}
+.boot-piggy-img{
+  width:150px;filter:drop-shadow(0 0 16px rgba(224,58,67,.6));
+  animation:bootFlicker 4s linear 1 both;
+}
+/* lampu "korslet": gambar sesekali berkedip, hanya opacity */
+@keyframes bootFlicker{
+  0%{opacity:0;}
+  6%{opacity:1;} 9%{opacity:.25;} 12%{opacity:1;}
+  34%{opacity:1;} 36%{opacity:.4;} 38%{opacity:1;} 40%{opacity:.2;} 43%{opacity:1;}
+  72%{opacity:1;} 74%{opacity:.35;} 77%{opacity:1;}
+  100%{opacity:1;}
+}
+
+.boot-title{
+  position:relative;font-family:var(--font-display);font-weight:800;font-size:38px;line-height:1;letter-spacing:.04em;
+  color:#F8F0E8;margin-top:4px;
+  animation:bootGlitch 4s steps(1,end) 1 both;
+}
+@keyframes bootGlitch{
+  0%,30%,46%,66%,100%{text-shadow:0 0 0 transparent;transform:none;}
+  32%{text-shadow:-3px 0 #E03A43,3px 0 #2fd3ff;transform:translateX(2px);}
+  34%{text-shadow:3px 0 #E03A43,-3px 0 #2fd3ff;transform:translateX(-2px);}
+  36%{text-shadow:0 0 0 transparent;transform:none;}
+  68%{text-shadow:-2px 0 #E03A43,2px 0 #2fd3ff;transform:translateX(-1px);}
+  70%{text-shadow:0 0 0 transparent;transform:none;}
+}
+.boot-sub{margin:8px 0 22px;font-size:13px;font-weight:500;color:#A39289;}
+
+.boot-progress-track{height:4px;border-radius:4px;background:rgba(255,255,255,.08);border:0;overflow:hidden;}
+.boot-progress-fill{
+  border-radius:4px;background:linear-gradient(90deg,#5a0e14,#E03A43);
+  box-shadow:0 0 10px rgba(224,58,67,.8);transition:none;
+}
+.boot-percent{margin:10px 0 14px;font-family:var(--font-body);font-size:13px;font-weight:700;color:#E8777D;letter-spacing:.06em;}
+.boot-phrase-wrap{min-height:24px;margin-bottom:22px;}
+.boot-phrase{font-family:var(--font-body);font-size:14px;font-style:italic;color:#CFC0B7;animation:bootPhraseIn .5s ease both;}
+.boot-footer{font-size:12.5px;color:#A39289;position:relative;z-index:5;}
+.boot-footer a{
+  display:inline-block;padding:6px 4px;color:#F2B84B;font-weight:700;text-decoration:underline;
+  text-underline-offset:3px;cursor:pointer;
+}
+.boot-footer a:hover{color:#FFD98A;}
+@media (max-width:420px){
+  .boot-piggy-wrap{width:160px;height:160px;}
+  .boot-piggy-img{width:128px;}
+  .boot-title{font-size:32px;}
+}
+@media (prefers-reduced-motion:reduce){
+  .boot-drips{display:none;}
+  .boot-ring,.boot-piggy-glow{animation:none !important;}
+}

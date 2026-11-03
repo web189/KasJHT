@@ -49,3 +49,8 @@ git remote add origin <url-repo-kamu>
 git push -u origin main
 ```
 Untuk publish otomatis sebagai website (GitHub Pages): Settings → Pages → Source: branch `main`, folder `/root`.
+
+## Rilis update (otomatis)
+Cukup ubah isi `version.json` (mis. `{"v":"2026-11-06.1"}`) setiap kali upload versi baru.
+Pengunjung yang sedang online / baru tersambung kembali akan memperbarui otomatis.
+Aplikasi tersimpan di perangkat (PWA) sehingga tetap bisa dibuka saat offline.

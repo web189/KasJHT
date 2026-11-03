@@ -3678,22 +3678,10 @@ function rollMonoDice(){
    ini murni sentuhan branding, bukan loading sungguhan.
 ============================================================ */
 const BOOT_PHRASES = [
-  "Menginisialisasi kernel sistem…",
-  "Mengompilasi modul enkripsi AES-256…",
-  "Menyinkronkan ledger transaksi terdistribusi…",
-  "Membangun indeks basis data real-time…",
-  "Mengoptimalkan query kas multi-thread…",
-  "Memvalidasi checksum integritas data…",
-  "Menjalankan garbage collector memori…",
-  "Menghubungkan node microservices…",
-  "Menyusun cache neural-index UI…",
-  "Merender antarmuka reaktif…",
-  "Mengunci sesi dengan token keamanan…",
-  "Menstabilkan protokol sinkronisasi cloud…",
-  "Menghitung ulang saldo dengan presisi ganda…",
-  "Mengaktifkan lapisan observability sistem…",
-  "Memuat komponen UI secara asinkron…",
-  "Kompilasi selesai. Menyiapkan tampilan…",
+  "Semar membuka mata…",
+  "Menghitung setiap koin…",
+  "Tidak ada rupiah yang luput…",
+  "Buku kas siap dibuka.",
 ];
 function runBootLoader(){
   const el = document.getElementById("bootLoader");
@@ -3702,7 +3690,7 @@ function runBootLoader(){
   // selesai dirender sejak awal (lihat render() di bagian INIT di bawah),
   // jadi splash ini murni dekoratif/branding — dan tetap bisa dilewati
   // kapan saja dengan tap/klik kalau pengunjung tidak ingin menunggu.
-  const DURATION = 8000;
+  const DURATION = 4000;
   const fill = document.getElementById("bootProgressFill");
   const pct = document.getElementById("bootPercent");
   const phraseEl = document.getElementById("bootPhrase");
@@ -3721,13 +3709,13 @@ function runBootLoader(){
   const phraseTimer = setInterval(()=>{
     phraseIdx++;
     setPhrase(phraseIdx);
-  }, 260);
+  }, 1000);
 
   function finish(){
     if(finished) return;
     finished = true;
     clearInterval(phraseTimer);
-    el.removeEventListener("click", finish);
+    
     if(fill) fill.style.width = "100%";
     if(pct) pct.textContent = "100%";
     el.classList.add("hide");
@@ -3735,7 +3723,11 @@ function runBootLoader(){
   }
   // Klik/tap di mana saja pada splash langsung melewatinya — buat pengunjung
   // yang tidak ingin menunggu animasi sama sekali.
-  el.addEventListener("click", finish);
+  el.addEventListener("click", function(e){
+    // klik pada tautan developer jangan ikut menutup splash
+    var t = e.target; while(t && t!==el){ if(t.tagName==="A") return; t = t.parentNode; }
+    finish();
+  });
   el.title = "Klik untuk lewati";
   el.style.cursor = "pointer";
 

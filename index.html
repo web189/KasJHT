@@ -43,33 +43,35 @@ body{margin:0;min-height:100vh;font-family:-apple-system,BlinkMacSystemFont,"Seg
   background:#08090a;color:#f2ede4;text-align:center;
 }
 </style>
-<title>Kas JHT — Sistem Kas Digital Modern</title>
-<meta name="description" content="Kelola kas lebih mudah, transparan & terpercaya. Pantau pemasukan, pengeluaran, saldo, dan riwayat transaksi dalam satu sistem digital.">
+<title>Kas JHT — Buku Kas Digital Transparan &amp; Terpercaya</title>
+<meta name="description" content="Pantau saldo, pemasukan, pengeluaran &amp; riwayat pengajuan kas secara real-time. Aman, mudah, cepat, dan terpercaya.">
 
 <!-- Open Graph (Facebook, WhatsApp, Telegram, dll) -->
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://web189.github.io/KasJHT/">
-<meta property="og:title" content="Kas JHT — Sistem Kas Digital Modern">
-<meta property="og:description" content="Kelola kas lebih mudah, transparan & terpercaya. Pantau pemasukan, pengeluaran, saldo, dan riwayat transaksi dalam satu sistem digital.">
-<meta property="og:image" content="https://web189.github.io/KasJHT/preview.jpg">
-<meta property="og:image:secure_url" content="https://web189.github.io/KasJHT/preview.jpg">
+<meta property="og:title" content="Kas JHT — Buku Kas Digital Transparan &amp; Terpercaya">
+<meta property="og:description" content="Pantau saldo, pemasukan, pengeluaran &amp; riwayat pengajuan kas secara real-time. Aman, mudah, cepat, dan terpercaya.">
+<meta property="og:image" content="https://web189.github.io/KasJHT/preview-2026.jpg">
+<meta property="og:image:secure_url" content="https://web189.github.io/KasJHT/preview-2026.jpg">
 <meta property="og:image:type" content="image/jpeg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="Tampilan Dashboard Kas JHT">
+<meta property="og:image:alt" content="Kas JHT — Celengan Semar: pantau saldo kas kapan saja, aman, mudah, cepat, dan terpercaya">
 <meta property="og:site_name" content="Kas JHT">
 <meta property="og:locale" content="id_ID">
 
 <!-- Twitter/X Card -->
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Kas JHT — Sistem Kas Digital Modern">
-<meta name="twitter:description" content="Kelola kas lebih mudah, transparan & terpercaya. Pantau pemasukan, pengeluaran, saldo, dan riwayat transaksi dalam satu sistem digital.">
-<meta name="twitter:image" content="https://web189.github.io/KasJHT/preview.jpg">
+<meta name="twitter:title" content="Kas JHT — Buku Kas Digital Transparan &amp; Terpercaya">
+<meta name="twitter:description" content="Pantau saldo, pemasukan, pengeluaran &amp; riwayat pengajuan kas secara real-time. Aman, mudah, cepat, dan terpercaya.">
+<meta name="twitter:image" content="https://web189.github.io/KasJHT/preview-2026.jpg">
 
+<link rel="icon" href="./favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="./assets/favicon-32.png">
 <link rel="icon" type="image/png" sizes="192x192" href="./assets/icon-192.png">
-<link rel="icon" type="image/png" sizes="512x512" href="./assets/icon-512.png">
-<link rel="apple-touch-icon" sizes="180x180" href="./assets/icon-180.png">
-<link rel="manifest" href="./manifest.json?v=20261004a">
+<link rel="icon" type="image/png" sizes="512x512" href="./assets/icon-512.png?v=2">
+<link rel="apple-touch-icon" sizes="180x180" href="./assets/icon-180.png?v=2">
+<link rel="manifest" href="./manifest.json?v=20261105a">
 <meta name="theme-color" content="#150E10">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -78,28 +80,29 @@ body{margin:0;min-height:100vh;font-family:-apple-system,BlinkMacSystemFont,"Seg
 <link rel="preload" href="./assets/fonts/bricolage-grotesque-latin-800-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="./assets/fonts/figtree-latin-600-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="./style.css?v=20261004a">
-<link rel="stylesheet" href="./theme-2026.css?v=20261103a">
+<link rel="stylesheet" href="./theme-2026.css?v=20261105a">
 </head>
 <body>
 
-<!-- ============ BOOT LOADER (splash 7 detik) ============ -->
+<!-- ============ BOOT LOADER (4 detik, horor ringan: hanya transform/opacity) ============ -->
 <div id="bootLoader" class="boot-loader">
+  <div class="boot-drips" aria-hidden="true">
+    <i style="--x:7%;--d:.1s;--h:70px"></i><i style="--x:21%;--d:1.2s;--h:46px"></i>
+    <i style="--x:38%;--d:.5s;--h:96px"></i><i style="--x:57%;--d:1.6s;--h:58px"></i>
+    <i style="--x:74%;--d:.8s;--h:84px"></i><i style="--x:91%;--d:2s;--h:50px"></i>
+  </div>
   <div class="boot-inner">
     <div class="boot-piggy-wrap">
-      <span class="boot-coin" style="--d:0;--x:-34px"></span>
-      <span class="boot-coin" style="--d:1;--x:-10px"></span>
-      <span class="boot-coin" style="--d:2;--x:14px"></span>
-      <span class="boot-coin" style="--d:3;--x:36px"></span>
-      <span class="boot-coin" style="--d:4;--x:-22px"></span>
-      <span class="boot-coin" style="--d:5;--x:2px"></span>
-      <span class="boot-coin" style="--d:6;--x:26px"></span>
+      <div class="boot-ring"></div>
       <div class="boot-piggy-glow"></div>
       <img src="./assets/piggy.png" class="boot-piggy-img" alt="JHT KAS">
     </div>
+    <div class="boot-title" data-t="JHT KAS">JHT KAS</div>
+    <div class="boot-sub">Buku kas admin gudang</div>
     <div class="boot-progress-track"><div class="boot-progress-fill" id="bootProgressFill"></div></div>
     <div class="boot-percent" id="bootPercent">0%</div>
-    <div class="boot-phrase-wrap"><div class="boot-phrase" id="bootPhrase">Menginisialisasi sistem…</div></div>
-    <div class="boot-footer">Website Developer <a href="https://benyoriki.com/" target="_blank" rel="noopener">benyoriki.com</a></div>
+    <div class="boot-phrase-wrap"><div class="boot-phrase" id="bootPhrase">Semar membuka mata…</div></div>
+    <div class="boot-footer">Website Developer <a href="https://benyoriki.com/" target="_blank" rel="noopener noreferrer">benyoriki.com</a></div>
   </div>
 </div>
 
@@ -168,7 +171,7 @@ body{margin:0;min-height:100vh;font-family:-apple-system,BlinkMacSystemFont,"Seg
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js" defer></script>
 <script src="./firebase-config.js?v=20261004a" defer></script>
 <script src="./script.js?v=20261007a" defer></script>
-<script src="./enhance.js?v=20261103a" defer></script>
-<script src="pwa.js" data-app-name="Kas JHT" data-accent="#c62828" defer></script>
+<script src="./enhance.js?v=20261104a" defer></script>
+<script src="./pwa.js?v=20261106a" data-app-name="Kas JHT" data-accent="#c62828" defer></script>
 </body>
 </html>
