@@ -4,6 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script>
+/* Tangkap event instal SEJAK AWAL (sebelum skrip lain selesai dimuat) — kunci agar tombol Instal berfungsi di Windows 7 */
+window.__bip=null;window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();window.__bip=e;});
+window.addEventListener('appinstalled',function(){window.__pwaInstalled=true;});
+</script>
+<script>
 /* Terapkan tema TERSINKRON sebelum apapun dirender (anti-FOUC / anti-flash).
    Kalau ini menunggu script.js di bawah body (yang antre di belakang SDK
    Firebase yang berat), sempat ada jeda singkat di mana <html> belum
@@ -68,10 +73,9 @@ body{margin:0;min-height:100vh;font-family:-apple-system,BlinkMacSystemFont,"Seg
 
 <link rel="icon" href="./favicon.ico" sizes="any">
 <link rel="icon" type="image/png" sizes="32x32" href="./assets/favicon-32.png">
-<link rel="icon" type="image/png" sizes="192x192" href="./assets/icon-192.png">
-<link rel="icon" type="image/png" sizes="512x512" href="./assets/icon-512.png?v=3">
-<link rel="apple-touch-icon" sizes="180x180" href="./assets/icon-180.png?v=3">
-<link rel="manifest" href="./manifest.json?v=20261105a">
+<link rel="icon" type="image/png" sizes="512x512" href="./assets/icon-512.png">
+<link rel="apple-touch-icon" sizes="180x180" href="./assets/icon-180.png">
+<link rel="manifest" href="./manifest.json">
 <meta name="theme-color" content="#150E10">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -79,8 +83,7 @@ body{margin:0;min-height:100vh;font-family:-apple-system,BlinkMacSystemFont,"Seg
 <meta name="apple-mobile-web-app-title" content="Kas JHT">
 <link rel="preload" href="./assets/fonts/bricolage-grotesque-latin-800-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="./assets/fonts/figtree-latin-600-normal.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="./style.css?v=20261004a">
-<link rel="stylesheet" href="./theme-2026.css?v=20261105a">
+<link rel="stylesheet" href="./app.css">
 </head>
 <body>
 
@@ -95,7 +98,7 @@ body{margin:0;min-height:100vh;font-family:-apple-system,BlinkMacSystemFont,"Seg
     <div class="boot-piggy-wrap">
       <div class="boot-ring"></div>
       <div class="boot-piggy-glow"></div>
-      <img src="./assets/piggy.png" class="boot-piggy-img" alt="JHT KAS">
+      <img src="./assets/piggy.webp" class="boot-piggy-img" alt="JHT KAS">
     </div>
     <div class="boot-title" data-t="JHT KAS">JHT KAS</div>
     <div class="boot-sub">Buku kas admin gudang</div>
@@ -166,12 +169,7 @@ body{margin:0;min-height:100vh;font-family:-apple-system,BlinkMacSystemFont,"Seg
      di script.js, langsung sebelum file dibuat. -->
 <!-- Firebase (Firestore + Auth) — harus dimuat sebelum script.js, tapi
      "defer" supaya tidak memblokir parsing HTML/CSS lain di halaman. -->
-<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js" defer></script>
-<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js" defer></script>
-<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js" defer></script>
-<script src="./firebase-config.js?v=20261107a" defer></script>
-<script src="./script.js?v=20261107a" defer></script>
-<script src="./enhance.js?v=20261104a" defer></script>
-<script src="./pwa.js?v=20261107a" data-app-name="Kas JHT" data-accent="#c62828" defer></script>
+<script src="./fb.js" defer></script>
+<script src="./app.js" defer></script>
 </body>
 </html>
