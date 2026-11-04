@@ -50,7 +50,26 @@ git push -u origin main
 ```
 Untuk publish otomatis sebagai website (GitHub Pages): Settings → Pages → Source: branch `main`, folder `/root`.
 
-## Rilis update (otomatis)
-Cukup ubah isi `version.json` (mis. `{"v":"2026-11-06.1"}`) setiap kali upload versi baru.
-Pengunjung yang sedang online / baru tersambung kembali akan memperbarui otomatis.
-Aplikasi tersimpan di perangkat (PWA) sehingga tetap bisa dibuka saat offline.
+## Mode offline & update otomatis
+**Offline-first**
+- Buka situs sekali saat online → seluruh aplikasi (halaman, CSS, JS, font, SDK Firebase, pustaka Excel/PDF) dan **data kas terakhir** tersimpan di perangkat.
+- Setelah itu bisa dibuka tanpa internet. Pill di atas layar memberi tahu "Mode offline — data per <waktu>".
+- Perubahan yang dibuat admin saat offline diantre dan **dikirim otomatis** begitu tersambung (pill "Menyinkronkan perubahan…" → "Semua perubahan sudah tersinkron ✓").
+- Kalau perangkat belum pernah membuka situs saat online, layar menjelaskan hal itu dan memuat ulang sendiri begitu tersambung.
+
+**Update otomatis (tanpa langkah manual)**
+- Saat tersambung kembali, tab dibuka lagi, atau tiap 15 menit, service worker membandingkan isi file (hash) dengan versi tersimpan.
+- Ada file yang berubah → disimpan dan halaman memuat ulang sendiri.
+  Jika pengguna sedang mengetik / membuka dialog, muncul tombol **Perbarui** supaya isian tidak hilang.
+- **Cukup upload file baru ke hosting.** Tidak wajib mengubah `version.json`, `CACHE_VERSION`, atau angka `?v=`.
+- Daftar file yang disimpan dibaca otomatis dari `index.html`.
+
+**Opsional / darurat**
+- Ubah isi `version.json` → memaksa semua perangkat memperbarui.
+- Naikkan `CACHE_VERSION` di `sw.js` → semua perangkat membuang cache lama sepenuhnya.
+- Tambah file statis baru yang tidak dirujuk `index.html` (mis. gambar yang dimuat lewat JS) → tambahkan ke `STATIC_ASSETS` di `sw.js`.
+
+**Catatan**
+- Service worker hanya jalan di HTTPS (GitHub Pages sudah HTTPS) atau `localhost`.
+- Perubahan offline hanya aman selama cache browser tidak dihapus sebelum sempat terkirim; aplikasi meminta browser agar penyimpanannya tidak dibuang otomatis.
+- Bila dua admin mengedit data yang sama saat offline, berlaku pola lama aplikasi: penyimpanan terakhir yang menang.

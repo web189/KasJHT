@@ -26,6 +26,51 @@ const _auth = firebase.auth();
 _db.enablePersistence({ synchronizeTabs: true }).catch(()=>{ /* aman diabaikan, mis. banyak tab / browser lama */ });
 
 /* ------------------------------------------------------------
+   LAPISAN OFFLINE-FIRST
+   - Setiap data yang sukses dimuat disalin ke "snapshot" lokal.
+   - Kalau saat boot internet putus / lambat / cache Firestore kosong,
+     app memakai snapshot itu (bukan layar "Gagal terhubung").
+   - Begitu internet kembali, listener real-time Firestore otomatis
+     menimpa snapshot dengan data terbaru dan layar ikut diperbarui.
+   - Perubahan yang dibuat saat offline diantre Firestore (IndexedDB)
+     dan dikirim otomatis begitu tersambung; statusnya dikabarkan lewat
+     event window "kas-sync" (dipakai pwa.js untuk menampilkan pill).
+------------------------------------------------------------ */
+const SNAP_KEY = "kasjht:snapshot:v1";
+const SYNC_KEY = "kasjht:lastsync";
+const LOAD_TIMEOUT_ONLINE_MS = 7000;
+const LOAD_TIMEOUT_OFFLINE_MS = 2500;
+
+function _readSnap(){
+  try{
+    const s = JSON.parse(localStorage.getItem(SNAP_KEY) || "null");
+    if(s && s.data && s.data.members && s.data.tx && s.data.requests && s.data.arisan) return s;
+  }catch(e){}
+  return null;
+}
+function _writeSnap(data){
+  try{ localStorage.setItem(SNAP_KEY, JSON.stringify({ t: Date.now(), data })); }catch(e){ /* kuota penuh / mode privat: abaikan */ }
+}
+let _lastSyncWrite = 0;
+function _markSynced(){
+  const now = Date.now();
+  FJHT.lastSync = now;
+  if(now - _lastSyncWrite > 30000){
+    _lastSyncWrite = now;
+    try{ localStorage.setItem(SYNC_KEY, String(now)); }catch(e){}
+  }
+}
+function _withTimeout(p, ms){
+  return new Promise((resolve, reject)=>{
+    const t = setTimeout(()=>reject(new Error("timeout")), ms);
+    p.then(v=>{ clearTimeout(t); resolve(v); }, e=>{ clearTimeout(t); reject(e); });
+  });
+}
+function _emit(name, detail){
+  try{ window.dispatchEvent(new CustomEvent(name, { detail })); }catch(e){}
+}
+
+/* ------------------------------------------------------------
    MODEL PENYIMPANAN
    Karena app ini selalu menulis ULANG seluruh array (members/tx/
    requests) setiap kali ada perubahan (bukan per-baris), data
@@ -88,15 +133,39 @@ const FJHT = {
   saveRequests(list){ return DOC_REQUESTS.set({ list }); },
   saveArisan(list){ return DOC_ARISAN.set({ list }); },
 
-  /** Dengarkan perubahan real-time (dari perangkat lain) dan panggil onChange({members,tx,requests,arisan}). */
+  /** Dengarkan perubahan real-time (dari perangkat lain) dan panggil onChange({members,tx,requests,arisan}).
+   *  Juga menyimpan snapshot lokal & mencatat waktu sinkron terakhir dengan server. */
   subscribe(onChange){
     const cache = { members: null, tx: null, requests: null, arisan: null };
-    const fire = ()=>{ if(cache.members && cache.tx && cache.requests && cache.arisan) onChange({ ...cache }); };
-    DOC_MEMBERS.onSnapshot(s=>{ if(s.exists){ cache.members = s.data().list || []; fire(); } });
-    DOC_TX.onSnapshot(s=>{ if(s.exists){ cache.tx = s.data().list || []; fire(); } });
-    DOC_REQUESTS.onSnapshot(s=>{ if(s.exists){ cache.requests = s.data().list || []; fire(); } });
-    DOC_ARISAN.onSnapshot(s=>{ if(s.exists){ cache.arisan = s.data().list || []; fire(); } });
+    const lastJson = {};
+    const fire = ()=>{
+      if(cache.members && cache.tx && cache.requests && cache.arisan){
+        _writeSnap(cache);
+        onChange({ ...cache });
+      }
+    };
+    const listen = (docRef, key)=>{
+      docRef.onSnapshot({ includeMetadataChanges: true }, s=>{
+        if(!s.metadata.fromCache) _markSynced();
+        if(!s.exists) return;
+        const list = s.data().list || [];
+        const j = JSON.stringify(list);
+        if(lastJson[key] === j) return;          // cuma metadata berubah, data sama: jangan render ulang
+        lastJson[key] = j;
+        cache[key] = list;
+        fire();
+      }, ()=>{ /* error listener (mis. izin): app tetap jalan dari data yang ada */ });
+    };
+    listen(DOC_MEMBERS, "members");
+    listen(DOC_TX, "tx");
+    listen(DOC_REQUESTS, "requests");
+    listen(DOC_ARISAN, "arisan");
   },
+
+  /** Promise yang selesai saat semua perubahan lokal sudah diterima server. */
+  flushed(){ return _db.waitForPendingWrites(); },
+  lastSync: null,
+  usingSnapshot: false,
 
   /** Login admin: username "admin" dipetakan ke email Firebase Auth. */
   async signInAdmin(username, password){
@@ -113,5 +182,38 @@ const FJHT = {
     });
   },
 };
+
+/* --- loadAll: tahan banting terhadap offline / koneksi lambat --- */
+const _origLoadAll = FJHT.loadAll.bind(FJHT);
+FJHT.loadAll = async function(){
+  try{
+    const ms = (navigator.onLine === false) ? LOAD_TIMEOUT_OFFLINE_MS : LOAD_TIMEOUT_ONLINE_MS;
+    const d = await _withTimeout(_origLoadAll(), ms);
+    if(d.members && d.tx && d.requests && d.arisan){ _writeSnap(d); FJHT.usingSnapshot = false; }
+    return d;
+  }catch(err){
+    const snap = _readSnap();
+    if(snap){
+      FJHT.usingSnapshot = true;
+      FJHT.lastSync = parseInt(localStorage.getItem(SYNC_KEY) || "0", 10) || snap.t;
+      _emit("kas-offline-data", { t: snap.t });
+      return snap.data;
+    }
+    throw err;
+  }
+};
+
+/* --- lacak penulisan yang belum diterima server (untuk pill "menyinkronkan…") --- */
+let _pending = 0;
+function _track(p){
+  _pending++; _emit("kas-sync", { pending: _pending });
+  const done = ()=>{ _pending = Math.max(0, _pending - 1); _emit("kas-sync", { pending: _pending }); };
+  p.then(done, done);
+  return p;
+}
+["saveMembers","saveTx","saveRequests","saveArisan"].forEach(k=>{
+  const orig = FJHT[k].bind(FJHT);
+  FJHT[k] = function(list){ return _track(orig(list)); };
+});
 
 window.FJHT = FJHT;

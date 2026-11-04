@@ -12,15 +12,21 @@
   var KEY = 'pwaInstallDismissed:' + location.pathname;
   var SNOOZE_MS = 7 * 24 * 60 * 60 * 1000;
 
-  /* ---- 1. Service worker + offline + pembaruan otomatis ----
-     - Dibuka sekali saat online -> seluruh aplikasi tersimpan, bisa dibuka offline.
-     - Begitu internet tersambung kembali, versi terbaru dicek (version.json).
-       Jika ada versi baru, aplikasi memperbarui diri otomatis (tanpa harus hapus cache).
-     Untuk merilis update: ubah isi version.json (mis. "2026-11-06.1"). */
-  var VER_KEY = 'kasjht:ver', RELOAD_KEY = 'kasjht:reloaded';
-  var swReg = null;
+  /* ---- 1. Offline + pembaruan otomatis + status sinkron ----
+     Alur:
+     - Dibuka sekali saat online -> seluruh aplikasi (+ data terakhir) tersimpan, bisa dibuka offline.
+     - Saat tersambung kembali / tab dibuka lagi / tiap 15 menit, service worker membandingkan
+       isi file dengan versi tersimpan. Ada yang berubah -> aplikasi memuat ulang dirinya sendiri
+       (ditunda dulu bila pengguna sedang mengetik / membuka dialog supaya isian tidak hilang).
+     - Perubahan data yang dibuat saat offline diantre Firestore & dikirim otomatis begitu online;
+       statusnya tampil sebagai pill di atas layar.
+     Tidak perlu lagi mengubah version.json untuk merilis update (tetap boleh, untuk memaksa). */
+  var VER_KEY = 'kasjht:ver', RELOAD_AT_KEY = 'kasjht:reloadAt', READY_KEY = 'kasjht:offlineReady', SYNC_KEY = 'kasjht:lastsync';
+  var swReg = null, lastCheck = 0, updateReady = false, pendingWrites = 0;
   function store(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
   function load(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+  function sstore(k, v) { try { sessionStorage.setItem(k, v); } catch (e) {} }
+  function sload(k) { try { return sessionStorage.getItem(k); } catch (e) { return null; } }
 
   function injectNetCss() {
     if (document.getElementById('pwaNetCss')) return;
@@ -32,14 +38,21 @@
       '-webkit-transform:translateX(-50%);transform:translateX(-50%)}' +
       '.pwa-pill i{width:9px;height:9px;border-radius:50%;background:#F2B84B;flex:none}' +
       '.pwa-pill.on i{background:#5BD9A4}.pwa-pill.off i{background:#FF8070}' +
+      '.pwa-pill.busy i{animation:pwaPulse 1s ease-in-out infinite}' +
+      '@keyframes pwaPulse{0%,100%{opacity:1}50%{opacity:.25}}' +
       '.pwa-pill button{border:0;border-radius:999px;padding:6px 13px;font:700 12.5px "Figtree","Segoe UI",Arial,sans-serif;cursor:pointer;background:#F2B84B;color:#2B1700}';
     document.head.appendChild(st);
   }
   var pill = null, pillTimer = null;
+  function hidePill() {
+    if (pillTimer) { clearTimeout(pillTimer); pillTimer = null; }
+    if (pill && pill.parentNode) pill.parentNode.removeChild(pill);
+    pill = null;
+  }
   function showPill(kind, text, btn, ms) {
     injectNetCss();
     if (pillTimer) { clearTimeout(pillTimer); pillTimer = null; }
-    if (!pill) { pill = document.createElement('div'); pill.setAttribute('role', 'status'); document.body.appendChild(pill); }
+    if (!pill) { pill = document.createElement('div'); pill.setAttribute('role', 'status'); pill.setAttribute('aria-live', 'polite'); document.body.appendChild(pill); }
     pill.className = 'pwa-pill ' + kind;
     pill.innerHTML = '<i></i><span></span>';
     pill.lastChild.textContent = text;
@@ -47,67 +60,148 @@
       var b = document.createElement('button'); b.type = 'button'; b.textContent = btn.label; b.onclick = btn.fn;
       pill.appendChild(b);
     }
-    if (ms) pillTimer = setTimeout(hidePill, ms);
+    if (ms) pillTimer = setTimeout(function () { hidePill(); settle(); }, ms);
   }
-  function hidePill() { if (pill && pill.parentNode) pill.parentNode.removeChild(pill); pill = null; }
+  /* Pesan sementara (hilang sendiri). Tidak menimpa pill "Versi baru siap". */
+  function flash(kind, text, ms) { if (updateReady) return; showPill(kind, text, null, ms); }
+  /* Kembali ke status yang sedang berlaku: ada perubahan belum terkirim -> tetap tampil */
+  function settle() {
+    if (updateReady) return;
+    if (pendingWrites > 0) {
+      var off = navigator.onLine === false;
+      showPill(off ? 'off busy' : 'busy', off ? 'Offline — perubahan akan dikirim otomatis saat tersambung' : 'Menyinkronkan perubahan…', null, 0);
+    } else if (pill && !pillTimer) hidePill();
+  }
+
+  function lastSyncText() {
+    var t = (window.FJHT && window.FJHT.lastSync) || parseInt(load(SYNC_KEY) || '0', 10);
+    if (!t) return '';
+    try { return ' (data per ' + new Date(t).toLocaleString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) + ')'; }
+    catch (e) { return ''; }
+  }
 
   function userBusy() {
     var ae = document.activeElement, t = ae && ae.tagName;
     if (t === 'INPUT' || t === 'TEXTAREA' || t === 'SELECT') return true;
-    return !!document.querySelector('.modal-overlay.open');
+    if (document.querySelector('.modal-overlay.open')) return true;
+    /* ada isian yang sudah terisi (draft pengajuan, pencarian, dst.) -> jangan hapus */
+    var f = document.querySelectorAll('#app input:not([type=checkbox]):not([type=radio]):not([type=hidden]), #app textarea');
+    for (var i = 0; i < f.length; i++) if (f[i].value && f[i].offsetParent !== null) return true;
+    return false;
   }
   function doReload() {
-    var go = function () { location.reload(); };
-    if (swReg && swReg.update) swReg.update().then(go, go); else go();
+    sstore(RELOAD_AT_KEY, String(Date.now()));
+    location.reload();
   }
-  function applyUpdate(v) {
-    if (sessionStorage.getItem(RELOAD_KEY) === v) return;      /* cegah reload berulang */
-    try { sessionStorage.setItem(RELOAD_KEY, v); } catch (e) {}
-    store(VER_KEY, v);
+  var applying = false;
+  function applyUpdate() {
+    if (applying) return;
+    var last = parseInt(sload(RELOAD_AT_KEY) || '0', 10);
+    if (Date.now() - last < 60000) return;                    /* cegah reload beruntun */
     if (userBusy()) {
-      showPill('', 'Versi baru tersedia', { label: 'Perbarui', fn: doReload });
+      updateReady = true;
+      showPill('', 'Versi baru siap', { label: 'Perbarui', fn: doReload }, 0);
       return;
     }
-    showPill('', 'Versi baru ditemukan — memperbarui…', null, 0);
-    setTimeout(doReload, 1400);
+    applying = true; updateReady = true;
+    if (document.hidden) { doReload(); return; }
+    showPill('busy', 'Versi baru ditemukan — memperbarui…', null, 0);
+    setTimeout(doReload, 1200);
   }
-  var checking = false;
-  function checkVersion() {
-    if (checking || navigator.onLine === false || !window.fetch) return;
-    checking = true;
+  /* Update yang tertunda karena pengguna sedang mengetik: coba lagi saat sudah tidak sibuk */
+  setInterval(function () {
+    if (updateReady && !applying && !userBusy()) { updateReady = false; applyUpdate(); }
+  }, 20000);
+
+  /* Cadangan bila SW belum aktif / tidak didukung: bandingkan version.json */
+  function checkVersionJson() {
+    if (!window.fetch) return;
     fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) {
       return r.ok ? r.json() : null;
     }).then(function (j) {
-      checking = false;
       var v = j && j.v; if (!v) return;
       var cur = load(VER_KEY);
-      if (!cur) { store(VER_KEY, v); return; }
-      if (cur !== v) applyUpdate(v);
-    }).catch(function () { checking = false; });
-    if (swReg && swReg.update) swReg.update().catch(function () {});
+      store(VER_KEY, v);
+      if (cur && cur !== v) applyUpdate();
+    }).catch(function () {});
+  }
+
+  function checkUpdate(force) {
+    if (navigator.onLine === false) return;
+    var now = Date.now();
+    if (!force && now - lastCheck < 60000) return;
+    lastCheck = now;
+    if (swReg && swReg.update) swReg.update().catch(function () {});          /* cek sw.js itu sendiri */
+    var ctl = navigator.serviceWorker && navigator.serviceWorker.controller;
+    if (ctl) ctl.postMessage({ type: 'CHECK_UPDATE' });                        /* cek isi semua file */
+    else checkVersionJson();
   }
 
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
+    var hadController = !!navigator.serviceWorker.controller;
+    navigator.serviceWorker.addEventListener('controllerchange', function () {
+      if (hadController) applyUpdate();                       /* sw.js baru mengambil alih -> pakai kode baru */
+      hadController = true;
+    });
+    navigator.serviceWorker.addEventListener('message', function (e) {
+      var d = e.data || {};
+      if (d.type === 'KAS_UPDATED') applyUpdate();
+      else if (d.type === 'KAS_READY' && !load(READY_KEY)) {
+        store(READY_KEY, '1');
+        flash('on', 'Aplikasi tersimpan — siap dipakai tanpa internet', 4000);
+      }
+    });
     window.addEventListener('load', function () {
-      navigator.serviceWorker.register('sw.js').then(function (reg) {
+      navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then(function (reg) {
         swReg = reg;
-        checkVersion();
+        checkUpdate(true);
+        /* pembaruan berkala di latar belakang (Chrome terpasang sebagai aplikasi) */
+        try {
+          if (reg.periodicSync && navigator.permissions) {
+            navigator.permissions.query({ name: 'periodic-background-sync' }).then(function (p) {
+              if (p.state === 'granted') reg.periodicSync.register('kas-update', { minInterval: 12 * 60 * 60 * 1000 });
+            }).catch(function () {});
+          }
+        } catch (e) {}
       }).catch(function (err) {
         if (window.console) console.warn('[PWA] service worker gagal didaftarkan:', err);
       });
+      /* minta browser jangan menghapus data offline saat penyimpanan menipis */
+      try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(function () {}); } catch (e) {}
     });
+  } else {
+    window.addEventListener('load', function () { setTimeout(checkVersionJson, 1500); });
   }
+
+  /* Status sinkron data: perubahan yang tertunda (dari app + yang tersisa dari sesi sebelumnya) */
+  window.addEventListener('kas-sync', function (e) {
+    var was = pendingWrites;
+    pendingWrites = (e.detail && e.detail.pending) || 0;
+    if (was > 0 && pendingWrites === 0) flash('on', 'Semua perubahan sudah tersinkron ✓', 3000);
+    else settle();
+  });
+  function watchLeftoverWrites() {
+    var F = window.FJHT; if (!F || !F.flushed) return;
+    var t = setTimeout(function () { if (!pendingWrites) { pendingWrites = 1; settle(); } }, 1500);
+    F.flushed().then(function () {
+      clearTimeout(t);
+      if (pendingWrites === 1) { pendingWrites = 0; flash('on', 'Semua perubahan sudah tersinkron ✓', 3000); }
+    }, function () { clearTimeout(t); });
+  }
+
   window.addEventListener('online', function () {
-    showPill('on', 'Tersambung kembali — memeriksa pembaruan…', null, 2600);
-    setTimeout(checkVersion, 600);
+    flash('on', 'Tersambung kembali — memeriksa pembaruan…', 2600);
+    setTimeout(function () { checkUpdate(true); }, 600);
+    watchLeftoverWrites();
   });
   window.addEventListener('offline', function () {
-    showPill('off', 'Mode offline — menampilkan data tersimpan', null, 4000);
+    flash('off', 'Mode offline — memakai data tersimpan' + lastSyncText(), 4500);
   });
-  document.addEventListener('visibilitychange', function () { if (!document.hidden) checkVersion(); });
-  setInterval(checkVersion, 20 * 60 * 1000);
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) checkUpdate(false); });
+  setInterval(function () { checkUpdate(false); }, 15 * 60 * 1000);
   window.addEventListener('load', function () {
-    if (navigator.onLine === false) setTimeout(function () { showPill('off', 'Mode offline — menampilkan data tersimpan', null, 4000); }, 1200);
+    if (navigator.onLine === false) setTimeout(function () { flash('off', 'Mode offline — memakai data tersimpan' + lastSyncText(), 4500); }, 1200);
+    setTimeout(watchLeftoverWrites, 2500);
   });
 
   /* ---- 2. Tombol pasang ---- */
@@ -231,8 +325,7 @@
     e.preventDefault();
     deferred = e;
     window.dispatchEvent(new CustomEvent('pwa-installable'));
-    if (document.readyState === 'complete') setTimeout(show, 2500);
-    else window.addEventListener('load', function () { setTimeout(show, 2500); });
+    queuePlace();
   });
   window.addEventListener('appinstalled', function () { deferred = null; removeBtn(); });
 })();

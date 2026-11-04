@@ -348,11 +348,16 @@ async function bootFromFirebase(){
     });
   }catch(err){
     DB_READY = true;
+    const offlineNow = (navigator.onLine === false);
     document.getElementById("app").innerHTML =
       `<div style="padding:32px;text-align:center;">
-         <p><b>Gagal terhubung ke database.</b></p>
-         <p style="opacity:.7;font-size:13px;">${(err && err.message) || err}</p>
+         <p><b>${offlineNow ? "Anda sedang offline." : "Gagal terhubung ke database."}</b></p>
+         <p style="opacity:.7;font-size:13px;">${offlineNow
+           ? "Data belum pernah tersimpan di perangkat ini. Sambungkan internet sekali — setelah itu aplikasi bisa dibuka tanpa internet. Halaman akan dimuat ulang otomatis begitu tersambung."
+           : ((err && err.message) || err)}</p>
+         <button onclick="location.reload()" style="margin-top:12px;padding:10px 22px;border:0;border-radius:12px;font-weight:700;cursor:pointer;background:#F2B84B;color:#2B1700">Coba lagi</button>
        </div>`;
+    window.addEventListener("online", ()=>location.reload(), { once: true });
   }
 }
 
