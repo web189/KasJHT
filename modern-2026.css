@@ -1,0 +1,289 @@
+/* =====================================================================
+   KAS JHT — Lapisan Tampilan 2026  (dimuat SETELAH app.css)
+   Arah desain: "Plakat emas di atas kain batik gelap"
+   - Satu elemen utama: kartu Saldo akhir (bingkai emas + pola kawung)
+   - Selebihnya tenang: garis tipis, ruang lega, daftar bukan kartu-kartu
+   RINGAN untuk Windows 7 / Chrome 109:
+   - tanpa backdrop-filter, tanpa filter:blur, tanpa animasi berulang
+   - hanya transform/opacity, satu animasi masuk saat halaman dibuka
+   - tidak memakai color-mix, @layer, container query
+   Hapus file ini + 1 baris <link> di index.html untuk kembali ke tampilan lama.
+   ===================================================================== */
+
+:root{
+  --m-gold:#f2b84b;
+  --m-gold-hi:#ffd98a;
+  --m-gold-rgb:242,184,75;
+  --m-wine-rgb:224,58,67;
+  --m-line:rgba(var(--ink-rgb),.09);
+  --m-r-hero:28px;
+  --m-r-card:22px;
+  --m-r-row:14px;
+}
+:root[data-theme=dark]{
+  --bg:#110a0c;--bg-r:17;--bg-g:10;--bg-b:12;
+  --bg-elev:#1a1114;--bg-elev-r:26;--bg-elev-g:17;--bg-elev-b:20;
+  --bg-elev-2:#231920;--bg-elev-2-r:35;--bg-elev-2-g:25;--bg-elev-2-b:32;
+  --border:#33222a;--border-soft:#271a20;
+  --m-line:rgba(255,236,220,.08);
+}
+:root[data-theme=light]{
+  --m-gold:#c98a12;--m-gold-hi:#8a5500;--m-gold-rgb:201,138,18;
+  --m-line:rgba(60,20,30,.1);
+}
+
+/* ---------- Latar: dua cahaya lembut, tanpa blur ---------- */
+body{
+  background:
+    radial-gradient(900px 480px at 8% -10%,rgba(var(--m-wine-rgb),.13),transparent 70%),
+    radial-gradient(700px 420px at 96% -4%,rgba(var(--m-gold-rgb),.09),transparent 70%),
+    var(--bg);
+  background-attachment:fixed;
+}
+body:before{display:none}
+:root[data-theme=light] body{
+  background:
+    radial-gradient(900px 480px at 8% -10%,rgba(var(--m-wine-rgb),.06),transparent 70%),
+    radial-gradient(700px 420px at 96% -4%,rgba(var(--m-gold-rgb),.12),transparent 70%),
+    var(--bg);
+  background-attachment:fixed;
+}
+
+/* ---------- Header: bersih, solid, tanpa blur ---------- */
+body .topbar{background:var(--bg);border-bottom:1px solid var(--m-line)}
+body .topbar-inner{padding-top:12px;padding-bottom:6px}
+body .brand-text b{font-size:17px;letter-spacing:-.025em}
+body .brand-mark{border-radius:16px;box-shadow:0 0 0 1.5px rgba(var(--m-gold-rgb),.6),0 10px 22px -10px rgba(var(--m-wine-rgb),.8)}
+body .icon-btn{border-radius:14px;background:transparent;border-color:var(--m-line)}
+body .icon-btn:hover{background:rgba(var(--ink-rgb),.06);border-color:rgba(var(--m-gold-rgb),.6)}
+body .btn-primary{border-radius:14px;background:linear-gradient(180deg,#ffd47a 0%,#eba82e 100%);box-shadow:0 10px 22px -12px rgba(var(--m-gold-rgb),.9),inset 0 1px 0 rgba(255,255,255,.5)}
+body .pwa-dl{border-radius:14px}
+
+/* Menu desktop: pil, aktif = emas padat */
+@media (min-width:761px){
+  body .desktop-nav-inner{padding-top:2px;padding-bottom:10px;gap:4px}
+  body .dnav-link,body .dnav-trigger{border-radius:12px;padding:9px 14px;font-weight:600}
+  body .dnav-link.active,body .dnav-link[aria-current=page]{
+    background:linear-gradient(180deg,#ffd47a,#eba82e);color:#2b1700;
+    box-shadow:0 8px 18px -10px rgba(var(--m-gold-rgb),.9)}
+  body .dnav-menu{border-radius:18px;box-shadow:0 28px 40px -24px rgba(0,0,0,.75);border-color:var(--m-line)}
+}
+
+/* ---------- Hero ---------- */
+body .hero{padding-top:32px}
+body .hero-top{margin-bottom:26px;align-items:flex-end}
+body .hero h1{
+  font-size:clamp(34px,4.6vw,60px);line-height:1.02;letter-spacing:-.045em;
+  font-weight:800;max-width:none;
+}
+body .hero h1 .h1-br{display:inline}
+body .hero-eyebrow{
+  order:2;margin:14px 0 0;font-size:15px;font-weight:500;color:var(--ink-soft);
+  max-width:46ch;line-height:1.5;
+}
+body .hero-head{display:flex;flex-direction:column}
+body .hero-head h1{order:1}
+body .hero-stamp{
+  background:rgba(var(--forest-rgb),.1);border:1px solid rgba(var(--forest-rgb),.35);
+  padding:8px 15px;font-size:12.5px;font-weight:600;
+}
+
+/* Susunan: Saldo (utama) di kiri, grafik di kanan */
+@media (min-width:900px){
+  body .hero-grid{grid-template-columns:minmax(0,1.08fr) minmax(0,1fr);gap:18px;align-items:stretch}
+  body .hero-grid .saldo-strip{order:-1;min-height:330px}
+  body .hero-grid .hero-chart{height:auto;min-height:330px}
+}
+
+/* Plakat saldo: bingkai emas bergradasi */
+body .saldo-strip{
+  border:1px solid transparent;border-radius:var(--m-r-hero);
+  background:
+    linear-gradient(var(--bg-elev),var(--bg-elev)) padding-box,
+    linear-gradient(145deg,rgba(var(--m-gold-rgb),.75),rgba(var(--m-gold-rgb),.12) 38%,rgba(var(--m-wine-rgb),.4) 100%) border-box;
+  box-shadow:0 30px 50px -34px rgba(0,0,0,.9);
+}
+:root[data-theme=light] body .saldo-strip{box-shadow:0 30px 50px -36px rgba(80,30,10,.4)}
+body .saldo-col.final{
+  background:
+    linear-gradient(135deg,rgba(var(--m-gold-rgb),.22),rgba(var(--m-gold-rgb),.03) 72%);
+  box-shadow:inset 0 -1px 0 var(--m-line);
+  padding:30px 30px 26px;justify-content:flex-end;
+}
+body .saldo-col.final .saldo-label{
+  color:var(--m-gold);font-size:14px;font-weight:700;letter-spacing:.01em;
+}
+body .saldo-col.final .saldo-fig{
+  font-size:clamp(40px,6.2vw,76px);line-height:1;letter-spacing:-.045em;color:var(--m-gold-hi);
+  background:linear-gradient(180deg,#fff1c9 0%,var(--m-gold) 100%);
+  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+}
+:root[data-theme=light] body .saldo-col.final .saldo-fig{
+  background:none;-webkit-text-fill-color:currentColor;color:#8a5500}
+@media (min-width:900px){
+  body .hero-grid .saldo-col.final .saldo-fig{font-size:clamp(44px,5.2vw,72px)}
+  body .hero-grid .saldo-col{padding:20px 30px}
+  body .hero-grid .saldo-col.final{padding:30px}
+  body .hero-grid .saldo-fig{font-size:24px}
+}
+body .saldo-col.in .saldo-fig,
+body .saldo-col.out .saldo-fig{font-family:var(--font-display);font-weight:800;letter-spacing:-.03em}
+body .saldo-col.in .saldo-label:before,
+body .saldo-col.out .saldo-label:before{
+  content:"";display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:8px;
+  vertical-align:1px;background:var(--forest);box-shadow:0 0 0 3px rgba(var(--forest-rgb),.2);
+}
+body .saldo-col.out .saldo-label:before{background:var(--rust);box-shadow:0 0 0 3px rgba(var(--rust-rgb),.2)}
+
+/* Grafik KAS-IDX: lebih tenang, sejajar tinggi dengan plakat */
+body .hero-chart{
+  border-radius:var(--m-r-hero);border:1px solid var(--m-line);
+  background:
+    repeating-linear-gradient(0deg,transparent 0 55px,rgba(var(--ink-rgb),.035) 55px 56px),
+    linear-gradient(180deg,var(--bg-elev),var(--bg-elev-2));
+  box-shadow:none;
+}
+body .hero-chart-tag,body .hero-chart-price{background:rgba(var(--bg-elev-r),var(--bg-elev-g),var(--bg-elev-b),.8);border-color:var(--m-line)}
+body .hcp-val{font-family:var(--font-display);font-weight:800;letter-spacing:-.03em}
+
+/* Tombol tampilkan nominal: pil kecil, rata kanan */
+body .money-toggle-btn{
+  border-radius:999px;background:transparent;border:1px solid var(--m-line);
+  padding:10px 18px;margin:16px 0 0 auto;font-weight:600;
+}
+body .money-toggle-btn:hover{border-color:rgba(var(--m-gold-rgb),.7);background:rgba(var(--m-gold-rgb),.08)}
+
+/* ---------- Panel: lebih lega, garis halus, tanpa bayangan berat ---------- */
+body .panel{
+  border-radius:var(--m-r-card);border:1px solid var(--m-line);
+  background:linear-gradient(180deg,var(--bg-elev),rgba(var(--bg-elev-r),var(--bg-elev-g),var(--bg-elev-b),.94));
+  box-shadow:none;margin-top:22px;padding:26px 28px;
+}
+body .panel-head{margin-bottom:18px}
+body .panel-head h3{font-size:21px;letter-spacing:-.03em}
+body .panel-head h3 svg{border-radius:12px;width:34px;height:34px;padding:8px;
+  background:rgba(var(--m-gold-rgb),.14);color:var(--m-gold)}
+body .panel-head .hint,body .panel-head-hint{font-size:13px}
+
+body .sheet-tabs{background:rgba(var(--ink-rgb),.05);border-color:var(--m-line)}
+body .sheet-tab.active{background:linear-gradient(180deg,#ffd47a,#eba82e);color:#2b1700}
+body .export-btn,body .export-row .btn{border-radius:12px;background:transparent;border-color:var(--m-line)}
+
+/* ---------- Tabel (PC): barisan lega, header menempel halus ---------- */
+body .excel-wrap{border-radius:18px;border:1px solid var(--m-line);background:transparent}
+body table.excel thead th{
+  background:var(--bg-elev-2);height:48px;font-size:12.5px;font-weight:700;color:var(--ink-faint);
+  border-bottom:1px solid var(--m-line);
+}
+body table.excel tbody td{height:56px;border-bottom:1px solid var(--m-line)}
+body table.excel tbody tr:last-child td{border-bottom:0}
+body table.excel tbody tr:hover{background:rgba(var(--m-gold-rgb),.06)}
+body table.excel td.col-amt{font-family:var(--font-display);font-weight:800}
+body .amt-pill{border-radius:10px;padding:6px 12px;font-family:var(--font-display);font-weight:800;letter-spacing:-.01em}
+body .amt-pill.in{background:rgba(var(--forest-rgb),.14)}
+body .amt-pill.out{background:rgba(var(--rust-rgb),.14)}
+body .tx-shift-chip{border-radius:8px;border-color:var(--m-line);background:transparent;font-weight:600}
+
+/* ---------- Peringkat: baris ramping, rincian jadi satu baris teks ---------- */
+body .rank-list{gap:10px}
+body .rank-row{
+  border-radius:18px;background:rgba(var(--ink-rgb),.03);border:1px solid var(--m-line);
+  padding:14px 18px 14px 22px;
+}
+body .rank-row:hover{border-color:rgba(var(--m-gold-rgb),.5)}
+body .rank-row:before{width:4px;border-radius:4px;left:8px;top:14px;bottom:14px}
+body .rank-no{background:transparent;color:var(--ink-faint);font-weight:800;border-radius:8px}
+body .rank-no.top1{color:var(--m-gold)}
+body .rank-row.podium-1{
+  border-color:rgba(var(--m-gold-rgb),.5);
+  background:linear-gradient(120deg,rgba(var(--m-gold-rgb),.16),rgba(var(--m-gold-rgb),.02) 65%);
+}
+body .rank-row.podium-1 .rank-amt{font-size:26px}
+body .rank-amt{font-size:19px;letter-spacing:-.03em}
+body .rank-bar-track{height:5px;margin-top:12px;background:rgba(var(--ink-rgb),.08)}
+
+/* chip rincian → teks sebaris tanpa kotak (hemat tinggi, lebih rapi) */
+body .rank-breakdown{gap:6px 22px;margin-top:10px;padding-top:0;border-top:0;align-items:flex-end}
+body .rank-breakdown .rb-op{display:none}
+body .rb-chip,
+body .rb-chip.rb-in,body .rb-chip.rb-out,body .rb-chip.rb-saldo,body .rb-chip.rb-saldo.is-neg{
+  background:none;border:0;border-radius:0;padding:0;box-shadow:none;
+}
+body .rb-chip-label{font-size:11.5px;font-weight:600;color:var(--ink-faint)}
+body .rb-chip-val{font-size:14px;font-weight:800}
+
+/* ---------- Footer ---------- */
+body .site-footer,body footer.site-footer{margin-top:48px;border-top:1px solid var(--m-line)}
+
+/* ---------- Animasi masuk: SATU kali, ringan (opacity+transform) ---------- */
+@keyframes m26In{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+body .hero-top,body .hero-grid>*{animation:m26In .6s cubic-bezier(.22,1,.36,1) both}
+body .hero-grid>.hero-chart{animation-delay:.1s}
+body .hero-grid>.saldo-strip{animation-delay:.04s}
+
+/* =====================================================================
+   HP (<= 640px)
+   ===================================================================== */
+@media (max-width:640px){
+  body .topbar-inner{padding:8px 16px 8px;padding-top:calc(8px + env(safe-area-inset-top,0px))}
+  body .brand-mark{width:44px;height:44px;border-radius:14px}
+  body .brand-text b{font-size:15.5px}
+  body .hero{padding-top:22px}
+  body .hero-top{margin-bottom:18px}
+  body .hero h1{font-size:clamp(34px,10.4vw,44px);letter-spacing:-.045em}
+  body .hero h1 .h1-br{display:block}
+  body .hero-eyebrow{font-size:14.5px;margin-top:12px}
+  body .hero-grid{display:flex;flex-direction:column;gap:12px}
+  body .saldo-strip{border-radius:26px;order:-1}
+  body .saldo-col.final{padding:24px 22px 22px}
+  body .saldo-col.final .saldo-fig{font-size:clamp(40px,12.5vw,54px)}
+  body .saldo-col{padding:16px 22px}
+  body .saldo-col.in .saldo-fig,body .saldo-col.out .saldo-fig{font-size:20px}
+  body .hero-chart{height:190px;border-radius:24px}
+  body .money-toggle-btn{width:100%;margin:12px 0 0}
+  body .panel{padding:20px 16px;margin-top:16px;border-radius:24px}
+  body .panel-head h3{font-size:18.5px}
+
+  /* transaksi: daftar rapi, bukan tumpukan kartu */
+  body table.excel-cards tbody tr{
+    background:transparent;border:0;border-bottom:1px solid var(--m-line);border-radius:0;
+    margin-bottom:0;padding:13px 2px 13px 14px;
+  }
+  body table.excel-cards tbody tr:last-child{border-bottom:0}
+  body table.excel-cards td.col-no{top:14px;bottom:14px;width:3px}
+  body table.excel-cards td.col-name{font-size:15px;font-weight:700}
+  body table.excel-cards .amt-pill{padding:7px 12px;font-size:13.5px}
+  body table.excel-cards tbody td{border:0;height:auto}
+  body table.excel-cards td.col-ket{border-top:1px dashed var(--m-line)}
+  body .excel-wrap{border:0}
+
+  /* peringkat */
+  body .rank-row{padding:13px 14px 13px 20px;border-radius:18px}
+  body .rank-breakdown{display:grid;grid-template-columns:repeat(3,auto);justify-content:space-between;gap:4px 8px}
+  body .rb-chip-val{font-size:13px}
+  body .rank-row.podium-1 .rank-amt{font-size:22px}
+}
+
+/* Dock bawah HP: melayang, aktif = pil emas */
+@media (max-width:760px){
+  body .tp-dock{
+    left:14px;right:14px;border-radius:26px;padding:6px;gap:2px;
+    background:rgba(var(--bg-elev-r),var(--bg-elev-g),var(--bg-elev-b),.98);
+    border:1px solid var(--m-line);
+    box-shadow:0 22px 30px -16px rgba(0,0,0,.85);
+  }
+  body .tp-dock a,body .tp-dock button{height:54px;border-radius:20px;font-size:11.5px}
+  body .tp-dock .on{background:linear-gradient(180deg,#ffd47a,#eba82e);color:#2b1700;
+    box-shadow:0 8px 16px -10px rgba(var(--m-gold-rgb),.95)}
+  body .site-footer,body footer.site-footer{padding-bottom:calc(104px + env(safe-area-inset-bottom,0px))}
+}
+
+/* Layar sangat lebar */
+@media (min-width:1440px){
+  body .hero h1{font-size:64px}
+}
+
+/* Hormati preferensi "kurangi gerakan" */
+@media (prefers-reduced-motion:reduce){
+  body .hero-top,body .hero-grid>*{animation:none}
+}

@@ -15,3 +15,9 @@ Jika mengedit file langsung di GitHub, tidak perlu mengubah apa pun di sw.js.
 
 ## Mode ringan Jadwal Admin
 Otomatis di Windows XP-8 / PC spek rendah. Paksa: tambahkan ?lite=1 di alamat, matikan: ?lite=0.
+
+## Tampilan 2026 (modern-2026.css)
+- File baru `modern-2026.css` dimuat setelah `app.css` (1 baris <link> di index.html + daftar CORE di sw.js).
+- Kembali ke tampilan lama: hapus baris <link> tersebut.
+- Ringan untuk Windows 7: tanpa blur/backdrop-filter, hanya satu animasi masuk (transform/opacity).
+- Upload SEMUA file (termasuk modern-2026.css, index.html, sw.js) ke GitHub.
