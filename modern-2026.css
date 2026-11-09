@@ -287,3 +287,140 @@ body .hero-grid>.saldo-strip{animation-delay:.04s}
 @media (prefers-reduced-motion:reduce){
   body .hero-top,body .hero-grid>*{animation:none}
 }
+
+
+/* =====================================================================
+   DESKTOP 2026  (layar PC >= 1024px)  — layout lebar, dashboard 2 kolom
+   Aman untuk Windows 7 / Chrome 109: tanpa blur, tanpa container query.
+   HP/tablet kecil (<1024px) TIDAK terpengaruh sama sekali.
+   ===================================================================== */
+@media (min-width:1024px){
+  :root{--d-wrap:1680px;--d-pad:40px;--d-gap:24px}
+
+  /* ---- Lebar halaman: penuh mengikuti layar PC ---- */
+  body .container,
+  body .topbar-inner,
+  body .desktop-nav-inner{max-width:var(--d-wrap);padding-left:var(--d-pad);padding-right:var(--d-pad)}
+
+  /* ---- Header ---- */
+  body .topbar{position:sticky;top:0;background:rgba(var(--bg-r),var(--bg-g),var(--bg-b),.98);
+    box-shadow:0 14px 24px -22px rgba(0,0,0,.9)}
+  body .topbar-inner{padding-top:14px;padding-bottom:8px}
+  body .brand-mark{width:50px;height:50px}
+  body .brand-text b{font-size:19px}
+  body .brand-text span{font-size:12.5px}
+  body .desktop-nav-inner{padding-top:0;padding-bottom:12px;gap:6px}
+  body .dnav-link,body .dnav-trigger{padding:10px 16px;font-size:14px;border:1px solid transparent}
+  body .dnav-link:not(.active):hover,body .dnav-trigger:hover{background:rgba(var(--ink-rgb),.06);border-color:var(--m-line)}
+
+  /* ---- Judul halaman ---- */
+  body .hero{padding-top:34px;padding-bottom:20px}
+  body .hero h1{font-size:clamp(40px,3.7vw,60px)}
+  body .hero-eyebrow{font-size:15.5px;max-width:60ch}
+  body .hero-top{margin-bottom:28px}
+
+  /* ================= HOME: dashboard 2 kolom ================= */
+  body .hero:has(.hero-grid){
+    display:grid;grid-template-columns:minmax(0,1fr) minmax(400px,30%);
+    column-gap:var(--d-gap);align-items:start;
+  }
+  body .hero:has(.hero-grid)>.hero-top{grid-column:1/-1;grid-row:1;padding-right:270px;margin-bottom:0}
+  body .hero:has(.hero-grid)>.money-toggle-btn{
+    grid-column:1/-1;grid-row:1;justify-self:end;align-self:end;margin:0 0 6px;white-space:nowrap}
+  body .hero:has(.hero-grid)>.hero-grid{grid-column:1/-1;grid-row:2;margin-top:26px;
+    grid-template-columns:minmax(0,1.12fr) minmax(0,1fr);gap:var(--d-gap)}
+  body .hero:has(.hero-grid)>.hero-grid .saldo-strip{min-height:340px}
+  body .hero:has(.hero-grid)>.hero-grid .hero-chart{min-height:340px}
+  body .hero:has(.hero-grid)>.panel-ledger{grid-column:1;grid-row:3;margin-top:var(--d-gap)}
+  body .hero:has(.hero-grid)>.panel:not(.panel-ledger){
+    grid-column:2;grid-row:3;margin-top:var(--d-gap)!important;position:sticky;top:132px}
+
+  /* Kartu saldo: angka besar & rapi */
+  body .hero-grid .saldo-col.final{padding:34px 36px}
+  body .hero-grid .saldo-col.final .saldo-fig{font-size:clamp(48px,4.6vw,84px)}
+  body .hero-grid .saldo-col{padding:22px 36px}
+  body .hero-grid .saldo-fig{font-size:clamp(24px,2vw,32px)}
+  body .hero-grid .saldo-col.in{background:linear-gradient(135deg,rgba(var(--forest-rgb),.12),transparent 70%)}
+  body .hero-grid .saldo-col.out{background:linear-gradient(135deg,rgba(var(--rust-rgb),.12),transparent 70%)}
+  body .hero-chart-tag{font-size:12.5px;padding:7px 14px}
+  body .hcp-val{font-size:clamp(28px,2.2vw,38px)}
+
+  /* Panel */
+  body .panel{padding:28px 32px}
+  body .panel-head h3{font-size:22px}
+
+  /* Tabel transaksi lebih lega, lebar kolom teratur */
+  body table.excel{table-layout:auto;width:100%}
+  body table.excel th.col-no,body table.excel td.col-no{width:64px}
+  body table.excel tbody td{font-size:14.5px}
+  body table.excel td.col-ket{color:var(--ink-soft)}
+  body .excel-wrap{scrollbar-width:thin}
+  body .excel-wrap::-webkit-scrollbar{width:8px;height:8px}
+  body .excel-wrap::-webkit-scrollbar-thumb{background:rgba(var(--m-gold-rgb),.45);border-radius:8px}
+  body .export-row{margin-bottom:14px}
+  body .filters{display:grid;grid-template-columns:minmax(0,1.6fr) 1fr 1fr;gap:12px}
+
+  /* Peringkat: satu kolom ringkas di panel kanan */
+  body .hero:has(.hero-grid)>.panel:not(.panel-ledger) .rank-list{grid-template-columns:1fr;gap:10px}
+  body .hero:has(.hero-grid)>.panel:not(.panel-ledger) .rank-list .rank-row.podium-1{grid-column:auto}
+  body .hero:has(.hero-grid)>.panel:not(.panel-ledger) .rank-row{padding:10px 16px 10px 22px}
+  body .hero:has(.hero-grid)>.panel:not(.panel-ledger) .rank-row.podium-1 .rank-amt{font-size:22px}
+  body .hero:has(.hero-grid)>.panel:not(.panel-ledger) .rank-amt{font-size:17px}
+  body .hero:has(.hero-grid)>.panel:not(.panel-ledger) .rank-bar-track{margin-top:9px}
+  body .hero:has(.hero-grid)>.panel:not(.panel-ledger) .rank-breakdown{margin-top:6px;gap:4px 18px}
+  body .hero:has(.hero-grid)>.panel:not(.panel-ledger) .panel-head{flex-wrap:wrap;gap:4px}
+
+  /* ============ Halaman Ajukan Pembelian: layar terbagi ============ */
+  body .hero:has(.pg-card){
+    display:grid;grid-template-columns:minmax(0,1fr) minmax(520px,640px);
+    column-gap:64px;align-content:start;align-items:start;padding-top:40px;
+  }
+  body .hero:has(.pg-card)>.back-link,
+  body .hero:has(.pg-card)>.hero-eyebrow,
+  body .hero:has(.pg-card)>h1,
+  body .hero:has(.pg-card)>.hero-sub{grid-column:1}
+  body .hero:has(.pg-card)>h1{font-size:clamp(42px,4vw,64px);line-height:1.04;margin:8px 0 18px}
+  body .hero:has(.pg-card)>.hero-sub{font-size:16.5px;max-width:48ch;line-height:1.6}
+  body .hero:has(.pg-card)>.pg-card{grid-column:2;width:auto;max-width:none;margin:0}
+  body .hero:has(.pg-card)>.back-link{align-self:end;justify-self:start;grid-row:1}
+  body .hero:has(.pg-card)>.hero-eyebrow{order:0;grid-row:2;margin:10px 0 0}
+  body .hero:has(.pg-card)>h1{grid-row:3}
+  body .hero:has(.pg-card)>.hero-sub{grid-row:4}
+  body .hero:has(.pg-card)>.pg-card{grid-row:1/span 6}
+
+  /* ============ Riwayat & Aset: ringkasan + grid kartu ============ */
+  body .req-summary{gap:20px}
+  body .rq-stat{padding:24px 20px}
+  body .asset-summary{padding:26px 34px}
+  body .req-list,body .asset-list{
+    display:grid!important;grid-template-columns:repeat(auto-fill,minmax(420px,1fr));gap:18px}
+  body .req-list>.empty-row,body .asset-list>.empty-row{grid-column:1/-1}
+
+  /* ============ Arisan: panel 2 kolom ============ */
+  body .arisan-panel{
+    display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:22px var(--d-gap);align-items:start}
+  body .arisan-panel>*{grid-column:1/-1;margin-top:0;margin-bottom:0}
+  body .arisan-panel>.arisan-countdown{grid-column:1;grid-row:3}
+  body .arisan-panel>.arisan-members-block{grid-column:1;grid-row:4}
+  body .arisan-panel>.arisan-reg-card{grid-column:2;grid-row:3/span 2}
+}
+
+/* Layar sangat lebar: beri ruang lebih untuk panel peringkat */
+@media (min-width:1600px){
+  :root{--d-pad:56px;--d-gap:28px}
+  body .hero:has(.hero-grid){grid-template-columns:minmax(0,1fr) minmax(480px,32%)}
+  body .hero:has(.hero-grid)>.hero-grid .saldo-strip,
+  body .hero:has(.hero-grid)>.hero-grid .hero-chart{min-height:380px}
+  body table.excel tbody td{font-size:15px}
+}
+/* Laptop 1024–1279: rapatkan sedikit */
+@media (min-width:1024px) and (max-width:1279px){
+  :root{--d-pad:28px;--d-gap:18px}
+  body .hero:has(.hero-grid){grid-template-columns:minmax(0,1fr) 360px}
+  body .hero:has(.pg-card){column-gap:36px;grid-template-columns:minmax(0,1fr) 520px}
+  body .hero:has(.hero-grid)>.hero-top{padding-right:0}
+  body .hero:has(.hero-grid)>.money-toggle-btn{grid-row:2;justify-self:end;margin:0 0 12px}
+  body .hero:has(.hero-grid)>.hero-grid{grid-row:3;margin-top:0}
+  body .hero:has(.hero-grid)>.panel-ledger,
+  body .hero:has(.hero-grid)>.panel:not(.panel-ledger){grid-row:4}
+}
