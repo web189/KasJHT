@@ -324,7 +324,7 @@ body .hero-grid>.saldo-strip{animation-delay:.04s}
     display:grid;grid-template-columns:minmax(0,1fr) minmax(400px,30%);
     column-gap:var(--d-gap);align-items:start;
   }
-  body .hero:has(.hero-grid)>.hero-top{grid-column:1/-1;grid-row:1;padding-right:270px;margin-bottom:0}
+  body .hero:has(.hero-grid)>.hero-top{grid-column:1/-1;grid-row:1;padding-right:350px;margin-bottom:0}
   body .hero:has(.hero-grid)>.money-toggle-btn{
     grid-column:1/-1;grid-row:1;justify-self:end;align-self:end;margin:0 0 6px;white-space:nowrap}
   body .hero:has(.hero-grid)>.hero-grid{grid-column:1/-1;grid-row:2;margin-top:26px;
@@ -423,4 +423,66 @@ body .hero-grid>.saldo-strip{animation-delay:.04s}
   body .hero:has(.hero-grid)>.hero-grid{grid-row:3;margin-top:0}
   body .hero:has(.hero-grid)>.panel-ledger,
   body .hero:has(.hero-grid)>.panel:not(.panel-ledger){grid-row:4}
+}
+
+
+/* =====================================================================
+   TOMBOL "TAMPILKAN SEMUA NOMINAL" — gaya saklar (toggle) profesional
+   Status aktif memakai class body.money-revealed (sudah diatur app.js)
+   ===================================================================== */
+body .money-toggle-btn{
+  position:relative;z-index:6;            /* di atas blok judul, agar bisa diklik */
+  display:inline-flex;align-items:center;gap:12px;
+  padding:7px 10px 7px 8px;margin:16px 0 0 auto;
+  border-radius:999px;cursor:pointer;
+  font-family:inherit;font-size:13.5px;font-weight:700;letter-spacing:.005em;
+  color:var(--ink);white-space:nowrap;
+  background:linear-gradient(180deg,rgba(var(--ink-rgb),.07),rgba(var(--ink-rgb),.025));
+  border:1px solid var(--m-line);
+  box-shadow:0 10px 22px -16px rgba(0,0,0,.85),inset 0 1px 0 rgba(255,255,255,.05);
+  transition:border-color .2s,background .2s,box-shadow .2s,transform .15s;
+}
+/* ikon dalam lingkaran emas */
+body .money-toggle-btn svg{
+  flex:none;width:32px;height:32px;padding:7px;border-radius:50%;box-sizing:border-box;
+  color:var(--m-gold);background:rgba(var(--m-gold-rgb),.16);
+  box-shadow:inset 0 0 0 1px rgba(var(--m-gold-rgb),.35);
+  transition:background .2s,color .2s;
+}
+body .money-toggle-btn span{line-height:1}
+/* saklar di sisi kanan: lintasan + bulatan */
+body .money-toggle-btn:after{
+  content:"";flex:none;width:40px;height:22px;margin-left:2px;border-radius:999px;
+  background-color:rgba(var(--ink-rgb),.18);
+  background-image:radial-gradient(circle at 11px 50%,#fff 8px,transparent 8.5px);
+  background-repeat:no-repeat;
+  box-shadow:inset 0 0 0 1px rgba(var(--ink-rgb),.12);
+  transition:background-color .25s,background-image .25s;
+}
+body .money-toggle-btn:hover{
+  border-color:rgba(var(--m-gold-rgb),.75);
+  background:linear-gradient(180deg,rgba(var(--m-gold-rgb),.16),rgba(var(--m-gold-rgb),.05));
+  box-shadow:0 14px 26px -16px rgba(var(--m-gold-rgb),.7),inset 0 1px 0 rgba(255,255,255,.07);
+  transform:translateY(-1px);
+}
+body .money-toggle-btn:active{transform:translateY(0)}
+body .money-toggle-btn:focus-visible{outline:2px solid var(--m-gold);outline-offset:3px}
+
+/* Saat nominal TERBUKA: tombol emas, saklar menyala */
+body.money-revealed .money-toggle-btn{
+  border-color:rgba(var(--m-gold-rgb),.75);
+  background:linear-gradient(180deg,rgba(var(--m-gold-rgb),.24),rgba(var(--m-gold-rgb),.08));
+}
+body.money-revealed .money-toggle-btn svg{color:#2b1700;background:linear-gradient(180deg,#ffd47a,#eba82e);box-shadow:none}
+body.money-revealed .money-toggle-btn:after{
+  background-color:#eba82e;
+  background-image:radial-gradient(circle at 29px 50%,#fff 8px,transparent 8.5px);
+  box-shadow:none;
+}
+:root[data-theme=light] body .money-toggle-btn{background:#fff;box-shadow:0 8px 18px -14px rgba(80,30,10,.45)}
+
+/* HP: tombol selebar layar, saklar di ujung kanan */
+@media (max-width:640px){
+  body .money-toggle-btn{width:100%;justify-content:flex-start;margin:12px 0 0;padding:9px 12px 9px 10px}
+  body .money-toggle-btn:after{margin-left:auto}
 }
