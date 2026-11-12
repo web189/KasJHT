@@ -486,3 +486,128 @@ body.money-revealed .money-toggle-btn:after{
   body .money-toggle-btn{width:100%;justify-content:flex-start;margin:12px 0 0;padding:9px 12px 9px 10px}
   body .money-toggle-btn:after{margin-left:auto}
 }
+
+
+/* =====================================================================
+   v3 — GRAFIK KAS-IDX BESAR + KARTU SALDO RINGKAS  (HP & PC)
+   Blok ini sengaja di paling akhir supaya menimpa aturan lama di atas.
+   Cabut perubahan: hapus seluruh blok ini (sampai akhir file).
+   Selector diulang (.x.x) hanya untuk menaikkan prioritas — tanpa :has,
+   jadi tetap aman di Chrome lama / Windows 7.
+   ===================================================================== */
+:root{--hc-head:58px}
+
+/* ---------- GRAFIK KAS-IDX (semua layar) ---------- */
+body .hero-grid.hero-grid .hero-chart.hero-chart{
+  height:340px;height:clamp(310px,46svh,410px);min-height:0;
+  border-radius:24px;
+}
+/* area gambar = di bawah baris judul (tag + harga) */
+body .hero-chart .hero-chart-svg{
+  position:absolute;left:0;top:var(--hc-head);width:100%;height:calc(100% - var(--hc-head));
+}
+body .hero-chart:after{
+  content:"";position:absolute;left:0;right:0;top:var(--hc-head);height:1px;
+  background:var(--m-line);z-index:2;pointer-events:none;
+}
+/* baris judul: tag kiri, harga kanan (satu baris) */
+body .hero-chart .hero-chart-tag{
+  top:calc((var(--hc-head) - 30px) / 2);left:14px;font-size:12px;padding:6px 12px;
+}
+body .hero-chart .hero-chart-price{
+  top:0;right:14px;height:var(--hc-head);padding:0;margin:0;
+  flex-direction:row;align-items:center;gap:10px;background:none;border:0;box-shadow:none;
+}
+body .hero-chart .hero-chart-price:before{display:none}
+body .hero-chart .hcp-val{font-size:clamp(26px,7vw,32px);line-height:1}
+body .hero-chart .hcp-chg{
+  font-size:12.5px;font-weight:700;padding:4px 9px;border-radius:999px;
+  background:rgba(var(--ink-rgb),.07);
+}
+body .hero-chart .hero-chart-range{bottom:9px;left:14px;font-size:12px;gap:12px}
+body .hero-chart .hct-dot{animation:hcDot 1.6s ease-out infinite}
+
+/* ---------- ANIMASI GRAFIK ---------- */
+@keyframes hcSlide{from{transform:translateX(var(--hc-dx,12px))}to{transform:translateX(0)}}
+@keyframes hcIntro{from{opacity:0;transform:translateY(22px)}to{opacity:1;transform:none}}
+@keyframes hcRing{0%{transform:scale(.55);opacity:.95}100%{transform:scale(2);opacity:0}}
+@keyframes hcDot{0%{box-shadow:0 0 0 0 rgba(var(--forest-rgb),.6)}100%{box-shadow:0 0 0 8px rgba(var(--forest-rgb),0)}}
+.hc-slide{animation:hcSlide .75s cubic-bezier(.22,1,.36,1) both}
+.hc-intro{animation:hcIntro .9s cubic-bezier(.22,1,.36,1) both}
+body .hero-live-ring{transform-origin:center;transform-box:fill-box;animation:hcRing .8s ease-out infinite}
+body .hero-chart-svg rect,body .hero-chart-svg line,body .hero-chart-svg polyline{transition:none}
+@media (prefers-reduced-motion:reduce){
+  .hc-slide,.hc-intro,body .hero-live-ring,body .hero-chart .hct-dot{animation:none}
+}
+
+/* ---------- KARTU SALDO: ringkas (HP & tablet kecil) ---------- */
+body .hero-grid.hero-grid{gap:10px}
+body .hero-grid .saldo-strip.saldo-strip{border-radius:20px;min-height:0}
+body .hero-grid .saldo-strip .saldo-col.final.final{padding:13px 18px 11px}
+body .hero-grid .saldo-strip .saldo-col.final.final .saldo-label{font-size:12.5px}
+body .hero-grid .saldo-strip .saldo-col.final.final .saldo-fig.saldo-fig{
+  font-size:clamp(28px,8.4vw,38px);letter-spacing:-.04em;
+}
+body .hero-grid .saldo-strip .saldo-col.saldo-col{padding:10px 18px;gap:3px}
+body .hero-grid .saldo-strip .saldo-col .saldo-label{font-size:12px}
+body .hero-grid .saldo-strip .saldo-col.in.in .saldo-fig.saldo-fig,
+body .hero-grid .saldo-strip .saldo-col.out.out .saldo-fig.saldo-fig{font-size:clamp(15px,4.5vw,19px)}
+body .hero-grid .saldo-strip .saldo-col.in .saldo-label:before,
+body .hero-grid .saldo-strip .saldo-col.out .saldo-label:before{width:7px;height:7px;margin-right:6px}
+
+/* Tablet (641–899): tumpuk, grafik tetap lebar */
+@media (min-width:641px) and (max-width:899px){
+  body .hero-grid.hero-grid .hero-chart.hero-chart{height:clamp(360px,46svh,470px)}
+  body .hero-chart .hcp-val{font-size:32px}
+}
+
+/* ---------- PC / laptop (>= 900): saldo kecil di kiri, grafik besar di kanan ---------- */
+@media (min-width:900px){
+  body .hero-grid.hero-grid.hero-grid.hero-grid{
+    grid-template-columns:minmax(270px,27%) minmax(0,1fr);gap:16px;align-items:stretch;
+  }
+  body .hero-grid.hero-grid .hero-chart.hero-chart{
+    height:auto;min-height:clamp(380px,52vh,520px);border-radius:26px;
+  }
+  body .hero-grid.hero-grid .saldo-strip.saldo-strip{
+    grid-template-columns:1fr;grid-template-rows:1.5fr 1fr 1fr;min-height:0;border-radius:26px;
+  }
+  body .hero-grid .saldo-strip .saldo-col.final.final{padding:20px 24px 18px;justify-content:center;gap:6px}
+  body .hero-grid .saldo-strip .saldo-col.final.final .saldo-label{font-size:13.5px}
+  body .hero-grid .saldo-strip .saldo-col.final.final .saldo-fig.saldo-fig{font-size:clamp(28px,2.7vw,44px)}
+  body .hero-grid .saldo-strip .saldo-col.saldo-col{padding:12px 24px;justify-content:center;align-items:flex-start}
+  body .hero-grid .saldo-strip .saldo-col.in.in{box-shadow:inset 0 -1px 0 var(--m-line)}
+  body .hero-grid .saldo-strip .saldo-col.out.out{box-shadow:none}
+  body .hero-grid .saldo-strip .saldo-col.in.in .saldo-fig.saldo-fig,
+  body .hero-grid .saldo-strip .saldo-col.out.out .saldo-fig.saldo-fig{font-size:clamp(19px,1.7vw,26px)}
+  body .hero-grid .saldo-strip .saldo-col .saldo-label{font-size:12.5px}
+
+  body .hero-chart{--hc-head:66px}
+  body .hero-chart .hero-chart-tag{font-size:13px;padding:7px 14px;top:calc((var(--hc-head) - 34px) / 2);left:18px}
+  body .hero-chart .hero-chart-price{right:18px;gap:12px}
+  body .hero-chart .hero-chart-price:before{
+    display:block;content:"Harga terakhir";margin:0;font-size:12px;color:var(--ink-faint);font-weight:600}
+  body .hero-chart .hcp-val{font-size:clamp(30px,2.5vw,40px)}
+  body .hero-chart .hcp-chg{font-size:13.5px;padding:5px 11px}
+  body .hero-chart .hero-chart-range{left:18px;bottom:11px;font-size:12.5px;gap:14px}
+}
+@media (min-width:1600px){
+  body .hero-grid.hero-grid .hero-chart.hero-chart{min-height:clamp(440px,54vh,580px)}
+}
+
+
+/* =====================================================================
+   v4 — HP & TABLET: kartu SALDO AKHIR / KAS MASUK / KAS KELUAR
+   dipindah ke BAWAH grafik KAS-IDX.
+   PC (>=900px) tidak berubah: saldo di kiri, grafik di kanan.
+   Cabut perubahan: hapus seluruh blok ini (sampai akhir file).
+   ===================================================================== */
+@media (max-width:899px){
+  body .hero-grid.hero-grid{display:flex;flex-direction:column;gap:12px}
+  body .hero-grid.hero-grid>.hero-chart{order:1}
+  body .hero-grid.hero-grid>.saldo-strip{order:2;margin-top:0}
+}
+@media (min-width:900px){
+  body .hero-grid.hero-grid>.saldo-strip{order:-1}
+  body .hero-grid.hero-grid>.hero-chart{order:0}
+}
