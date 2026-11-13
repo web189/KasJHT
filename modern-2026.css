@@ -611,3 +611,129 @@ body .hero-grid .saldo-strip .saldo-col.out .saldo-label:before{width:7px;height
   body .hero-grid.hero-grid>.saldo-strip{order:-1}
   body .hero-grid.hero-grid>.hero-chart{order:0}
 }
+
+
+/* =====================================================================
+   v5 — PENYEMPURNAAN TEMA TERANG & GELAP
+   Fokus: kontras (WCAG AA), kedalaman kartu, loader mengikuti tema,
+   kartu saldo tidak lagi melar, nominal tersamar seragam, tabel rapi.
+   Cabut perubahan: hapus seluruh blok ini (sampai akhir file).
+   Tanpa blur / :has baru — tetap ringan untuk Chrome 109 / Windows 7.
+   ===================================================================== */
+
+/* ---------- 1. TOKEN WARNA: satu sumber kebenaran ---------- */
+:root{
+  --m-focus:#f2b84b;
+  -webkit-tap-highlight-color:transparent;
+}
+:root[data-theme=dark]{
+  --bg:#110a0c;                         /* sama dengan critical CSS & theme-color */
+  --ink-faint:#ab9a91;                  /* 6,9 : 1 di kartu */
+  --m-shadow-card:0 1px 0 rgba(255,236,220,.04) inset,0 18px 30px -22px rgba(0,0,0,.9);
+}
+:root[data-theme=light]{
+  --bg:#f4f0f1;
+  --ink-faint:#6f5d64;                  /* ≥ 5,4 : 1 (sebelumnya 3,9) */
+  --ink-soft:#554249;
+  --forest:#0b7a52;--forest-r:11;--forest-g:122;--forest-b:82;   /* ≥ 5 : 1 di pil */
+  --rust:#b5361f;--rust-r:181;--rust-g:54;--rust-b:31;
+  --m-gold:#9a6208;--m-gold-rgb:154,98,8;                          /* label emas terbaca */
+  --m-focus:#8a5500;
+  --m-line:rgba(60,20,30,.12);
+  --m-shadow-card:0 1px 2px rgba(60,20,30,.06),0 14px 30px -20px rgba(60,20,30,.30);
+}
+:root[data-theme=light] body .saldo-col.final .saldo-label{color:#8a5500}
+
+/* ---------- 2. KEDALAMAN KARTU ---------- */
+body .panel,
+body .hero-chart{box-shadow:var(--m-shadow-card)}
+body .saldo-strip{box-shadow:var(--m-shadow-card)}
+:root[data-theme=light] body .rank-row{background:#fff}
+:root[data-theme=light] body .rank-row.podium-1{
+  background:linear-gradient(120deg,rgba(201,138,18,.16),#fff 70%)}
+:root[data-theme=light] body .hero-chart{
+  background:
+    repeating-linear-gradient(0deg,transparent 0 55px,rgba(60,20,30,.045) 55px 56px),
+    linear-gradient(180deg,#fff,#faf6f4)}
+
+/* ---------- 3. FOKUS KEYBOARD (aksesibilitas) ---------- */
+body a:focus-visible,body button:focus-visible,body input:focus-visible,
+body select:focus-visible,body textarea:focus-visible,body [tabindex]:focus-visible{
+  outline:2px solid var(--m-focus);outline-offset:2px;border-radius:10px}
+
+/* ---------- 4. ANGKA: lebar tetap, rata, tegas ---------- */
+body .amt-pill,body .rank-amt,body .rb-chip-val,body .saldo-fig,
+body .hcp-val,body table.excel td.col-amt,body table.excel td.col-no{
+  font-variant-numeric:tabular-nums lining-nums}
+body .money-masked{letter-spacing:.06em;opacity:.9}
+
+/* ---------- 5. SAKLAR NOMINAL: terlihat di tema terang ---------- */
+:root[data-theme=light] body .money-toggle-btn:after{
+  background-color:rgba(60,20,30,.38);
+  box-shadow:inset 0 0 0 1px rgba(60,20,30,.18)}
+:root[data-theme=light] body.money-revealed .money-toggle-btn:after{background-color:#c98a12}
+
+/* ---------- 6. TEKS KECIL: minimal 12,5px ---------- */
+body .rb-chip-label,body .hero-chart .hero-chart-range,
+body .rank-row .rank-pct,body .panel-head .hint,body .panel-head-hint{font-size:12.5px}
+body .saldo-col .saldo-label{font-size:13px}
+
+/* ---------- 7. KARTU SALDO + GRAFIK: tinggi wajar, isi seimbang ---------- */
+@media (min-width:900px){
+  /* vh di HP "situs desktop" sangat besar → batasi agar kartu tidak melar */
+  body .hero-grid.hero-grid .hero-chart.hero-chart{min-height:clamp(340px,44vh,460px)}
+  body .hero-grid .saldo-strip.saldo-strip{grid-template-rows:1.35fr 1fr 1fr}
+  body .hero-grid .saldo-strip .saldo-col.final.final{
+    justify-content:flex-end;padding:22px 26px 20px;
+    background:
+      linear-gradient(135deg,rgba(var(--m-gold-rgb),.22),rgba(var(--m-gold-rgb),.03) 72%)}
+  body .hero-grid .saldo-strip .saldo-col.final.final .saldo-fig.saldo-fig{
+    font-size:clamp(30px,2.9vw,46px)}
+  body .hero-grid .saldo-strip .saldo-col.in.in{
+    background:linear-gradient(135deg,rgba(var(--forest-rgb),.10),transparent 75%)}
+  body .hero-grid .saldo-strip .saldo-col.out.out{
+    background:linear-gradient(135deg,rgba(var(--rust-rgb),.10),transparent 75%)}
+  body .hero-grid .saldo-strip .saldo-col.in.in .saldo-fig.saldo-fig,
+  body .hero-grid .saldo-strip .saldo-col.out.out .saldo-fig.saldo-fig{
+    font-size:clamp(20px,1.9vw,28px)}
+}
+@media (min-width:1600px){
+  body .hero-grid.hero-grid .hero-chart.hero-chart{min-height:clamp(420px,46vh,560px)}
+}
+
+/* ---------- 8. TABEL: kolom rapat, nominal sejajar, Keterangan fleksibel ---------- */
+body .amt-pill{min-width:112px;justify-content:center;text-align:center}
+@media (min-width:900px){
+  body table.excel:not(.excel-cards) th,
+  body table.excel:not(.excel-cards) td{white-space:nowrap}
+  body table.excel:not(.excel-cards) th.col-ket,
+  body table.excel:not(.excel-cards) td.col-ket{width:100%;white-space:normal}
+  body table.excel:not(.excel-cards) td.col-amt,
+  body table.excel:not(.excel-cards) th.col-amt{text-align:right}
+}
+
+/* ---------- 9. LOADER MENGIKUTI TEMA ---------- */
+html[data-theme=light] #bootLoader.boot-loader{
+  background:
+    radial-gradient(70% 55% at 50% 36%,rgba(201,138,18,.20),transparent 70%),
+    radial-gradient(120% 90%,transparent 50%,rgba(60,20,30,.08) 100%),#f4f0f1;
+  color:#2a171c}
+html[data-theme=light] #bootLoader:before{
+  background-image:repeating-linear-gradient(0deg,rgba(60,20,30,.035) 0 1px,transparent 1px 4px)}
+html[data-theme=light] #bootLoader .boot-title{color:#2a171c}
+html[data-theme=light] #bootLoader .boot-sub,
+html[data-theme=light] #bootLoader .boot-footer{color:#624f55}
+html[data-theme=light] #bootLoader .boot-phrase{color:#554249}
+html[data-theme=light] #bootLoader .boot-percent{color:#9a6208}
+html[data-theme=light] #bootLoader .boot-progress-track{background:rgba(60,20,30,.12)}
+html[data-theme=light] #bootLoader .boot-footer a{color:#8a5500}
+html[data-theme=light] #bootLoader .boot-drips{opacity:.35}
+
+/* ---------- 10. Kurangi gerakan: matikan juga animasi berulang ---------- */
+@media (prefers-reduced-motion:reduce){
+  body .hero-live-ring,body .hero-chart .hct-dot{animation:none}
+}
+
+/* label "Ilustrasi" pada grafik hiasan KAS-IDX */
+body .hero-chart .hct-note{margin-left:8px;padding:1px 7px;border-radius:999px;font-size:11px;font-weight:700;
+  letter-spacing:.02em;color:var(--ink-faint);border:1px solid var(--m-line)}
